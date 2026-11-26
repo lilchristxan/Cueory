@@ -1,5 +1,5 @@
 import '../styles/sharedialog.css';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { untilNextPuzzle } from './pulse';
 import { inertOutside, lockPageScroll } from './gameresults';
@@ -15,7 +15,7 @@ import {
   type SharePayload,
 } from './vialosharing';
 import { formatCountdown } from './vialosticker';
-import { DIALOG_TAB_STOPS, stickersFor, trapTarget, type ShareGame, type ShareSticker } from './sharedialogmodel';
+import { DIALOG_TAB_STOPS, stickersFor, trapTarget, yieldToBrowser, type ShareGame, type ShareSticker } from './sharedialogmodel';
 
 /*
   The completion dialog (Christian's design, 25 Nov 2026), shared by the daily games. It opens over the play area when a
@@ -81,7 +81,7 @@ export default function ShareDialog({ game, open, onClose, description, payload,
   // Draw the stickers (again if the stats change). The dialog stays mounted while closed, so reopening is instant.
   useEffect(() => {
     let live = true;
-    void makeStickers().then(
+    void yieldToBrowser().then(() => (live ? makeStickers() : [])).then(
       (made) => {
         if (!live) return;
         setDrawn({ key: stickersKey, list: made });
@@ -120,13 +120,28 @@ export default function ShareDialog({ game, open, onClose, description, payload,
     return () => window.clearInterval(timer);
   }, [open]);
 
-  // Modal: the page behind is inert and cannot scroll; focus moves in, is trapped, and goes back when it closes.
+  // Focus moves into the card as soon as it is shown, before the browser paints (a layout effect, so no timer and nothing
+  // that waits for the stickers). Safari's engine can drop a focus() call made in the same task that un-hid the card and
+  // made the page behind inert, so if it did not land, it is asked once more on the next frame.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const target = card.current;
+    target?.focus({ preventScroll: true });
+    if (!target || document.activeElement === target) return;
+    const frame = window.requestAnimationFrame(() => {
+      if (document.activeElement !== target && !target.contains(document.activeElement)) target.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
+
+  // Modal: the page behind is inert and cannot scroll; focus is trapped, and goes back when it closes.
   useEffect(() => {
     if (!open || !scrim.current) return;
     wasOpen.current = true;
     const restoreInert = inertOutside(scrim.current, document.body);
     const restoreScroll = lockPageScroll(document.documentElement, document.body, window);
-    card.current?.focus();
+    // Making the page inert can move focus off the card (the engine falls back to the page): put it back on the card.
+    if (document.activeElement !== card.current && !card.current?.contains(document.activeElement)) card.current?.focus({ preventScroll: true });
     const key = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -251,12 +266,25 @@ export default function ShareDialog({ game, open, onClose, description, payload,
         className={`share-dialog share-dialog-${id} always-daytime`}
         data-testid="share-dialog"
       >
-        <img className="share-dialog-corner share-dialog-corner-top" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
-        <img className="share-dialog-corner share-dialog-corner-bottom" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
+        {game.cornerSrc ? (
+          <>
+            <img className="share-dialog-corner share-dialog-corner-top" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
+            <img className="share-dialog-corner share-dialog-corner-bottom" src={game.cornerSrc} alt="" aria-hidden="true" width="48" height="48" loading="lazy" />
+          </>
+        ) : (
+          <>
+            <span className="share-dialog-corner share-dialog-corner-tile share-dialog-corner-top" aria-hidden="true">{game.cornerText}</span>
+            <span className="share-dialog-corner share-dialog-corner-tile share-dialog-corner-bottom" aria-hidden="true">{game.cornerText}</span>
+          </>
+        )}
         <button type="button" className="share-dialog-close" aria-label="close" onClick={onClose} data-testid="share-dialog-close">
           <span aria-hidden="true">×</span>
         </button>
-        <img className="share-dialog-wordmark" src={game.wordmarkSrc} alt={game.wordmarkAlt} width="160" height="60" loading="lazy" />
+        {game.wordmarkSrc ? (
+          <img className="share-dialog-wordmark" src={game.wordmarkSrc} alt={game.wordmarkAlt} width="160" height="60" loading="lazy" />
+        ) : (
+          <p className="share-dialog-wordmark share-dialog-wordmark-text">{game.wordmarkAlt}</p>
+        )}
 
         <p id={`share-dialog-description-${id}`} className="sr-only" data-testid="share-dialog-description">{description}</p>
 

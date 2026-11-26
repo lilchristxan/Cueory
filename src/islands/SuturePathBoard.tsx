@@ -1,17 +1,20 @@
 import '../styles/wordpath.css';
 import PrintLogo from './PrintLogo';
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
 import { printGame } from './gameprint';
+import { usePrintRequest } from './useprintrequest';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { playGameCue } from './gamesound';
 import { useSharedGameSettings } from './GameSettings';
+import { formatSolveTime } from './vialotimer';
+import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
 import { shake } from './SutureGame';
-import { loadPicclineSave, savePicclineBoard } from './picclinesave';
+import { loadPicclineMs, loadPicclineSave, savePicclineBoard, savePicclineMs } from './picclinesave';
 import type { Cell } from './suture';
 import {
   announceProgress, backspace, cellView, cuesUsed, firstWordFound, clearPicked, extend, hintsLeft, MIN_WORD, parsePathPuzzle, pathCellLabel, pathDone, pathShareLine,
@@ -20,7 +23,10 @@ import {
   type CellLook, type PathState, type SuturePathPuzzle,
 } from './suturepath';
 
+const PicclineShare = lazy(() => import('./PicclineShare'));
+
 interface Props { puzzle: SuturePathPuzzle; name: string; framed?: boolean }
+
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
 
@@ -103,6 +109,8 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   // A board played earlier today on this device comes back as it was (a finished one stays finished); a new day starts fresh.
   const [restored] = useState(() => loadPicclineSave(puzzle, localDay(today)));
   const [state, setState] = useState<PathState>(() => restored ?? startPath());
+  /** The board was already complete when the page opened: no card is thrown at the player again ("share" still offers it). */
+  const restoredDone = Boolean(restored && pathDone(restored, puzzle));
   const current = useRef(state);
   const [focused, setFocused] = useState(0);
   const [said, setSaid] = useState('');
@@ -116,7 +124,7 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   const [finger, setFinger] = useState<{ x: number; y: number } | null>(null);
   const [printNote, setPrintNote] = useState('');
   const quietClickUntil = useRef(0);
-  const { soundAllowed } = useSharedGameSettings();
+  const { soundAllowed, settings: prefs, update: updateShared } = useSharedGameSettings();
   const sound = useRef(true);
   sound.current = soundAllowed();
   const help = useId();
@@ -124,16 +132,76 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
   const title = useId();
   const done = pathDone(state, puzzle);
   const total = puzzle.words.length;
+  // The solve timer (Christian, 25 Nov 2026): starts at the first letter, stops at the last answer, pauses in a hidden
+  // tab. It is saved with the board, so a reload carries on from where it was.
+  const savedMs = useState(() => loadPicclineMs(puzzle, localDay(today)))[0];
+  const timer = useRef<SolveTimer>(
+    restoredDone
+      ? { elapsed: savedMs ?? 0, since: undefined, started: savedMs !== undefined, stopped: true }
+      : restored && savedMs !== undefined
+        ? { elapsed: savedMs, since: document.hidden ? undefined : Date.now(), started: true, stopped: false }
+        : newTimer(),
+  );
+  const [timerRunning, setTimerRunning] = useState(() => timer.current.started && !timer.current.stopped);
+  const [solveMs, setSolveMs] = useState<number | undefined>(restoredDone ? savedMs : undefined);
+  const [, setTick] = useState(0);
+  const [shareReady, setShareReady] = useState(restoredDone);
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareButton = useRef<HTMLButtonElement>(null);
   const shared = pathShareLine(state, puzzle, dayLabel(today), name);
   const word = pickedWord(state, puzzle).toLowerCase();
 
   const apply = (next: PathState) => {
     current.current = next;
     setState(next);
-    savePicclineBoard(puzzle, localDay(today), next);
+    const now = Date.now();
+    if (!timer.current.started && (next.picked.length > 0 || next.found.length > 0)) {
+      timer.current = startTimer(timer.current, now, !document.hidden);
+      setTimerRunning(true);
+    }
+    if (pathDone(next, puzzle) && timer.current.started && !timer.current.stopped) {
+      timer.current = stopTimer(timer.current, now);
+      setTimerRunning(false);
+      setSolveMs(timerElapsed(timer.current, now));
+    }
+    savePicclineBoard(puzzle, localDay(today), next, undefined, timer.current.started ? timerElapsed(timer.current, now) : undefined);
   };
 
-  useEffect(() => { if (done && !restored) result.current?.focus(); }, [done]);
+  useEffect(() => {
+    // Thinking time since the last move is saved when the tab is hidden or the page is left, so a reload or a trip to
+    // another page never understates the solve time.
+    const saveNow = () => {
+      if (!timer.current.started) return;
+      // Time only: this tab's board may be older than what another tab saved, and must not overwrite it.
+      savePicclineMs(puzzle, localDay(today), timerElapsed(timer.current, Date.now()));
+    };
+    const onVisibility = () => {
+      const now = Date.now();
+      timer.current = document.hidden ? pauseTimer(timer.current, now) : resumeTimer(timer.current, now);
+      if (document.hidden) saveNow();
+      setTick((n) => n + 1);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('pagehide', saveNow);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pagehide', saveNow);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!timerRunning || !prefs.showTimer) return;
+    const id = window.setInterval(() => setTick((n) => n + 1), 1000);
+    return () => window.clearInterval(id);
+  }, [timerRunning, prefs.showTimer]);
+
+  // The share card opens by itself as soon as the board is finished: state, not a timer (the short wait is a CSS
+  // entrance delay on the card, removed by reduced motion). A board that reopens finished does not throw it again.
+  useEffect(() => {
+    if (shareReady && !restoredDone) setShareOpen(true);
+  }, [shareReady]);
+
+  useEffect(() => { if (done && !restoredDone) result.current?.focus(); }, [done]);
 
   // Measure every letter's circle, again whenever the board changes size (rotation, text size, a narrower window).
   useLayoutEffect(() => {
@@ -179,21 +247,8 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
       tries: state.misses,
       hints: cuesUsed(state),
       specialFirst: specialFoundFirst(state, puzzle),
-      card: {
-        game: 'suture',
-        name,
-        date: dayLabel(today),
-        result: `${state.found.length} / ${total}`,
-        shareResult: `${state.found.length} of ${total} answers, ${cuesUsed(state)} ${cuesUsed(state) === 1 ? 'cue' : 'cues'}`,
-        summary: 'you found every answer on today\'s board.',
-        stats: [
-          { label: 'answers found', value: `${state.found.length}` },
-          { label: 'cues used', value: `${cuesUsed(state)}` },
-          { label: 'the thread found first', value: specialFoundFirst(state, puzzle) ? 'yes' : 'no' },
-        ],
-        path: '/play/word-path',
-      },
     });
+    setShareReady(true);
   }, [done]);
 
   const send = () => {
@@ -326,6 +381,8 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
     }
     printGame('suture');
   };
+  // The Frame's printer button announces the print; this is what the old print button ran.
+  usePrintRequest('suture', printPuzzle);
 
   // The lines that join each found answer and the word being picked, from circle edge to circle edge.
   const lines: Line[] = [];
@@ -367,17 +424,20 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
         framed={framed}
         name={name}
         help={howToPlay}
-        end={
-          <button type="button" className="wordpath-round" aria-label="print" data-testid="suture-print" onClick={printPuzzle}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
-              <path d="M6 9V3h12v6" />
-              <rect x="3" y="9" width="18" height="9" rx="2" />
-              <path d="M7 14h10v7H7z" />
-            </svg>
-          </button>
+        settings={
+          <fieldset>
+            <legend>{name}</legend>
+            <label className="game-settings-option">
+              <span>show the timer</span>
+              <input type="checkbox" checked={prefs.showTimer} onChange={() => updateShared({ showTimer: !prefs.showTimer })} data-testid="suture-show-timer" />
+            </label>
+          </fieldset>
         }
       />
       {printNote && <p className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-print-note" data-print-hidden>{printNote}</p>}
+      <p className="wordpath-time" data-testid="suture-time">
+        {prefs.showTimer && <span>time: {formatSolveTime(timerElapsed(timer.current, Date.now()))}</span>}
+      </p>
       <div className="wordpath-panel -mx-(--wordpath-bleed) mt-6 sm:mx-0 sm:mt-0 sm:px-(--spacing-stack)">
       <div
         ref={board}
@@ -499,7 +559,29 @@ export function PathBoard({ puzzle, name, framed = false }: Props) {
         <div ref={result} tabIndex={-1} className="mt-6 rounded-md border border-control p-4" data-testid="suture-result" data-print-hidden>
           <p className="text-lg font-medium">board complete.</p>
           <p className="mt-2">{shared}</p>
-          <button type="button" className={`${button} mt-3`} onClick={share}>copy my result</button>
+          {solveMs !== undefined && <p className="mt-1 text-ink-soft" data-testid="suture-solve-time">solve time {formatSolveTime(solveMs)}.</p>}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" className={button} onClick={share}>copy my result</button>
+            {shareReady && (
+              <button ref={shareButton} type="button" className={button} onClick={() => setShareOpen(true)} data-testid="suture-share-open">share</button>
+            )}
+          </div>
+          {shareReady && (
+            <Suspense fallback={null}>
+              <PicclineShare
+                open={shareOpen}
+                onClose={() => {
+                  setShareOpen(false);
+                  requestAnimationFrame(() => shareButton.current?.focus());
+                }}
+                found={state.found.map((index) => puzzle.words[index]!.special)}
+                solveMs={solveMs}
+                date={today}
+                resultLine={shared}
+                siteUrl={site.url}
+              />
+            </Suspense>
+          )}
           {copied && <p className="mt-2 text-sm text-ink-soft" aria-live="polite">{copied}</p>}
         </div>
       )}

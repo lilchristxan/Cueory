@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { printGame } from './gameprint';
+import { usePrintRequest } from './useprintrequest';
+import { requestPrint } from './gameprintevent';
 import { GameHelpButton, GameHelpDialog, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
-import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
-import { GameSettingsDialog } from './GameSettings.tsx';
+import { deleteStats, forgetHeldRounds, heldRounds, loadStats, localDay, reportStatsChanged } from './gameresults';
+import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
+import { useStatsVisible } from './gamestatsgate';
+import { dayLabel } from './daily';
+import { site } from '../config/site';
+import { useRefreshOnStatsChange } from './finishstatsrefresh';
+import { GameSettingsDialog, useSharedGameSettings } from './GameSettings.tsx';
 import { announceFrameListening, frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 import { playGameCue, type GameCue } from './gamesound';
 import { GAME_SETTINGS_EVENT, GAME_SETTINGS_STORAGE_KEY, gameSoundAllowed, loadGameSettings, parseGameSettings, type SharedGameSettings } from './gamesettings';
@@ -31,6 +38,18 @@ function firstOpen(puzzle: readonly number[]): number {
   const index = puzzle.findIndex((value) => value === 0);
   return index < 0 ? 0 : index;
 }
+const SudokuShare = lazy(() => import('./SudokuShare'));
+
+type FinishStats = { on: false } | { on: true; stats: DailyStats };
+
+/** The same numbers the stats panel shows, read once the puzzle is solved (only if the player turned stats on). */
+function finishStats(day: string): FinishStats {
+  const saved = loadStats(browserStorage(), day);
+  if (!saved.on) return { on: false };
+  const all = heldRounds().reduce<GameStats>((kept, round) => recordResult(kept, round), saved.stats);
+  return { on: true, stats: dailyStats(all, 'triage', day, 1) };
+}
+
 export default function SudokuGame({ framed = false }: { framed?: boolean } = {}) {
   const today = useMemo(() => new Date(), []);
   const day = useMemo(() => localDay(today), [today]);
@@ -60,6 +79,12 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const confirmForgetAllButton = useRef<HTMLButtonElement>(null);
   const restoreForgetAllFocus = useRef(false);
   const solvedResult = useRef<HTMLDivElement>(null);
+  const statsVisible = useStatsVisible();
+  useSharedGameSettings();
+  const [finish, setFinish] = useState<FinishStats>({ on: false });
+  const [shareReady, setShareReady] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareButton = useRef<HTMLButtonElement>(null);
   const cells = useRef(new Map<number, HTMLButtonElement>());
   const { entries, marks, notes } = board;
   const solved = entries.every((value, index) => value === puzzle.solution[index]);
@@ -160,6 +185,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setSelected(firstOpen(puzzle.puzzle));
     setSeconds(0); setErrors(0); setPaused(false); setAuto(settings.autoCandidates);
     setSaid(`${LEVEL_LABELS[level]} puzzle ready. ${LEVEL_RULES[level].givens} given numbers.`); reported.current = false;
+    // A new puzzle or level starts a new card: the next solve opens it again, with that level and fresh numbers.
+    setShareReady(false); setShareOpen(false); setFinish({ on: false });
   }, [puzzle]);
 
   useEffect(() => {
@@ -190,8 +217,6 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     // The shared "game sounds" switch silences every game, sudoku's solve sound too: its latest value, as followed above.
     if (gameSoundAllowed(shared.current ?? loadGameSettings(browserStorage()), settings.playSound)) playGameCue('solved');
     const result = getResult({ day, level, seconds, errors, solved: true });
-    // Queue the display result even if the separate host island has not hydrated yet.
-    showResultCard(sudokuResultCard(result));
     // Keep the existing public completion event for other observers. The host no longer consumes it.
     window.dispatchEvent(new CustomEvent('cueory:sudoku-solved', { detail: result }));
     // The shared stats record (and /play's daily status) count sudoku like every other game.
@@ -200,8 +225,17 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     const now = keepSudokuSolve(browserStorage(), day, { level, day, seconds });
     reportStatsChanged();
     setKept(now);
+    setFinish(finishStats(localDay(new Date())));
+    setShareReady(true);
     setSaid(`solved in ${result.time} with ${errors} ${errors === 1 ? 'error' : 'errors'}.${now.on ? ' added to your sudoku stats.' : ''}`);
   }, [solved, day, level, seconds, errors, settings.playSound]);
+
+  // The share card opens as soon as the solve is recorded: state, not a timer (the short wait is a CSS entrance delay on the card).
+  useEffect(() => {
+    if (shareReady) setShareOpen(true);
+  }, [shareReady]);
+
+  useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))), [SUDOKU_STATS_STORAGE_KEY]);
 
   useEffect(() => { saveSudokuSettings(browserStorage(), settings); }, [settings]);
 
@@ -384,6 +418,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   };
   // The shared print helper (Task 641): marks the page for sudoku's print rules and clears the mark after printing.
   const printPuzzle = () => printGame('sudoku');
+  // The Frame's printer button announces the print; this is what the old toolbar button ran.
+  usePrintRequest('sudoku', printPuzzle);
   const runFromSettings = (action: () => void) => {
     setSettingsOpen(false);
     action();
@@ -404,7 +440,6 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         <button type="button" className="sudoku-icon-button sudoku-pause-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} disabled={solved} onClick={togglePause}>{paused
           ? <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M8.5 6.5v11l9-5.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
           : <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M9 6.5v11M15 6.5v11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>}</button>
-        <button type="button" className="sudoku-icon-button print-control" aria-label="print this puzzle" onClick={printPuzzle}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M7 9V4h10v5M7 17H5.5A2.5 2.5 0 0 1 3 14.5v-3A2.5 2.5 0 0 1 5.5 9h13a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H17M7 14h10v6H7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
         {!framed && <button type="button" className="sudoku-icon-button" aria-label="sudoku stats" aria-expanded={statsOpen} onClick={openStats}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M5 20V11M12 20V5M19 20v-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg></button>}
         {!framed && <GameHelpButton help={help} name={gameName('triage')} className="sudoku-icon-button" />}
         {!framed && statsOpen && <div className="sudoku-how sudoku-stats" role="region" aria-label="sudoku stats" data-testid="sudoku-stats">
@@ -465,7 +500,19 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         </div>
       </div>
     </div>
-    {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
+    {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p>{shareReady && <button ref={shareButton} type="button" className="sudoku-text-button" onClick={() => setShareOpen(true)} data-testid="sudoku-share-open">share</button>}</div>}
+    {shareReady && <Suspense fallback={null}>
+      <SudokuShare
+        open={shareOpen}
+        onClose={() => { setShareOpen(false); requestAnimationFrame(() => shareButton.current?.focus()); }}
+        level={level}
+        seconds={seconds}
+        date={today}
+        account={statsVisible && finish.on ? { winPercent: finish.stats.winPercent, streak: finish.stats.currentStreak } : undefined}
+        resultLine={`${site.wordmarkName} ${gameName('triage')}, ${dayLabel(today).toLowerCase()}: ${LEVEL_LABELS[level]} in ${elapsed}, ${errors} ${errors === 1 ? 'error' : 'errors'}.`}
+        siteUrl={site.url}
+      />
+    </Suspense>}
     {/* The same settings dialog as the other games (#823): the shared settings first, then sudoku's own. */}
     {framed && <GameHelpDialog help={help} name={gameName('triage')} />}
     <GameSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="sudoku settings" returnFocusTo={framed ? undefined : settingsButton}>
@@ -492,7 +539,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
           <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(clearCell)} disabled={paused || solved}>clear cell</button>
           <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(checkPuzzle)} disabled={paused || solved}>check puzzle</button>
           <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(togglePause)} disabled={solved}>{paused ? 'resume puzzle' : 'pause puzzle'}</button>
-          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(() => requestAnimationFrame(printPuzzle))}>print this puzzle</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(() => requestAnimationFrame(() => requestPrint('sudoku')))}>print this puzzle</button>
         </div>
       </fieldset>
       <fieldset>

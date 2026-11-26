@@ -40,3 +40,9 @@ export function stopTimer(t: SolveTimer, now: number): SolveTimer {
 export function timerElapsed(t: SolveTimer, now: number): number {
   return t.elapsed + (t.since === undefined ? 0 : Math.max(0, now - t.since));
 }
+
+/** "0:42", "12:05". Whole seconds, rounded down; never negative. */
+export function formatSolveTime(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}

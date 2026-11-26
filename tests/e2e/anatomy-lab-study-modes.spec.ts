@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { recordCspEvents, withoutWebkitSelectReports } from './csp-allow';
 import { expect, test, type Page } from '@playwright/test';
 import { isDesktopOfEachEngine } from './projects';
+import { openLabPanels } from './anatomy-lab-panels';
 
 const axeTags = ['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'];
 
@@ -29,6 +30,7 @@ async function watchErrors(page: Page): Promise<string[]> {
 async function openLab(page: Page, url = URL) {
   await page.goto(url);
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+  await openLabPanels(page);
   await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole('button', { name: 'reset view' })).toBeEnabled({ timeout: 20_000 });
 }
@@ -63,19 +65,28 @@ test.describe('anatomy lab: preset views and keys', () => {
     const start = await labelSpots(page);
 
     const presets = page.getByRole('group', { name: 'preset views' });
-    for (const name of ['front view', 'back view', 'left side view', 'right side view', 'top view']) {
+    // The orientation panel's three views carry Christian's words, shown under each picture: nothing says front,
+    // back or side. The top view is in the "more" drawer's views list.
+    for (const name of ['anterior view', 'posterior view', 'lateral view']) {
       const button = presets.getByRole('button', { name, exact: true });
       await expect(button).toBeEnabled();
       const box = (await button.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
     }
+    await expect(presets).toContainText('anterior');
+    await expect(presets).toContainText('posterior');
+    await expect(presets).toContainText('lateral');
+    const anterior = presets.getByRole('button', { name: 'anterior view', exact: true });
+    await expect(anterior).toHaveAttribute('aria-pressed', 'true');
 
-    await presets.getByRole('button', { name: 'back view', exact: true }).click();
-    await expect(page.locator('p[aria-live="polite"].sr-only').filter({ hasText: 'back view' })).toHaveCount(1);
+    await presets.getByRole('button', { name: 'posterior view', exact: true }).click();
+    await expect(page.locator('p[aria-live="polite"].sr-only').filter({ hasText: 'posterior view' })).toHaveCount(1);
+    await expect(presets.getByRole('button', { name: 'posterior view', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(anterior).toHaveAttribute('aria-pressed', 'false');
     await expect.poll(() => labelSpots(page)).not.toEqual(start);
     const back = await labelSpots(page);
 
-    await presets.getByRole('button', { name: 'top view', exact: true }).click();
+    await page.getByTestId('anatomy-tools').getByRole('button', { name: 'top', exact: true }).click();
     await expect.poll(() => labelSpots(page)).not.toEqual(back);
 
     await page.getByRole('button', { name: 'reset view' }).click();
@@ -93,7 +104,7 @@ test.describe('anatomy lab: preset views and keys', () => {
     const canvas = page.locator('canvas');
     await canvas.focus();
     await page.keyboard.press('3');
-    await expect(page.locator('p[aria-live="polite"].sr-only').filter({ hasText: 'left side view' })).toHaveCount(1);
+    await expect(page.locator('p[aria-live="polite"].sr-only').filter({ hasText: 'lateral view' })).toHaveCount(1);
     await expect.poll(() => labelSpots(page)).not.toEqual(start);
     await page.keyboard.press('0');
     await expect.poll(() => labelSpots(page)).toEqual(start);
@@ -124,7 +135,7 @@ test.describe('anatomy lab: preset views and keys', () => {
     await expect(keys).toHaveAttribute('aria-expanded', 'true');
     const panel = page.getByRole('region', { name: 'keys for the 3D view' });
     await expect(panel).toBeVisible();
-    for (const line of ['turn the model left or right', 'zoom in or out', 'front view', 'top view', 'reset the view']) {
+    for (const line of ['turn the model left or right', 'zoom in or out', 'anterior view', 'top view', 'reset the view']) {
       await expect(panel.getByText(line, { exact: true })).toBeVisible();
     }
     await noSidewaysScroll(page);
@@ -143,7 +154,7 @@ test.describe('anatomy lab: preset views and keys', () => {
     await page.getByRole('button', { name: 'labels' }).click();
     await expect(overlay(page).locator(':scope > span').first()).toBeVisible();
     const start = await labelSpots(page);
-    await page.getByRole('button', { name: 'right side view', exact: true }).click();
+    await page.getByRole('button', { name: 'lateral view', exact: true }).click();
     await expect.poll(() => labelSpots(page)).not.toEqual(start);
     // Labels are laid out a moment after the camera lands (the "behind" check runs on the next frames). Once two
     // readings agree, nothing keeps drifting afterwards: the view stays where the button put it.
@@ -379,7 +390,7 @@ test.describe('anatomy lab: worksheet', () => {
   test('numbers only what is showing, and says why when nothing is', async ({ page }) => {
     await openLab(page);
     await list(page).getByRole('button', { name: 'fixture cube A', exact: true }).click();
-    await page.getByRole('button', { name: 'show only this' }).click();
+    await page.getByRole('button', { name: 'isolate' }).click();
     await page.getByRole('button', { name: 'make a worksheet' }).click();
     await expect(sheet(page)).toBeVisible({ timeout: 20_000 });
     const rows = sheet(page).getByRole('list', { name: 'names to fill in' }).getByRole('listitem');

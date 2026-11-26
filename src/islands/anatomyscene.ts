@@ -63,6 +63,15 @@ export interface LabColors {
   fadedOpacity: number;
   /** The interface font (--font-body). */
   font: string;
+  /** The lab's rim lights (--lab-rim*): color and strength; a strength of 0 means no rim light. */
+  rim: string;
+  rimStrength: number;
+  rimSoft: string;
+  rimSoftStrength: number;
+  /** The skin's outline (--lab-skin-outline*): color, how tightly it hugs the silhouette, and how strong it is. */
+  skinOutline: string;
+  skinOutlinePower: number;
+  skinOutlineAlpha: number;
 }
 
 export function readColors(root: HTMLElement = document.documentElement): LabColors {
@@ -70,6 +79,10 @@ export function readColors(root: HTMLElement = document.documentElement): LabCol
   const get = (name: string) => style.getPropertyValue(name).trim();
   const alpha = Number.parseFloat(get('--model-dim-alpha'));
   const faded = Number.parseFloat(get('--anatomy-faded-opacity'));
+  const number = (name: string, fallback: number) => {
+    const value = Number.parseFloat(get(name));
+    return Number.isFinite(value) ? value : fallback;
+  };
   return {
     page: get('--color-page'),
     surface: get('--color-surface'),
@@ -82,6 +95,13 @@ export function readColors(root: HTMLElement = document.documentElement): LabCol
     dimAlpha: Number.isFinite(alpha) ? alpha : 0.2,
     fadedOpacity: Number.isFinite(faded) ? faded : 0.35,
     font: get('--font-body') || 'sans-serif',
+    rim: get('--lab-rim'),
+    rimStrength: number('--lab-rim-strength', 0),
+    rimSoft: get('--lab-rim-soft'),
+    rimSoftStrength: number('--lab-rim-soft-strength', 0),
+    skinOutline: get('--lab-skin-outline'),
+    skinOutlinePower: number('--lab-skin-outline-power', 2.6),
+    skinOutlineAlpha: number('--lab-skin-outline-alpha', 0.55),
   };
 }
 
@@ -203,6 +223,17 @@ export interface LabScene {
   focusOn(id: string): boolean;
   /** Turns the whole model to stand or lie on its back, then shows it from that posture's home view. */
   setPosture(posture: Posture): void;
+  /**
+   * The structures drawn as a glowing outline instead of a solid surface (the skin system), while anything else is
+   * showing. A selected one is drawn solid; an outlined one is never picked, so a tap reaches what is behind it.
+   */
+  setOutlined(ids: ReadonlySet<string>): void;
+  /** "Spread structures apart": 0 to 1 moves every structure away from the model's middle; 0 puts them back. */
+  setSpread(fraction: number): void;
+  /** A small picture of the visible model from a preset view, as a data: URL, or null with nothing to draw. */
+  thumbnail(preset: ViewPreset, width: number, height: number): string | null;
+  /** Where each structure's center falls in such a picture, 0 to 1 across and down; structures not loaded are left out. */
+  thumbnailMarks(preset: ViewPreset, width: number, height: number, ids: readonly string[]): Map<string, { x: number; y: number }>;
   /** Every loaded structure's world-space box (min and max corners), for "what is nearby" (Task 178). */
   boundsById(): Map<string, { min: { x: number; y: number; z: number }; max: { x: number; y: number; z: number } }>;
   /** Where the camera is, what it looks at and which way is up, as plain number triples (saved views, compare view). */
@@ -229,6 +260,10 @@ interface Options {
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
+/** "Spread structures apart" at 100% moves each structure this share of the model's largest size away from its middle. */
+const SPREAD_REACH = 0.35;
+/** The orientation thumbnails leave a little room round the model (1 is a tight fit). */
+const THUMBNAIL_MARGIN = 1.08;
 /** How long the camera must be still before the lab checks which labeled structures it can see. */
 const VISIBILITY_IDLE_MS = 120;
 /** The ID picture's size: about this many pixels, whatever the view's size (enough to find small visible parts). */
@@ -253,6 +288,40 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
   const key = new THREE.DirectionalLight(undefined, 2.3);
   key.position.set(0.6, 0.8, 1);
   camera.add(key); // the light moves with the camera, so the side facing the student is always lit
+  // Rim lights: from behind the model, to its left and right, in copper (--lab-rim*). They sit in the camera's frame
+  // and aim at the camera's own origin, so whichever way the student turns the model its edges catch the light.
+  const rimLight = new THREE.DirectionalLight(undefined, 0);
+  rimLight.position.set(-1, 0.35, -2);
+  const rimSoftLight = new THREE.DirectionalLight(undefined, 0);
+  rimSoftLight.position.set(1, 0.6, -2);
+  camera.add(rimLight, rimLight.target, rimSoftLight, rimSoftLight.target);
+  const applyRim = () => {
+    if (colors.rim) rimLight.color.set(colors.rim);
+    if (colors.rimSoft) rimSoftLight.color.set(colors.rimSoft);
+    rimLight.intensity = colors.rim ? colors.rimStrength : 0;
+    rimSoftLight.intensity = colors.rimSoft ? colors.rimSoftStrength : 0;
+  };
+  // The skin's outline: bright where the surface turns edge-on to the camera (a fresnel rim), clear in the middle.
+  const outlineMaterial = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: { color: { value: new THREE.Color() }, power: { value: 2.6 }, alpha: { value: 0.55 } },
+    vertexShader: `varying float edge; uniform float power;
+      void main() {
+        vec3 n = normalize(normalMatrix * normal);
+        vec3 v = normalize(-(modelViewMatrix * vec4(position, 1.0)).xyz);
+        edge = pow(1.0 - abs(dot(n, v)), power);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: `uniform vec3 color; uniform float alpha; varying float edge;
+      void main() {
+        gl_FragColor = vec4(color, edge * alpha);
+        #include <colorspace_fragment>
+      }`,
+  });
+  let outlined: ReadonlySet<string> = new Set();
+  applyRim();
 
   let needsRender = true;
   // Event handlers can wake the scheduler without keeping a WebGL loop alive while idle.
@@ -288,6 +357,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
   controls.addEventListener('change', onCameraChange);
 
   let root: THREE.Object3D | null = null;
+  let spread = 0;
   let meshesById = new Map<string, THREE.Mesh[]>();
   let order: string[] = [];
   let centers = new Map<string, THREE.Vector3>();
@@ -361,6 +431,14 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
 
   function disposeModel() {
     if (!root) return;
+    // Give every mesh its own material back first, so disposing the model also releases those.
+    for (const meshes of meshesById.values()) {
+      for (const mesh of meshes) {
+        const solid = mesh.userData['solidMaterial'] as THREE.Material | undefined;
+        if (solid) mesh.material = solid;
+      }
+    }
+    spread = 0;
     scene.remove(root);
     disposeAnatomyMeshResources(root);
     root = null;
@@ -376,12 +454,35 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     disposeAnatomyMaterials(oldIdMaterials);
   }
 
+  /** The lab's own solid material for a mesh, kept while the outline material is on it. */
+  const solidOf = (mesh: THREE.Mesh) => {
+    const saved = mesh.userData['solidMaterial'] as THREE.MeshLambertMaterial | undefined;
+    if (saved) return saved;
+    mesh.userData['solidMaterial'] = mesh.material;
+    return mesh.material as THREE.MeshLambertMaterial;
+  };
+
   function applyAppearance() {
     const { hidden, selected } = appearance;
     const faded = appearance.faded ?? new Set<string>();
     const highlighted = visibleSelection(selected, hidden);
+    applyRim();
+    if (colors.skinOutline) outlineMaterial.uniforms['color']!.value.set(colors.skinOutline);
+    outlineMaterial.uniforms['power']!.value = colors.skinOutlinePower;
+    outlineMaterial.uniforms['alpha']!.value = colors.skinOutlineAlpha;
+    // The skin is an outline only while something else is showing; alone, it is drawn as a solid model.
+    const innerShown = outlined.size > 0 && order.some((id) => !outlined.has(id) && !hidden.has(id));
     order.forEach((id, index) => {
       const isSelected = id === highlighted;
+      if (innerShown && outlined.has(id) && !isSelected) {
+        for (const mesh of meshesById.get(id) ?? []) {
+          solidOf(mesh);
+          mesh.visible = !hidden.has(id);
+          mesh.material = outlineMaterial;
+          mesh.renderOrder = 5;
+        }
+        return;
+      }
       const dim = highlighted !== null && !isSelected;
       // A faded structure stays see-through even while selected; dimming (another one selected) goes further.
       const fade = faded.has(id);
@@ -389,7 +490,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       const color = isSelected ? colors.modelSelected : index % 2 === 0 ? colors.model : colors.modelAlt;
       for (const mesh of meshesById.get(id) ?? []) {
         mesh.visible = !hidden.has(id);
-        const material = mesh.material as THREE.MeshLambertMaterial;
+        const material = solidOf(mesh);
+        mesh.material = material;
         material.color.set(color);
         material.transparent = opacity < 1;
         material.opacity = opacity;
@@ -417,6 +519,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
   // conversion, so the bytes read back are exactly the codes written.
   let idMaterials: THREE.MeshBasicMaterial[] = [];
   const nothing = new THREE.MeshBasicMaterial({ color: new THREE.Color(0, 0, 0) });
+  // For meshes that must not show up in the ID picture and must not hide anything behind them (the skin's outline).
+  const seeThrough = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
   const idTarget = new THREE.WebGLRenderTarget(1, 1);
 
   function idMaterialFor(index: number): THREE.MeshBasicMaterial {
@@ -445,6 +549,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
           const isSelected = id === highlighted;
           for (const mesh of meshesById.get(id) ?? []) {
             remember(mesh);
+            if (mesh.material === outlineMaterial) {
+              mesh.material = seeThrough;
+              continue;
+            }
             const material = idMaterialFor(index);
             material.depthTest = !isSelected;
             mesh.material = material;
@@ -750,9 +858,129 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     // The boxes integrate() worked out used the group's own matrices; with the model turned (lying), work them out
     // again from the world.
     if (posture !== 'standing') recomputeBounds();
+    if (spread > 0) applySpread();
     applyAppearance();
     requestRender();
     return result;
+  }
+
+  /** Puts every structure back, then moves each away from the model's middle by `spread` of the model's size. */
+  function applySpread() {
+    if (!root) return;
+    for (const meshes of meshesById.values()) {
+      for (const mesh of meshes) {
+        const moved = mesh.userData['spreadOffset'] as THREE.Vector3 | undefined;
+        if (moved) {
+          mesh.position.sub(moved);
+          delete mesh.userData['spreadOffset'];
+        }
+      }
+    }
+    recomputeBounds();
+    if (spread > 0 && boxes.size > 0) {
+      const all = new THREE.Box3();
+      for (const box of boxes.values()) all.union(box);
+      const middle = all.getCenter(new THREE.Vector3());
+      const reach = spread * Math.max(...all.getSize(new THREE.Vector3()).toArray()) * SPREAD_REACH;
+      for (const [id, meshes] of meshesById) {
+        const center = centers.get(id);
+        if (!center || meshes.length === 0) continue;
+        const away = center.clone().sub(middle);
+        if (away.lengthSq() < 1e-12) continue;
+        away.setLength(reach);
+        for (const mesh of meshes) {
+          if (!mesh.parent) continue;
+          mesh.parent.updateWorldMatrix(true, false);
+          const inverse = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().copy(mesh.parent.matrixWorld).invert());
+          const local = away.clone().applyMatrix3(inverse);
+          mesh.position.add(local);
+          mesh.userData['spreadOffset'] = local;
+        }
+      }
+      recomputeBounds();
+    }
+    requestRender();
+  }
+
+  const thumbnailTarget = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
+  thumbnailTarget.texture.colorSpace = THREE.SRGBColorSpace;
+  const thumbnailCamera = new THREE.PerspectiveCamera(35, 1, 0.1, 1000);
+
+  /** Points the spare camera at the visible model from a preset view; null with nothing to draw. */
+  function frameThumbnail(preset: ViewPreset, width: number, height: number): THREE.PerspectiveCamera | null {
+    const box = visibleBox();
+    if (!box || !root || width < 1 || height < 1) return null;
+    const center = box.getCenter(new THREE.Vector3());
+    const dir = rotateX(presetDirection(preset), postureAngleX(posture));
+    const camSize = boxSizeInCameraFrame(box.getSize(new THREE.Vector3()), dir);
+    const cam = thumbnailCamera;
+    cam.fov = camera.fov;
+    cam.aspect = width / height;
+    const distance = fitDistance(camSize, cam.fov, cam.aspect) * THUMBNAIL_MARGIN;
+    cam.near = Math.max(distance / 200, 1e-3);
+    cam.far = distance * 20;
+    cam.updateProjectionMatrix();
+    const position = cameraForPreset(preset, center, distance, posture);
+    cam.position.set(position.x, position.y, position.z);
+    cam.up.copy(UP);
+    cam.lookAt(center);
+    cam.updateMatrixWorld(true);
+    return cam;
+  }
+
+  /** Where each structure's center falls in a thumbnail of the visible model (0 to 1 across and down). */
+  function thumbnailMarks(preset: ViewPreset, width: number, height: number, ids: readonly string[]) {
+    const cam = frameThumbnail(preset, width, height);
+    const out = new Map<string, { x: number; y: number }>();
+    if (!cam) return out;
+    for (const id of ids) {
+      const box = boxes.get(id);
+      if (!box || (meshesById.get(id)?.length ?? 0) === 0) continue;
+      const point = box.getCenter(new THREE.Vector3()).project(cam);
+      out.set(id, { x: (point.x + 1) / 2, y: (1 - point.y) / 2 });
+    }
+    return out;
+  }
+
+  function thumbnail(preset: ViewPreset, width: number, height: number): string | null {
+    const cam = frameThumbnail(preset, width, height);
+    if (!cam) return null;
+    // The lights live in the main camera's frame; borrow them so this picture is lit as if it were the view.
+    const lights = [key, rimLight, rimLight.target, rimSoftLight, rimSoftLight.target];
+    scene.add(cam);
+    cam.add(...lights);
+    const previousTarget = renderer.getRenderTarget();
+    const previousClear = renderer.getClearColor(new THREE.Color());
+    const previousAlpha = renderer.getClearAlpha();
+    const pixels = new Uint8Array(width * height * 4);
+    try {
+      thumbnailTarget.setSize(width, height);
+      renderer.setRenderTarget(thumbnailTarget);
+      renderer.setClearColor(new THREE.Color(0, 0, 0), 0);
+      renderer.clear();
+      renderer.render(scene, cam);
+      renderer.readRenderTargetPixels(thumbnailTarget, 0, 0, width, height, pixels);
+    } catch {
+      return null;
+    } finally {
+      renderer.setRenderTarget(previousTarget);
+      renderer.setClearColor(previousClear, previousAlpha);
+      camera.add(...lights);
+      scene.remove(cam);
+      requestRender();
+    }
+    const out = document.createElement('canvas');
+    out.width = width;
+    out.height = height;
+    const ctx = out.getContext('2d');
+    if (!ctx) return null;
+    // WebGL rows run bottom to top.
+    const image = ctx.createImageData(width, height);
+    for (let y = 0; y < height; y++) {
+      image.data.set(pixels.subarray((height - 1 - y) * width * 4, (height - y) * width * 4), y * width * 4);
+    }
+    ctx.putImageData(image, 0, 0);
+    return out.toDataURL('image/png');
   }
 
   const raycaster = new THREE.Raycaster();
@@ -762,7 +990,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     if (rect.width === 0 || rect.height === 0) return null;
     const pointer = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
-    const candidates = order.flatMap((id) => (appearance.hidden.has(id) ? [] : meshesById.get(id)!));
+    const candidates = order.flatMap((id) => (appearance.hidden.has(id) ? [] : meshesById.get(id)!))
+      .filter((mesh) => mesh.material !== outlineMaterial);
     const hits = raycaster.intersectObjects(candidates, false)
       .map((hit) => hit.object.userData['structureId'])
       .filter((id): id is string => typeof id === 'string');
@@ -1047,6 +1276,18 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     viewPreset,
     focusOn,
     setPosture,
+    setOutlined(ids) {
+      outlined = ids;
+      applyAppearance();
+    },
+    setSpread(fraction) {
+      const next = Number.isFinite(fraction) ? Math.min(1, Math.max(0, fraction)) : 0;
+      if (next === spread) return;
+      spread = next;
+      applySpread();
+    },
+    thumbnail,
+    thumbnailMarks,
     boundsById,
     cameraState,
     applyCameraState,
@@ -1066,7 +1307,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       controls.removeEventListener('change', onCameraChange);
       controls.dispose();
       disposeModel();
-      disposeAnatomyMaterials([nothing]);
+      disposeAnatomyMaterials([nothing, seeThrough, outlineMaterial]);
+      thumbnailTarget.dispose();
       idTarget.dispose();
       renderer.dispose();
     },

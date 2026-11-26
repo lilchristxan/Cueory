@@ -527,7 +527,7 @@ test.describe('daily games: sudoku (Task 625)', () => {
     await editable.click();
     await page.keyboard.press('1');
     await page.evaluate(() => { window.print = () => {}; });
-    await game(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.getByTestId('game-frame-print').click();
     await expect(page.locator('html')).toHaveAttribute('data-print-game', 'sudoku');
     await page.emulateMedia({ media: 'print' });
     await expect(page.getByTestId('pulse')).toBeHidden();
@@ -555,11 +555,11 @@ test.describe('daily games: sudoku (Task 625)', () => {
       await cells(page).nth(index).click();
       await page.keyboard.press(String(daily.solution[index]));
     }
-    const resultDialog = page.getByTestId('game-result-dialog');
-    await expect(resultDialog.getByRole('button', { name: 'close results' })).toBeFocused();
-    await resultDialog.getByRole('button', { name: 'close results' }).click();
+    // The share card opens over the board; closing it hands focus to the result's share button.
+    await expect(page.getByTestId('share-dialog')).toBeFocused();
+    await page.getByTestId('share-dialog-close').click();
     const result = page.getByTestId('sudoku-result');
-    await expect(result).toBeFocused();
+    await expect(page.getByTestId('sudoku-share-open')).toBeFocused();
     await expect(result).toContainText('solved.');
     await expect(result).toContainText('0 errors');
     for (const copy of await result.locator('p').all()) {
@@ -684,7 +684,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
     await board(page).getByRole('button', { name: '1, row 1, column 2, 1 across, empty' }).click();
     await page.keyboard.type('a');
     await page.evaluate(() => { window.print = () => undefined; });
-    await board(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.getByTestId('game-frame-print').click();
     await expect(page.locator('html')).toHaveAttribute('data-print-game', 'crossword');
     await page.emulateMedia({ media: 'print' });
     await expect(page.locator('#pulse-heading')).toBeHidden();
@@ -811,7 +811,7 @@ test.describe('daily games: crossword levels (Task 627)', () => {
   test('printing a hard board removes scroll containment', async ({ page }) => {
     await page.getByTestId('crossword-levels').getByRole('button', { name: 'large, 15 by 15' }).click();
     await page.evaluate(() => { window.print = () => undefined; });
-    await board(page).getByRole('button', { name: 'print this puzzle' }).click();
+    await page.getByTestId('game-frame-print').click();
     await page.emulateMedia({ media: 'print' });
     const region = board(page).getByRole('region', { name: 'crossword board scroll area' });
     await expect(region).toHaveCSS('overflow-x', 'visible');
@@ -884,6 +884,7 @@ test.describe('daily games: private stats (D-76), always kept (2026-11-17)', () 
   const solveOnItsPage = async (page: Page) => {
     await page.goto('/play/vialo');
     await expect(page.getByTestId('vialo')).toBeVisible();
+    await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1); // hydrated before the first guess
     await solveVialo(page);
   };
   test.beforeEach(async ({ page }) => {

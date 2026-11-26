@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
+import { openLabPanels } from './anatomy-lab-panels';
 
 for (const colorScheme of ['light', 'dark'] as const) {
   test(`unavailable lesson system cannot highlight a fallback structure (${colorScheme})`, async ({ page }) => {
@@ -7,6 +8,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     for (const system of ['missing-system', '../x', '']) {
       await page.goto(`/preview/anatomy-lab?fixture&system=${encodeURIComponent(system)}&structure=FIX001`);
       await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+      await openLabPanels(page);
       const target = page.getByRole('button', { name: 'fixture cube A', exact: true });
       await expect(target).toBeEnabled({ timeout: 20_000 });
       await expect(target).toHaveAttribute('aria-pressed', 'false');
@@ -18,6 +20,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await page.goto('/preview/anatomy-lab?fixture&system=fixture&structure=FIX001');
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await openLabPanels(page);
     const target = page.getByRole('button', { name: 'fixture cube A', exact: true });
     await expect(target).toHaveAttribute('aria-pressed', 'true', { timeout: 20_000 });
     await page.getByRole('button', { name: 'fixture cube B', exact: true }).click();

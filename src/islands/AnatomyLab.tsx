@@ -11,17 +11,28 @@ import {
 import { createGeneration, createOnDemandLoader, publishAnatomyFile, knownMissingStructureIds, filesForLayer, idsForFiles, initialLayerPlan, firstLayer, layerNeedsReveal, visibilityAfterLayerDownload, lazyPeel, lazyRestore, revealTargetPlan, needsBulkLayerConfirmation, needsSavedViewConsent, showAllPlan, structureLoadNote, type OnDemandLoader } from './anatomylazy';
 import type { CameraState, LabColors, LabScene, LoadResult } from './anatomyscene';
 import { createAnatomyOpenGate } from './anatomyopen';
+import '../styles/anatomy-lab.css';
 import AnatomyLabCover from './AnatomyLabCover';
 import { breadcrumb, siblings } from './anatomyhierarchy';
 import { boxesFromMeshes, expandNearby, nearbyStructures } from './anatomynearby';
 import { canSpeak, speak, stop as stopSpeaking } from './anatomyspeech';
+import { groupIndex, indexHeading, indexStep, inspectorRows, leaderSegment } from './anatomyinspector';
+import { flagMailto } from '../scripts/footer';
+import {
+  backspace as roundBackspace, currentTarget, hintLetter, nextQuestion,
+  roundFinished, setFirstLetters, setNearby, showAnswer, skipQuestion, startRound, typeLetter, type StudyRound,
+} from './anatomyround';
+import { StudyCells, StudyEntryPanel, StudyRoundSide, usesTouch, type StudyChoice } from './AnatomyStudyRound';
+import { site } from '../config/site';
 import { createAnatomyStudy, createReviewQueueRequestGuard, createSavedViewsRequestGuard, createStudyIdentityGuard, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow, type StudyIdentitySnapshot } from './anatomystudy';
 import { getSupabase } from './supabaseclient';
 import { STRUCTURE_PAGE_SIZE, visibleStructureGroups } from './anatomy-list-window';
 import { anatomyTriangleNote } from './anatomybudget';
 import {
   KEY_MAP,
+  ORIENTATIONS,
   VIEW_PRESETS as NAV_VIEW_PRESETS,
+  VIEW_WORDS,
   canvasKeyAction,
   coverDownloadNote,
   focusFromSearch,
@@ -29,6 +40,10 @@ import {
   initialSystemKey,
   linkedStructureId,
   presetDirection,
+  tappableIds,
+  tappableRound,
+  spreadBlocksSaving,
+  SPREAD_SAVE_NOTE,
   type ViewPreset,
 } from './anatomyviews';
 import {
@@ -173,11 +188,15 @@ type Props = AnatomyLabProps;
 type Phase = 'cover' | 'opening' | 'open' | 'error';
 type SystemLoad = { state: 'loading' } | { state: 'ready'; systemKey: string; result: LoadResult; publishedFiles: ReadonlySet<string> } | { state: 'error'; message: string };
 
-const primaryButton =
+// Inside the lab's dark frame the buttons are the lab's own pills (src/styles/anatomy-lab.css). The worksheet sits
+// outside the frame, on the page's normal colors, so it keeps the plain buttons.
+const primaryButton = 'lab-btn lab-btn-primary';
+const secondaryButton = 'lab-btn';
+const iconButton = 'lab-btn px-3';
+const plainPrimaryButton =
   'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover disabled:opacity-60';
-const secondaryButton =
+const plainButton =
   'min-h-11 min-w-11 rounded-pill border border-control px-4 py-2 text-sm text-ink aria-pressed:border-button aria-pressed:bg-button aria-pressed:text-on-button disabled:opacity-60';
-const iconButton = 'min-h-11 min-w-11 rounded-pill border border-control px-3 text-ink disabled:opacity-60';
 
 const STEP = Math.PI / 24; // 7.5° a press
 const ZOOM_IN = 0.85;
@@ -236,7 +255,7 @@ function labelNotes(names: ReadonlyMap<string, string>, leftOut: readonly string
   const notes: string[] = [];
   const missing = leftOutNote(leftOut.map((id) => names.get(id) ?? id));
   if (missing) notes.push(`${missing} turn or zoom the model, or hide some structures, to make room.`);
-  if (anyBehind) notes.push(`a label marked ${BEHIND_MARK} names a structure hidden behind others from this side: turn the model to see it.`);
+  if (anyBehind) notes.push(`a label marked ${BEHIND_MARK} names a structure hidden behind others from this view: turn the model to see it.`);
   return notes;
 }
 
@@ -284,6 +303,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [labelsOn, setLabelsOn] = useState(false);
   const [quiz, setQuiz] = useState<QuizState | null>(null);
   const [recall, setRecall] = useState<RecallState | null>(null);
+  const [round, setRound] = useState<StudyRound | null>(null);
+  // The answer cells: a switch or hint hands the keyboard back to them, because typing is handled there.
+  const studyCellsRef = useRef<HTMLDivElement>(null);
+  // Names stay off the screen (labels, search, list, card) while a name is being recalled or tested.
+  const namesHidden = recall !== null || (round !== null && round.mode === 'test' && !roundFinished(round));
   const [typed, setTyped] = useState('');
   const [alone, setAlone] = useState(false);
   const aloneSavedRef = useRef<ReadonlySet<string>>(new Set());
@@ -318,6 +342,29 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [savingViews, setSavingViews] = useState<ReadonlySet<string>>(new Set());
   const [compareKey, setCompareKey] = useState('');
   const [compareState, setCompareState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  // The lab's shell: which side panel is open below the desktop width, the "more" drawer, which orientation is
+  // showing, the orientation thumbnails (pictures of the loaded model) and "spread structures apart" (0 to 1).
+  const [panels, setPanels] = useState({ orientation: false, systems: false, structures: false });
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [orientation, setOrientation] = useState<ViewPreset | 'free' | null>('front');
+  const [thumbs, setThumbs] = useState<Partial<Record<'front' | 'back' | 'left', string>>>({});
+  const [spread, setSpread] = useState(0);
+  // The study round (Task 178, redesign part 3): learn it / test it over the selected group, or find it.
+  const orientationRef = useRef(orientation);
+  orientationRef.current = orientation;
+  const [studyChoice, setStudyChoice] = useState<StudyChoice>('learn');
+  const [studyLocation, setStudyLocation] = useState<{ url: string; marks: ReadonlyMap<string, { x: number; y: number }>; word: string | null } | null>(null);
+  const studyStartRef = useRef(0);
+  const studyGroupRef = useRef<{ name: string; ids: string[] } | null>(null);
+  const studySavedHiddenRef = useRef<ReadonlySet<string>>(new Set());
+  const [touchKeys] = useState(usesTouch);
+  // The ring round the selection and the leader line to the inspector card are moved by hand on every frame.
+  const stageRef = useRef<HTMLDivElement>(null);
+  const ringRef = useRef<HTMLDivElement>(null);
+  const leaderRef = useRef<SVGLineElement>(null);
+  const markedIdRef = useRef<string | null>(null);
+  const indexItemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const labRef = useRef<HTMLDivElement>(null);
   const speechOn = useMemo(() => canSpeak(), []);
   const generation = useMemo(() => createGeneration(), []);
   // An account change aborts outgoing-user picture exports without cancelling
@@ -397,13 +444,48 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const toRestore = lazy ? lazyRestore(layers, hidden) : nextToRestore(layers, hidden);
   const layerGapNote = system?.key === WHOLE_BODY_KEY ? unavailableLayersNote(system.structures) : null;
   const labelIds = useMemo(
-    () => (labelsOn && !quiz && !recall ? labelsToShow(visible, selected) : []),
-    [labelsOn, quiz, recall, visible, selected],
+    () => (labelsOn && !quiz && !namesHidden ? labelsToShow(visible, selected) : []),
+    [labelsOn, quiz, namesHidden, visible, selected],
   );
   labelIdsRef.current = labelIds;
 
   // ── Labels follow the camera: re-laid out after every frame the scene draws ──────────────────────────────────────
+  const updateSelectionMark = useCallback(() => {
+    const ring = ringRef.current;
+    const line = leaderRef.current;
+    const stage = stageRef.current;
+    const canvas = canvasRef.current;
+    if (!ring || !line || !stage || !canvas) return;
+    const off = () => { ring.removeAttribute('data-on'); line.removeAttribute('data-on'); };
+    const id = markedIdRef.current;
+    const point = id ? sceneRef.current?.locate([id])[0] : undefined;
+    const box = canvas.getBoundingClientRect();
+    if (!point || point.x < 0 || point.y < 0 || point.x > box.width || point.y > box.height) { off(); return; }
+    const frame = stage.getBoundingClientRect();
+    const center = { x: box.left - frame.left + point.x, y: box.top - frame.top + point.y };
+    ring.setAttribute('data-on', '');
+    const radius = ring.offsetWidth / 2;
+    ring.style.transform = `translate(${center.x - radius}px, ${center.y - radius}px)`;
+    // The leader only draws where the card floats beside the model (desktop); below that the card sits under it.
+    const heading = document.getElementById('anatomy-name-card');
+    const card = heading?.closest('section');
+    const floating = !!card?.parentElement && getComputedStyle(card.parentElement).position === 'absolute';
+    if (!heading || !card || !floating) { line.removeAttribute('data-on'); return; }
+    const cardBox = card.getBoundingClientRect();
+    const headingBox = heading.getBoundingClientRect();
+    const segment = leaderSegment(center, radius, { x: cardBox.left - frame.left, y: headingBox.top - frame.top + headingBox.height / 2 });
+    if (!segment) { line.removeAttribute('data-on'); return; }
+    line.setAttribute('x1', String(segment.x1));
+    line.setAttribute('y1', String(segment.y1));
+    line.setAttribute('x2', String(segment.x2));
+    line.setAttribute('y2', String(segment.y2));
+    line.setAttribute('data-on', '');
+  }, []);
+  const updateSelectionMarkRef = useRef(updateSelectionMark);
+  updateSelectionMarkRef.current = updateSelectionMark;
+
   const updateLabels = useCallback(() => {
+    updateSelectionMarkRef.current();
     const scene = sceneRef.current;
     const canvas = canvasRef.current;
     const ids = labelIdsRef.current;
@@ -475,6 +557,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSelected(null);
     setQuiz(null);
     setRecall(null);
+    // The old model's study round has nothing to ask about any more.
+    setRound(null);
+    setStudyLocation(null);
+    studyGroupRef.current = null;
     setAlone(false);
     setPending(new Set());
     setLayerError(null);
@@ -495,7 +581,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       if (!openGate.current(attempt)) return;
       const canvas = canvasRef.current;
       if (!canvas) throw new Error('The 3D view could not start.');
-      const getColors = () => readColors();
+      // The lab's own element, so its dark-look tokens (src/styles/tokens.css) apply in Light as in Evening.
+      const getColors = () => readColors(labRef.current ?? undefined);
       const nextColors = getColors();
       const nextScene = createLabScene({
         canvas,
@@ -539,10 +626,16 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setExporting(null);
     setExportNote('');
     scene.clear();
+    setSpread(0);
+    setOrientation('front');
     setLoad({ state: 'loading' });
     setSelected(null);
     setQuiz(null);
     setRecall(null);
+    // The old model's study round has nothing to ask about any more.
+    setRound(null);
+    setStudyLocation(null);
+    studyGroupRef.current = null;
     setAlone(false);
     setPending(new Set());
     setLayerError(null);
@@ -862,6 +955,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setFaded(baseline.faded);
       setSelected(null);
       setQuiz(null);
+      setRound(null);
+      setStudyLocation(null);
+      studyGroupRef.current = null;
       setRecallOn(false);
       setRecallRevealed(false);
       // Newer staging's name-it and printable worksheet are also applied presentation.
@@ -1074,6 +1170,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setSelected(null);
       setQuiz(null);
       setRecall(null);
+      setRound(null);
+      setStudyLocation(null);
+      studyGroupRef.current = null;
       setAlone(false);
       setPending(new Set());
       setLayerError(null);
@@ -1118,6 +1217,28 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (phase === 'error') fallbackHeadingRef.current?.focus();
   }, [phase]);
 
+  // The skin system is drawn as a glowing outline while anything else is showing (src/islands/anatomyscene.ts).
+  const skinIds = useMemo(
+    () => new Set((system?.structures ?? []).filter((structure) => structure.layer === 'skin').map((structure) => structure.id)),
+    [system],
+  );
+  const modelReady = load.state === 'ready';
+  useEffect(() => {
+    if (modelReady) sceneRef.current?.setOutlined(skinIds);
+  }, [modelReady, skinIds]);
+
+  // The orientation panel's three pictures are the loaded model itself, seen from each preset (no image files).
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!modelReady || !scene) return;
+    const next: Partial<Record<'front' | 'back' | 'left', string>> = {};
+    for (const o of ORIENTATIONS) {
+      const url = scene.thumbnail(o.id, 136, 216);
+      if (url) next[o.id] = url;
+    }
+    setThumbs(next);
+  }, [modelReady, systemKey]);
+
   // ── Theme and accessible text sizing ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'open') return;
@@ -1150,7 +1271,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const pickStructure = useCallback(
     (id: string | null) => {
       // "name it" asks about the highlighted structure: a tap must not move the highlight (or announce a name).
-      if (recall) return;
+      if (recall || round) return;
       if (quiz && quiz.target) {
         if (!id) return;
         // Once the answer is shown or found, further clicks must not move the highlight off the target.
@@ -1165,7 +1286,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setSelected((current) => (id === null ? null : current === id ? current : id));
       if (id) setAnnounce(`selected ${names.get(id) ?? id}`);
     },
-    [quiz, recall, names, recordMiss],
+    [quiz, recall, round, names, recordMiss],
   );
 
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -1175,7 +1296,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   };
   const onPointerMove = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     const p = pointerRef.current;
-    if (p && p.id === e.pointerId && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 6) p.moved = true;
+    if (p && p.id === e.pointerId && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 6) {
+      if (!p.moved) setOrientation('free');
+      p.moved = true;
+    }
   };
   const onPointerUp = (e: ReactPointerEvent<HTMLCanvasElement>) => {
     activePointers.current.delete(e.pointerId);
@@ -1185,7 +1309,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     // mouse click, touch contact or pen-tip release can select a structure.
     if (!p || p.id !== e.pointerId || p.moved || e.button !== 0) return;
     // In quizzes, choose the nearest hit rather than favoring a previous selection.
-    if (recall) return;
+    if (recall || round) return;
     const id = sceneRef.current?.pick(e.clientX, e.clientY, quiz === null) ?? null;
     if (id && tapAction(mode, quiz !== null && quiz.target !== null) === 'hide') {
       // Hide mode: the tap hides the structure and selects nothing. Undo brings it back.
@@ -1207,21 +1331,136 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     if (!scene || load.state !== 'ready' || e.altKey || e.ctrlKey || e.metaKey) return;
     const action = canvasKeyAction(e.key, STEP, ZOOM_IN);
     if (!action) return;
-    if (action.kind === 'orbit') scene.orbit(action.yaw, action.pitch);
+    if (action.kind === 'orbit') turn(action.yaw, action.pitch);
     else if (action.kind === 'zoom') scene.zoom(action.factor);
-    else if (action.kind === 'reset') scene.resetView();
+    else if (action.kind === 'reset') resetToHome();
     else showView(action.preset);
     e.preventDefault();
   };
 
-  const showView = (preset: ViewPreset) => {
+  const showView = (requested: ViewPreset) => {
+    // Pressing "lateral" again turns to the opposite side.
+    const preset = requested === 'left' && orientation === 'left' ? 'right' : requested;
     sceneRef.current?.viewFrom(presetDirection(preset));
+    setOrientation(preset);
     setAnnounce(`${NAV_VIEW_PRESETS.find((p) => p.id === preset)?.label ?? preset} view`);
   };
+  /** Turning the model by a button or a key leaves the preset views: "free rotate" is what is showing. */
+  const turn = (yaw: number, pitch: number) => {
+    sceneRef.current?.orbit(yaw, pitch);
+    setOrientation('free');
+  };
+  const freeRotate = () => {
+    setOrientation('free');
+    canvasRef.current?.focus();
+    setAnnounce('free rotate: drag the model, or use the arrow keys.');
+  };
+  const resetToHome = () => {
+    sceneRef.current?.resetView();
+    setOrientation(posture === 'lying' ? null : 'front');
+  };
+  const changeSpread = (fraction: number) => {
+    setSpread(fraction);
+    sceneRef.current?.setSpread(fraction);
+  };
+  /** Opens a body system: everything that belongs to the old one is dropped in this one update. */
+  const pickSystem = (key: string) => {
+    if (key === system.key) return;
+    nextListFocusId.current = null;
+    setListLimit(STRUCTURE_PAGE_SIZE);
+    // A search for one system must not make the next system appear to have no structures.
+    setQuery('');
+    // Invalidate the old picture and any pending layer-visibility intent now,
+    // before React's passive load-effect cleanup can run.
+    generation.bump();
+    visibilityIntent.bump();
+    loaderRef.current?.retire();
+    loaderRef.current = null;
+    // Invalidate an in-flight initial GLB and clear the old 3D geometry
+    // immediately. A late result cannot repopulate the previous scene.
+    sceneRef.current?.clear();
+    // Clear the previous body's transient feedback in this click update.
+    // The passive loading effect runs later and must not show stale progress,
+    // retry controls, export feedback or label notes under the new title.
+    setLoad({ state: 'loading' });
+    setSelected(null);
+    setCompareKey('');
+    setQuiz(null);
+    setRecall(null);
+    // A study round belongs to the old system's group: its ids would hide everything in the new one.
+    setRound(null);
+    setStudyLocation(null);
+    studyGroupRef.current = null;
+    setAlone(false);
+    setPending(new Set());
+    setLayerError(null);
+    setFilesLoaded(0);
+    setExporting(null);
+    setExportNote('');
+    setLabelNote([]);
+    setAnnounce('');
+    setSpread(0);
+    setOrientation('front');
+    setThumbs({});
+    activeSystemKeyRef.current = key;
+    savedViewsRequestGuard.invalidate();
+    reviewQueueRequestGuard.invalidate();
+    setSavedViews([]);
+    setSystemKey(key);
+  };
+
+  // While a round runs, the round is the single source of truth for what is selected and what is showing: the asked
+  // structure is selected and visible, and only its group (plus "show nearby") is showing. Anything else that changes
+  // the selection or the visibility (clear selection, a layer toggle, peeling, isolate or hide) is put straight back.
+  const studyTargetNow = round ? currentTarget(round) : null;
+  const studyNearbyNow = round?.nearby ?? false;
+  const studySeqNow = round?.seq ?? 0;
+  const studyActive = round !== null;
+  const studyFrameKeyRef = useRef('');
+  useEffect(() => {
+    const group = studyGroupRef.current;
+    const scene = sceneRef.current;
+    if (!studyActive || !group || !system) {
+      studyFrameKeyRef.current = '';
+      return;
+    }
+    if (studyTargetNow && selected !== studyTargetNow) setSelected(studyTargetNow);
+    const keep = new Set(group.ids);
+    const base = new Set(system.structures.map((structure) => structure.id).filter((id) => !keep.has(id)));
+    let wanted = base;
+    if (studyNearbyNow && studyTargetNow && scene) {
+      const boxes = boxesFromMeshes([...scene.boundsById()].map(([id, box]) => ({ id, box })));
+      const near = nearbyStructures(boxes, studyTargetNow, NEARBY_LIMIT).map((n) => n.id);
+      wanted = expandNearby(base, near);
+    }
+    if (studyTargetNow && wanted.has(studyTargetNow)) {
+      wanted = new Set(wanted);
+      wanted.delete(studyTargetNow);
+    }
+    const same = wanted.size === hidden.size && [...wanted].every((id) => hidden.has(id));
+    if (!same) {
+      visibilityIntent.bump();
+      setHidden(wanted);
+    }
+    // Frame what is left showing, once per question (not each time something drifts and is put back).
+    const frameKey = `${studySeqNow}|${studyTargetNow}|${studyNearbyNow}`;
+    if (scene && studyFrameKeyRef.current !== frameKey) {
+      studyFrameKeyRef.current = frameKey;
+      window.requestAnimationFrame(() => sceneRef.current?.viewPreset(orientationRef.current === 'back' || orientationRef.current === 'left' ? orientationRef.current : 'front'));
+    }
+  }, [studyActive, studyTargetNow, studyNearbyNow, studySeqNow, system, hidden, selected, visibilityIntent]);
+
+  // The ring and leader follow the selection while it can be seen and no test is hiding its name.
+  const markedId = modelReady && selected !== null && foundSet.has(selected) && !hidden.has(selected) && !quiz && !recall ? selected : null;
+  useEffect(() => {
+    markedIdRef.current = markedId;
+    updateSelectionMarkRef.current();
+  }, [markedId, panels, moreOpen, compareSystem, spread]);
 
   // ── Quiz ──────────────────────────────────────────────────────────────────────────────────────────────────────────
-  const quizPool = visible;
+  const quizPool = useMemo(() => tappableIds(visible, skinIds), [visible, skinIds]);
   const toggleQuiz = () => {
+    stopStudy();
     if (quiz) {
       setQuiz(null);
       setRecall(null);
@@ -1247,6 +1486,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSelected(null);
   };
   const toggleRecall = () => {
+    stopStudy();
     if (recall) {
       stopRecall();
       return;
@@ -1359,7 +1599,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           </div>
           <p className="text-sm text-ink-soft">you can still search the original structure names below.</p>
           <div className="flex flex-wrap gap-3">
-            <button type="button" className={secondaryButton} onClick={() => void open()}>try 3D again</button>
+            <button type="button" className={plainButton} onClick={() => void open()}>try 3D again</button>
             <a href="/learn" className="inline-flex min-h-11 items-center text-sm underline">browse the lessons</a>
           </div>
         </div>
@@ -1369,7 +1609,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <legend className="text-sm text-ink-soft">body system</legend>
             <div className="flex flex-wrap gap-2">
               {systems.map((choice) => (
-                <button key={choice.key} type="button" className={secondaryButton}
+                <button key={choice.key} type="button" className={plainButton}
                   aria-pressed={choice.key === system.key}
                   onClick={() => { activeSystemKeyRef.current = choice.key; savedViewsRequestGuard.invalidate(); setSavedViews([]); setSystemKey(choice.key); setQuery(''); setTextLimit(TEXT_FALLBACK_BATCH); }}>
                   {choice.title}
@@ -1428,7 +1668,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </ul>
           )}
           {rows.length < shownCount && (
-            <button type="button" className={secondaryButton}
+            <button type="button" className={plainButton}
               onClick={() => setTextLimit((limit) => limit + TEXT_FALLBACK_BATCH)}>
               show {Math.min(TEXT_FALLBACK_BATCH, shownCount - rows.length)} more structures
             </button>
@@ -1466,6 +1706,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const canFocus = ready && selected !== null && foundSet.has(selected) && !hidden.has(selected);
 
   // ── Study tools on the name card and around it (Task 178, integration) ───────────────────────────────────────────
+  const selectedIndex = selected && selectedStructure
+    ? groupIndex(system.structures, selected, selectedStructure.group, (structure) => structureTree(system, structure) === selectedTree)
+    : null;
   const crumbs = selected
     ? breadcrumbRows(breadcrumb(system.structures, selected, selectedTree), system.structures, selected)
     : [];
@@ -1475,6 +1718,71 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const reviewPool = reviewQuizPool(queued, foundSet);
   // The whole body is never a comparison: it is several models at once, past the per-model budget twice over.
   const compareOptions = system.key === WHOLE_BODY_KEY ? [] : systems.filter((s) => s.key !== system.key && s.key !== WHOLE_BODY_KEY && !s.model.layerFiles);
+
+  // ── Study round (learn it / test it / find it over the selected group) ───────────────────────────────────────────
+  const groupIds = selectedIndex ? selectedIndex.items.map((item) => item.id).filter((id) => foundSet.has(id)) : [];
+  const allBut = (keep: readonly string[]) => {
+    const kept = new Set(keep);
+    return new Set(system.structures.map((structure) => structure.id).filter((id) => !kept.has(id)));
+  };
+  const stopStudy = () => {
+    if (!round) return;
+    visibilityIntent.bump();
+    setHidden(studySavedHiddenRef.current);
+    setRound(null);
+    setStudyLocation(null);
+    studyGroupRef.current = null;
+    setSelected(null);
+  };
+  const beginStudy = () => {
+    const scene = sceneRef.current;
+    if (!scene || !ready || !selectedIndex || groupIds.length === 0) return;
+    setAnnounce('');
+    if (studyChoice === 'find') {
+      // The same "find it" as everywhere else, over this group: only structures a tap can reach are asked.
+      const shown = [...new Set([...visible, ...groupIds])];
+      const reachable = new Set(tappableIds(shown, skinIds));
+      const pool = groupIds.filter((id) => reachable.has(id));
+      if (pool.length === 0) {
+        setAnnounce('these structures cannot be tapped while other structures are showing. hide the others to practise them.');
+        return;
+      }
+      stopRecall();
+      changeVisibility((v) => ({ hidden: expandNearby(v.hidden, pool), faded: v.faded }));
+      setSelected(null);
+      setQuiz(startQuiz(pool, Math.random));
+      setAnnounce(`find it: ${pool.length} structures from this group.`);
+      return;
+    }
+    stopRecall();
+    setQuiz(null);
+    setLabelsOn(false);
+    // The location picture is taken now, with everything the student was looking at, before the group is set apart.
+    const preset = orientation === 'back' || orientation === 'left' ? orientation : 'front';
+    const url = scene.thumbnail(preset, 136, 216);
+    setStudyLocation(url ? { url, marks: scene.thumbnailMarks(preset, 136, 216, groupIds), word: VIEW_WORDS[preset] } : null);
+    studySavedHiddenRef.current = hidden;
+    studyGroupRef.current = { name: selectedIndex.group, ids: groupIds };
+    visibilityIntent.bump();
+    setHidden(allBut(groupIds));
+    // A made worksheet lists the names: it cannot stay open under a test.
+    if (studyChoice === 'test') setWorksheet(null);
+    studyStartRef.current = Date.now();
+    setRound(startRound(studyChoice, groupIds));
+  };
+  const studyTarget = round ? currentTarget(round) : null;
+  const officialOf = (id: string) => names.get(id) ?? id;
+  const studyStep = (change: (current: StudyRound, id: string) => StudyRound) =>
+    setRound((current) => {
+      const id = current ? currentTarget(current) : null;
+      return current && id ? change(current, id) : current;
+    });
+  const againStudy = () => {
+    const group = studyGroupRef.current;
+    if (!group || !round) return;
+    studyStartRef.current = Date.now();
+    setRound(startRound(round.mode, group.ids));
+  };
 
   /** Reveals the structures nearest the selected one (by box centers), as one undoable change. */
   const showNearby = () => {
@@ -1518,16 +1826,24 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   /** A "find it" round over the review queue only: every queued structure is shown first, then asked about. */
   const startReviewQuiz = () => {
     if (reviewPool.length === 0 || !ready) return;
+    stopStudy();
+    // The queue is shown first, so the skin is an outline (and cannot be tapped) if anything else is showing then.
+    const round = tappableRound(reviewPool, [...new Set([...visible, ...reviewPool])], skinIds);
+    if (round.length === 0) {
+      setAnnounce('the structures in your review queue cannot be tapped while other structures are showing. hide the others to practise them.');
+      return;
+    }
     stopRecall();
     changeVisibility((v) => ({ hidden: expandNearby(v.hidden, reviewPool), faded: v.faded }));
     setSelected(null);
-    setQuiz(startQuiz(reviewPool, Math.random));
-    setAnnounce(`find it: ${reviewPool.length} structures from your review queue.`);
+    setQuiz(startQuiz(round, Math.random));
+    setAnnounce(`find it: ${round.length} structures from your review queue.`);
   };
 
   const saveView = () => {
     const scene = sceneRef.current;
     if (!scene || !ready || savingViewBusy(savingViews, system.key)) return;
+    if (spreadBlocksSaving(spread)) { setAnnounce(SPREAD_SAVE_NOTE); return; }
     const key = system.key;
     const identity = identityGuard.snapshot();
     if (!activeUserId || identity.userId !== activeUserId) return;
@@ -1592,10 +1908,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setBulkPrompt({ kind: 'saved-view', systemKey: system.key, files: missingFiles.length, view, identity });
       return;
     }
+    stopStudy();
     stopRecall();
     setQuiz(null);
     changeVisibility(() => restored);
     setSelected(selectedId);
+    // A saved view is always the assembled arrangement, so bring the structures back together first.
+    changeSpread(0);
     scene.applyCameraState(cameraToWorldFrame(camera, posture));
     if (!loader || missingFiles.length === 0) {
       setAnnounce(`opened the view "${view.name}".`);
@@ -1643,180 +1962,52 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     <div className="space-y-6" onKeyDown={onLabKey}>
       <p className="sr-only" aria-live="polite" data-testid="anatomy-announce">{announce}</p>
 
-      {systems.length > 1 && (
-        <fieldset>
-          <legend className="text-sm text-ink-soft">body system</legend>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {systems.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                aria-pressed={s.key === system.key}
-                onClick={() => {
-                  if (s.key === system.key) return;
-                  nextListFocusId.current = null;
-                  setListLimit(STRUCTURE_PAGE_SIZE);
-                  // A search for one system must not make the next system appear to have no structures.
-                  setQuery('');
-                  // Invalidate the old picture and any pending layer-visibility intent now,
-                  // before React's passive load-effect cleanup can run.
-                  generation.bump();
-                  visibilityIntent.bump();
-                  loaderRef.current?.retire();
-                  loaderRef.current = null;
-                  // Invalidate an in-flight initial GLB and clear the old 3D geometry
-                  // immediately. A late result cannot repopulate the previous scene.
-                  sceneRef.current?.clear();
-                  // Clear the previous body's transient feedback in this click update.
-                  // The passive loading effect runs later and must not show stale progress,
-                  // retry controls, export feedback or label notes under the new title.
-                  setLoad({ state: 'loading' });
-                  setSelected(null);
-                  setCompareKey('');
-                  setQuiz(null);
-                  setRecall(null);
-                  setAlone(false);
-                  setPending(new Set());
-                  setLayerError(null);
-                  setFilesLoaded(0);
-                  setExporting(null);
-                  setExportNote('');
-                  setLabelNote([]);
-                  setAnnounce('');
-                  activeSystemKeyRef.current = s.key;
-                  savedViewsRequestGuard.invalidate();
-                  reviewQueueRequestGuard.invalidate();
-                  setSavedViews([]);
-                  setSystemKey(s.key);
-                }}
-                className={secondaryButton}
-              >
-                {s.title}
-              </button>
-            ))}
+      <div ref={labRef} className="anatomy-lab" data-testid="anatomy-lab">
+        <div className="lab-topbar flex-wrap">
+          <div className="min-w-0">
+            <p className="lab-title">anatomy lab</p>
+            <p className="lab-cap" data-testid="anatomy-caption">
+              {system.title} · {system.model.release} · {system.structures.length} structures
+            </p>
           </div>
-        </fieldset>
-      )}
-
-      {drafts && system.status === 'draft' && (
-        <p className="rounded-md border border-line px-3 py-2 text-sm text-ink">draft · labels waiting for review</p>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-3 lg:col-span-2">
-          <div className={compareSystem ? 'grid gap-3 md:grid-cols-2' : undefined} data-testid="anatomy-views-row">
-          <div className="relative">
-            <canvas
-              ref={canvasRef}
-              tabIndex={0}
-              role="img"
-              aria-label={`3D model: ${system.title}`}
-              aria-describedby="anatomy-lab-help"
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerCancel}
-              onKeyDown={onCanvasKey}
-              className="block aspect-square w-full touch-none rounded-lg border border-line bg-page md:aspect-lab-view"
-            />
-            <LabelOverlay setterRef={setPlacedRef} onMount={updateLabels} />
-            {(phase === 'opening' || load.state === 'loading') && (
-              <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-surface">
-                <span className="text-sm text-ink-soft">
-                  loading {system.title}
-                  {modelBytes[system.key] !== undefined && formatDownloadSize(modelBytes[system.key]!) ? ` (${formatDownloadSize(modelBytes[system.key]!)})` : ''}…
-                </span>
+          <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+            {!namesHidden && (
+              <div className="min-w-0 flex-1 sm:max-w-sm">
+                <label htmlFor="anatomy-search" className="sr-only">find a structure by name or source ID</label>
+                <input
+                  id="anatomy-search"
+                  type="search"
+                  value={query}
+                  placeholder={`search ${system.structures.length} structures`}
+                  onChange={(e) => {
+                    nextListFocusId.current = null;
+                    setListLimit(STRUCTURE_PAGE_SIZE);
+                    setQuery(e.target.value);
+                  }}
+                  className="lab-field"
+                  autoComplete="off"
+                />
               </div>
             )}
-            {load.state === 'error' && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-lg bg-surface p-4 text-center">
-                <p role="alert" className="text-sm text-ink">could not load {system.title}. check the connection and try again.</p>
-                <button type="button" className={secondaryButton} onClick={() => setInitialRetry((count) => count + 1)}>
-                  try loading again
-                </button>
-              </div>
-            )}
-          </div>
-          {compareSystem && (
-            <figure className="relative m-0" data-testid="anatomy-compare">
-              <canvas
-                ref={compareCanvasRef}
-                role="img"
-                aria-label={`compare: 3D model of ${compareSystem.title}, turned the same way`}
-                className="pointer-events-none block aspect-square w-full rounded-lg border border-line bg-page md:aspect-lab-view"
-              />
-              {compareState === 'loading' && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-surface">
-                  <span className="text-sm text-ink-soft">loading {compareSystem.title}…</span>
-                </div>
-              )}
-              {compareState === 'error' && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-surface p-4 text-center">
-                  <p role="alert" className="text-sm text-ink">could not load {compareSystem.title} to compare.</p>
-                </div>
-              )}
-              <figcaption className="mt-1 text-sm text-ink-soft">comparing with {compareSystem.title}: turns with the main view.</figcaption>
-            </figure>
-          )}
-          </div>
-          <p id="anatomy-lab-help" className="sr-only">
-            Turn the model by dragging or with the arrow keys; zoom by pinching, scrolling or pressing plus and minus.
-            Number keys 1 to 5 show the front, back, left side, right side and top; 0 resets the view.
-            In navigate mode a tap selects a structure; in hide mode a tap hides it. The list of structures does the
-            same as tapping in 3D. Control or Command plus Z undoes a change to what is shown; add Shift to redo.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="view">
-            <button type="button" className={iconButton} aria-label="turn left" disabled={!ready} onClick={() => sceneRef.current?.orbit(-STEP, 0)}>←</button>
-            <button type="button" className={iconButton} aria-label="turn right" disabled={!ready} onClick={() => sceneRef.current?.orbit(STEP, 0)}>→</button>
-            <button type="button" className={iconButton} aria-label="tilt up" disabled={!ready} onClick={() => sceneRef.current?.orbit(0, -STEP)}>↑</button>
-            <button type="button" className={iconButton} aria-label="tilt down" disabled={!ready} onClick={() => sceneRef.current?.orbit(0, STEP)}>↓</button>
-            <button type="button" className={iconButton} aria-label="zoom in" disabled={!ready} onClick={() => sceneRef.current?.zoom(ZOOM_IN)}>+</button>
-            <button type="button" className={iconButton} aria-label="zoom out" disabled={!ready} onClick={() => sceneRef.current?.zoom(1 / ZOOM_IN)}>−</button>
-            <button type="button" className={secondaryButton} disabled={!ready} onClick={() => sceneRef.current?.resetView()}>reset view</button>
             <button
               ref={keysButtonRef}
               type="button"
-              className={secondaryButton}
+              className="lab-btn lab-round shrink-0"
               aria-expanded={keysOpen}
               aria-controls="anatomy-keys"
               onClick={() => setKeysOpen((open) => !open)}
             >
-              <span aria-hidden="true">? </span>keys
-            </button>
-            <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={() => showAll()}>show all</button>
-            <button
-              type="button"
-              className={secondaryButton}
-              aria-pressed={labelsOn}
-              disabled={!ready || quiz !== null || recall !== null}
-              onClick={() => setLabelsOn((on) => !on)}
-            >
-              labels
+              <span aria-hidden="true">?</span>
+              <span className="sr-only">keys</span>
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="preset views">
-            <span className="text-sm text-ink-soft" aria-hidden="true">look from:</span>
-            {NAV_VIEW_PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                type="button"
-                className={secondaryButton}
-                aria-label={`${preset.label} view`}
-                aria-keyshortcuts={preset.key}
-                disabled={!ready}
-                onClick={() => showView(preset.id)}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
+        </div>
           {keysOpen && (
             <div
               id="anatomy-keys"
               role="region"
               aria-label="keys for the 3D view"
-              className="space-y-2 rounded-lg border border-line bg-surface p-4 text-sm text-ink"
+              className="lab-glass absolute top-20 right-3 left-3 z-30 space-y-2 p-4 text-sm text-ink sm:left-auto sm:w-80"
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
                   event.preventDefault();
@@ -1840,6 +2031,573 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </div>
           )}
 
+        <div ref={stageRef} className="relative flex flex-col lg:block lg:h-(--lab-stage-height)" data-testid="anatomy-stage">
+          <div ref={ringRef} className="lab-selring" aria-hidden="true" data-testid="anatomy-selection-ring" />
+          <svg className="lab-leader hidden lg:block" aria-hidden="true" data-testid="anatomy-leader"><line ref={leaderRef} /></svg>
+          <div className="relative h-(--lab-stage-height-small) lg:absolute lg:inset-0 lg:h-auto">
+            <div className="lab-decor lab-pool bottom-16 left-1/2 h-12 w-1/3 -translate-x-1/2" aria-hidden="true" />
+            <div className="lab-decor lab-ring bottom-15 left-1/2 hidden h-14 w-1/3 -translate-x-1/2 md:block" aria-hidden="true" />
+            <div className="lab-decor lab-ring lab-ring-soft bottom-12 left-1/2 hidden h-20 w-1/2 -translate-x-1/2 md:block" aria-hidden="true" />
+            <div className="lab-decor lab-ring lab-ring-faint bottom-8 left-1/2 hidden h-28 w-2/3 -translate-x-1/2 md:block" aria-hidden="true" />
+            <div className="lab-decor lab-scale top-1/6 left-1/4 hidden h-(--lab-scale-height) w-5 lg:block" aria-hidden="true" />
+            <div className={`${compareSystem ? 'grid h-full grid-cols-2 pt-2 lg:pr-(--lab-inspector-clear) lg:pl-(--lab-rail-clear)' : 'h-full pt-2'} ${round ? 'pb-8 lg:pb-(--lab-study-clear)' : 'pb-32 lg:pb-28'}`} data-testid="anatomy-views-row">
+              <div className="relative h-full">
+                <canvas
+                  ref={canvasRef}
+                  tabIndex={0}
+                  role="img"
+                  aria-label={`3D model: ${system.title}`}
+                  aria-describedby="anatomy-lab-help"
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerCancel}
+                  onKeyDown={onCanvasKey}
+                  className="lab-canvas touch-none"
+                />
+                <LabelOverlay setterRef={setPlacedRef} onMount={updateLabels} />
+                {(phase === 'opening' || load.state === 'loading') && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-page">
+                    <span className="text-sm text-ink-soft">
+                      loading {system.title}
+                      {modelBytes[system.key] !== undefined && formatDownloadSize(modelBytes[system.key]!) ? ` (${formatDownloadSize(modelBytes[system.key]!)})` : ''}…
+                    </span>
+                  </div>
+                )}
+                {load.state === 'error' && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-page p-4 text-center">
+                    <p role="alert" className="text-sm text-ink">could not load {system.title}. check the connection and try again.</p>
+                    <button type="button" className={secondaryButton} onClick={() => setInitialRetry((count) => count + 1)}>
+                      try loading again
+                    </button>
+                  </div>
+                )}
+              </div>
+          {compareSystem && (
+            <figure className="relative m-0 h-full" data-testid="anatomy-compare">
+              <canvas
+                ref={compareCanvasRef}
+                role="img"
+                aria-label={`compare: 3D model of ${compareSystem.title}, turned the same way`}
+                className="lab-canvas pointer-events-none"
+              />
+              {compareState === 'loading' && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-page">
+                  <span className="text-sm text-ink-soft">loading {compareSystem.title}…</span>
+                </div>
+              )}
+              {compareState === 'error' && (
+                <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-page p-4 text-center">
+                  <p role="alert" className="text-sm text-ink">could not load {compareSystem.title} to compare.</p>
+                </div>
+              )}
+              <figcaption className="lab-cap absolute top-3 left-3">comparing with {compareSystem.title}: turns with the main view.</figcaption>
+            </figure>
+          )}
+            </div>
+
+            <div className="absolute inset-x-3 bottom-20 z-10 mx-auto flex max-w-xl flex-col gap-2" data-testid="anatomy-status">
+          {bulkPrompt?.systemKey === system.key && (
+            <div
+              role="group"
+              aria-label={bulkPrompt.kind === 'all' ? 'confirm loading every body layer' : 'confirm opening saved view'}
+              className="lab-glass space-y-3 p-4"
+              data-testid={bulkPrompt.kind === 'all' ? 'anatomy-bulk-confirm' : 'anatomy-saved-view-confirm'}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  finishBulkPrompt(false);
+                }
+              }}
+            >
+              <p role="status" className="text-sm text-ink">
+                {bulkPrompt.kind === 'all'
+                  ? `showing every layer would download ${bulkPrompt.files} more 3D model files.`
+                  : `opening the saved view "${bulkPrompt.view.name}" would download ${bulkPrompt.files} uncached 3D model files.`}
+                {' '}on a phone, this can slow the view or make it stop responding. choose whether to continue.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button ref={confirmBulkButtonRef} type="button" className={primaryButton} onClick={() => finishBulkPrompt(true)}>
+                  {bulkPrompt.kind === 'all' ? 'load every layer' : 'load this saved view'}
+                </button>
+                <button type="button" className={secondaryButton} onClick={() => finishBulkPrompt(false)}>
+                  keep current view
+                </button>
+              </div>
+            </div>
+          )}
+              {pending.size > 0 && (
+                <p role="status" className="lab-glass px-4 py-2 text-sm text-ink" data-testid="anatomy-layer-loading">
+                  loading {[...pending].join(', ')}…
+                </p>
+              )}
+              {layerError && (
+                <div role="alert" className="lab-glass space-y-2 px-4 py-3 text-sm text-ink">
+                  <p>
+                    Could not load {layerError.layer}. <span className="text-ink-soft">{layerError.message}</span>
+                  </p>
+                  <button type="button" className={secondaryButton} onClick={layerError.retry}>
+                    try {layerError.layer} again
+                  </button>
+                </div>
+              )}
+          {labelsOn && !quiz && !recall && visible.length > labelIds.length && (
+            <p className="text-sm text-ink-soft">
+              {selected ? 'with this many structures showing, only the selected one is labeled.' : 'with this many structures showing, select one to label it.'}
+            </p>
+          )}
+          {labelNote.length > 0 && (
+            <div className="space-y-1 text-sm text-ink-soft" data-testid="anatomy-label-note">
+              {labelNote.map((note) => <p key={note}>{note}</p>)}
+            </div>
+          )}
+            </div>
+
+            {!round && (
+            <div className="lab-glass absolute inset-x-0 bottom-3 z-10 mx-auto flex w-fit max-w-full items-center gap-3 p-2 pr-4" role="group" aria-label="bottom bar">
+              <button
+                type="button"
+                className={`${secondaryButton} min-h-(--lab-bar-button)`}
+                aria-pressed={labelsOn}
+                disabled={!ready || quiz !== null || namesHidden}
+                onClick={() => setLabelsOn((on) => !on)}
+              >
+                labels
+              </button>
+              <div className="w-28 sm:w-52">
+                <label htmlFor="anatomy-spread" className="lab-cap block">spread structures apart · {Math.round(spread * 100)}%</label>
+                <input
+                  id="anatomy-spread"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={Math.round(spread * 100)}
+                  disabled={!ready}
+                  aria-valuetext={`${Math.round(spread * 100)}%`}
+                  className="lab-slider"
+                  onChange={(e) => changeSpread(Number(e.target.value) / 100)}
+                />
+              </div>
+              <button
+                type="button"
+                className={`${secondaryButton} min-h-(--lab-bar-button)`}
+                aria-expanded={moreOpen}
+                aria-controls="lab-more"
+                onClick={() => setMoreOpen((open) => !open)}
+              >
+                more
+              </button>
+            </div>
+            )}
+          </div>
+
+          {round && (
+            <div className="lab-glass lab-solid relative mx-3 mt-3 p-4 lg:absolute lg:inset-x-auto lg:right-(--lab-inspector-clear) lg:bottom-3 lg:left-(--lab-rail-clear) lg:z-10 lg:m-0" data-testid="anatomy-round-stage">
+              <StudyCells
+                round={round}
+                boxRef={studyCellsRef}
+                official={studyTarget ? officialOf(studyTarget) : null}
+                touch={touchKeys}
+                onLetter={(key) => studyStep((round, id) => typeLetter(round, key, officialOf(id)))}
+                onBackspace={() => studyStep((round, id) => roundBackspace(round, officialOf(id)))}
+                onHint={() => studyStep((round, id) => hintLetter(round, officialOf(id)))}
+                onShow={() => studyStep((round) => showAnswer(round))}
+                onSkip={() => studyStep((round) => skipQuestion(round))}
+                onNext={() => studyStep((round) => nextQuestion(round))}
+                onAgain={againStudy}
+              />
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2 p-3 lg:hidden" role="group" aria-label="panels">
+            {([['orientation', 'orientation'], ['systems', 'body systems'], ['structures', 'structures']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                className={secondaryButton}
+                aria-expanded={panels[key]}
+                aria-controls={`lab-panel-${key}`}
+                onClick={() => setPanels((current) => ({ ...current, [key]: !current[key] }))}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <div className="contents lg:pointer-events-none lg:absolute lg:top-5 lg:bottom-12 lg:left-5 lg:z-10 lg:flex lg:w-(--lab-rail-width) lg:flex-col lg:gap-3 lg:overflow-y-auto">
+            <section id="lab-panel-orientation" className="lab-glass mx-3 mb-3 hidden p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:block" data-open={panels.orientation || undefined} aria-labelledby="lab-orientation-heading">
+              <h2 id="lab-orientation-heading" className="lab-cap">orientation</h2>
+              <div className="mt-3 flex justify-between gap-2" role="group" aria-label="preset views">
+                {ORIENTATIONS.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    className="flex flex-col items-center bg-transparent p-0 disabled:opacity-60"
+                    aria-label={`${o.label} view`}
+                    aria-pressed={orientation === o.id}
+                    aria-keyshortcuts={NAV_VIEW_PRESETS.find((p) => p.id === o.id)?.key}
+                    disabled={!ready}
+                    onClick={() => showView(o.id)}
+                  >
+                    <span className="lab-thumb" aria-hidden="true">
+                      {thumbs[o.id] && <img src={thumbs[o.id]} alt="" width={136} height={216} />}
+                    </span>
+                    <span className="lab-thumb-label" data-on={orientation === o.id} aria-hidden="true">{o.label}</span>
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={`${secondaryButton} mt-3 w-full`}
+                aria-pressed={orientation === 'free'}
+                disabled={!ready}
+                onClick={freeRotate}
+              >
+                free rotate
+              </button>
+              <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="view">
+                <button type="button" className={iconButton} aria-label="turn left" disabled={!ready} onClick={() => turn(-STEP, 0)}>←</button>
+                <button type="button" className={iconButton} aria-label="turn right" disabled={!ready} onClick={() => turn(STEP, 0)}>→</button>
+                <button type="button" className={iconButton} aria-label="tilt up" disabled={!ready} onClick={() => turn(0, -STEP)}>↑</button>
+                <button type="button" className={iconButton} aria-label="tilt down" disabled={!ready} onClick={() => turn(0, STEP)}>↓</button>
+                <button type="button" className={iconButton} aria-label="zoom in" disabled={!ready} onClick={() => sceneRef.current?.zoom(ZOOM_IN)}>+</button>
+                <button type="button" className={iconButton} aria-label="zoom out" disabled={!ready} onClick={() => sceneRef.current?.zoom(1 / ZOOM_IN)}>−</button>
+                <button type="button" className={secondaryButton} disabled={!ready} onClick={resetToHome}>reset view</button>
+                <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={() => showAll()}>show all</button>
+              </div>
+            </section>
+
+            <section id="lab-panel-systems" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:block" data-open={panels.systems || undefined} aria-labelledby="lab-systems-heading">
+              <h2 id="lab-systems-heading" className="lab-cap">body systems</h2>
+              {systems.length > 1 && (
+                <div role="group" aria-label="body system" className="space-y-1">
+                  {systems.map((s) => (
+                    <button
+                      key={s.key}
+                      type="button"
+                      aria-pressed={s.key === system.key}
+                      onClick={() => pickSystem(s.key)}
+                      className="lab-row"
+                    >
+                      <span className="lab-dot" aria-hidden="true" />
+                      <span>{s.title}</span>
+                      <span className="lab-state" aria-hidden="true">{s.key === system.key ? 'on' : 'off'}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+          {layers.length > 1 && (
+            <fieldset className="lab-divider min-w-0 space-y-3 border-x-0 border-b-0 p-0 pt-3">
+              <legend className="lab-cap float-left w-full">layers, skin to bone</legend>
+              <p className="lab-cap clear-both" data-testid="anatomy-layer-count">{layers.filter((layer) => layerShown(layer, hidden)).length} of {layers.length} showing</p>
+              <div className="space-y-1">
+                {layers.map((layer) => (
+                  <button
+                    key={layer.id}
+                    type="button"
+                    className="lab-row"
+                    aria-pressed={layerShown(layer, hidden)}
+                    disabled={!ready || pending.has(layer.id)}
+                    onClick={() => {
+                      if (pending.has(layer.id)) return;
+                      visibilityIntent.bump();
+                      if (lazy && layerNeedsReveal(
+                        layer, hidden, filesForLayer(system, layer.id), (url) => loaderRef.current?.isLoaded(url) ?? false,
+                      )) reveal(layer);
+                      else setHidden((h) => toggleLayer(h, layer));
+                    }}
+                  >
+                    <span className="lab-dot" aria-hidden="true" />
+                    <span>{layer.id} ({layer.ids.length}){pending.has(layer.id) ? ', loading' : ''}</span>
+                    <span className="lab-state" aria-hidden="true">{layerShown(layer, hidden) ? 'on' : 'off'}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={secondaryButton}
+                  disabled={!ready || !toPeel || pending.size > 0}
+                  onClick={() => {
+                    if (!toPeel || pending.size > 0) return;
+                    visibilityIntent.bump();
+                    if (peelPlan) {
+                      reveal(peelPlan.show, peelPlan.hide);
+                      return;
+                    }
+                    setHidden((h) => toggleLayer(h, toPeel));
+                    setAnnounce(`peeled away ${toPeel.id}`);
+                  }}
+                >
+                  peel a layer{toPeel ? `: ${toPeel.id}` : ''}
+                </button>
+                <button
+                  type="button"
+                  className={secondaryButton}
+                  disabled={!ready || !toRestore || pending.size > 0}
+                  onClick={() => {
+                    if (!toRestore || pending.size > 0) return;
+                    visibilityIntent.bump();
+                    if (lazy) reveal(toRestore);
+                    else setHidden((h) => toggleLayer(h, toRestore));
+                    setAnnounce(`put back ${toRestore.id}`);
+                  }}
+                >
+                  put a layer back{toRestore ? `: ${toRestore.id}` : ''}
+                </button>
+              </div>
+              {layerGapNote && (
+                <p className="text-sm text-ink-soft" data-testid="anatomy-layer-gaps">
+                  {layerGapNote}
+                </p>
+              )}
+              {system.key === WHOLE_BODY_KEY && (
+                <p className="text-sm text-ink-soft" data-testid="anatomy-files">
+                  the whole body starts with the outer layer only; each deeper layer downloads when you open it.
+                  model files loaded: {filesLoaded} of {system.model.files?.length ?? 0}.
+                </p>
+              )}
+            </fieldset>
+          )}
+            </section>
+          </div>
+
+          <div className="contents lg:pointer-events-none lg:absolute lg:inset-y-5 lg:right-5 lg:z-10 lg:flex lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto">
+          {selectedName && !quiz && !namesHidden && (
+            <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
+              <p className="lab-cap flex justify-between gap-3"><span>selected structure</span><span className="lab-id" data-testid="anatomy-card-id">{selected}</span></p>
+              <h2 id="anatomy-name-card" className="lab-name">{selectedName}</h2>
+              {selectedStructure && (
+                <dl data-testid="anatomy-card-rows">
+                  {inspectorRows(selectedStructure, system.title, system.model.release, selectedStructure.group).map((row) => (
+                    <div key={row.label} className="lab-kv"><dt className="lab-cap">{row.label}</dt><dd className="m-0 text-right">{row.value}</dd></div>
+                  ))}
+                </dl>
+              )}
+              {crumbs.length > 1 ? (
+                <nav aria-label="where it sits" className="mt-1">
+                  <ol className="flex flex-wrap items-center gap-x-1 text-sm text-ink-soft" data-testid="anatomy-breadcrumb">
+                    {crumbs.map((row, index) => (
+                      <li key={`${index}-${row.name}`} className="flex items-center gap-x-1">
+                        {index > 0 && <span aria-hidden="true">›</span>}
+                        {row.current ? (
+                          <span aria-current="location" className="text-ink">{row.name}</span>
+                        ) : row.id ? (
+                          <button
+                            type="button"
+                            className="min-h-11 rounded-md px-1 text-ink underline underline-offset-4 disabled:no-underline disabled:opacity-60"
+                            disabled={!ready || !foundSet.has(row.id)}
+                            onClick={() => pickStructure(row.id!)}
+                          >
+                            {row.name}
+                          </button>
+                        ) : (
+                          <span>{row.name}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </nav>
+              ) : (
+                selectedGroup && <p className="text-sm text-ink-soft">{selectedGroup}</p>
+              )}
+              <p className="mt-1 text-sm text-ink-soft">{nameSourceFor(system)}</p>
+              {showSiblings(siblingList.length) && (
+                <details className="mt-2 rounded-md border border-line" data-testid="anatomy-siblings">
+                  <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm text-ink-soft">
+                    siblings ({siblingList.length})
+                  </summary>
+                  <ul className="flex flex-wrap gap-2 px-3 pb-3">
+                    {siblingList.map((sibling) => (
+                      <li key={sibling.id}>
+                        <button
+                          type="button"
+                          className={secondaryButton}
+                          disabled={!ready || !foundSet.has(sibling.id)}
+                          onClick={() => pickStructure(sibling.id)}
+                        >
+                          {sibling.text}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {!round && (<>
+                <button type="button" className={secondaryButton} onClick={() => { visibilityIntent.bump(); setHidden(onlyThis(system.structures.map((s) => s.id), selected!)); }}>
+                  isolate
+                </button>
+                <button type="button" className={secondaryButton} onClick={() => changeVisibility((v) => hideStructure(v, selected!))}>
+                  {hidden.has(selected!) ? 'show' : 'hide'}
+                </button>
+                </>)}
+                <a
+                  href={flagMailto(site.contactEmail, window.location.pathname)}
+                  data-game-flag
+                  className={secondaryButton}
+                >
+                  flag or comment
+                </a>
+                {!round && (<>
+                <button
+                  type="button"
+                  className={secondaryButton}
+                  aria-pressed={structureState({ hidden, faded }, selected!) === 'faded'}
+                  onClick={() => {
+                    changeVisibility((v) => fadeStructure(v, selected!));
+                    setAnnounce(faded.has(selected!) && !hidden.has(selected!) ? `${selectedName} shown in full.` : `${selectedName} faded.`);
+                  }}
+                >
+                  {structureState({ hidden, faded }, selected!) === 'faded' ? 'unfade' : 'fade this'}
+                </button>
+                <button type="button" className={secondaryButton} disabled={!ready || !foundSet.has(selected!)} onClick={showNearby}>
+                  show nearby
+                </button>
+                </>)}
+                {speechOn && (
+                  <button type="button" className={secondaryButton} onClick={sayIt}>say it</button>
+                )}
+                {!round && <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>}
+              </div>
+            </section>
+          )}
+          {selectedName && !quiz && !namesHidden && !round && selectedIndex && (
+            <div role="group" className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-index-heading" data-testid="anatomy-index">
+              <h2 id="anatomy-index-heading" className="lab-cap">{indexHeading(selectedIndex)}</h2>
+              <ul className="lab-index mt-2 space-y-1">
+                {selectedIndex.items.map((item, position) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      ref={(node) => { indexItemRefs.current[position] = node; }}
+                      aria-pressed={selected === item.id}
+                      disabled={!ready || !foundSet.has(item.id)}
+                      onClick={() => pickStructure(item.id)}
+                      onKeyDown={(e) => {
+                        const next = indexStep(e.key, position, selectedIndex.items.length);
+                        if (next === null) return;
+                        e.preventDefault();
+                        indexItemRefs.current[next]?.focus();
+                      }}
+                      className="lab-row w-full"
+                    >
+                      <span>{item.text}</span>
+                      <span className="lab-id">{item.id}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {round ? (
+            <StudyRoundSide
+              round={round}
+              names={names}
+              groupName={studyGroupRef.current?.name ?? ''}
+              startedAt={studyStartRef.current}
+              onClose={stopStudy}
+              onFirstLetters={(on) => { studyStep((round) => setFirstLetters(round, on)); studyCellsRef.current?.focus(); }}
+              onNearby={(on) => { studyStep((round) => setNearby(round, on)); studyCellsRef.current?.focus(); }}
+              thumb={studyLocation?.url}
+              viewWord={studyLocation?.word ?? null}
+              dot={studyTarget ? (studyLocation?.marks.get(studyTarget) ?? null) : null}
+            />
+          ) : (
+            selectedName && !quiz && !namesHidden && selectedIndex && (
+              <StudyEntryPanel
+                choice={studyChoice}
+                onChoice={setStudyChoice}
+                count={groupIds.length}
+                disabled={!ready || groupIds.length === 0}
+                onBegin={beginStudy}
+                groupName={selectedIndex.group}
+              />
+            )
+          )}
+        <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-(--lab-list-min) lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
+          <h2 id="anatomy-list-heading" className="lab-cap">structures</h2>
+          {namesHidden ? (
+            <p className="text-sm text-ink-soft" data-testid="anatomy-list-paused">
+              the list is put away while a name is hidden, so it doesn't give the answer away. stop {recall ? 'name it' : 'the round'} to see it again.
+            </p>
+          ) : (<>
+          <p className="text-sm text-ink-soft" aria-live="polite">
+            {listedCount < shownCount
+              ? `showing ${listedCount} of ${shownCount} structures`
+              : shownCount === 1 ? '1 structure' : `${shownCount} structures`}
+          </p>
+          <div className="lab-sheet space-y-4 lg:max-h-none lg:min-h-0 lg:flex-1">
+            {listedGroups.map((group) => (
+              <div key={group.group ?? '—'}>
+                {group.group && <h3 className="lab-cap">{group.group}</h3>}
+                <ul className="mt-1 space-y-1">
+                  {group.items.map((item) => {
+                    const inModel = foundSet.has(item.id);
+                    const isHidden = hidden.has(item.id);
+                    const isFaded = !isHidden && faded.has(item.id);
+                    const loadNote = structureLoadNote(
+                      item, foundSet, lazy, (id) => filesForLayer(system, id),
+                      system.model.files ?? [], fileIntegratedForStatus, system.model.fileIds,
+                    );
+                    return (
+                      <li
+                        key={item.id}
+                        ref={nextListFocusId.current === item.id ? nextListItemRef : undefined}
+                        tabIndex={nextListFocusId.current === item.id ? -1 : undefined}
+                        className="flex items-stretch gap-1"
+                      >
+                        <button
+                          type="button"
+                          aria-pressed={selected === item.id}
+                          disabled={!ready || !inModel}
+                          onClick={() => pickStructure(item.id)}
+                          className="lab-row min-w-0 flex-1"
+                        >
+                          {item.text}
+                          {selected === item.id && <span className="lab-state" aria-hidden="true">selected</span>}
+                          {isHidden && inModel && <span> (hidden)</span>}
+                          {isFaded && inModel && <span> {FADED_MARK}</span>}
+                          {ready && !inModel && loadNote && <span> ({loadNote})</span>}
+                        </button>
+                        {inModel && (
+                          <button
+                            type="button"
+                            aria-label={`${isHidden ? 'show' : 'hide'} ${item.text}`}
+                            disabled={revealedTarget === item.id}
+                            onClick={() => changeVisibility((v) => hideStructure(v, item.id))}
+                            className="lab-btn min-w-14 px-2"
+                          >
+                            {isHidden ? 'show' : 'hide'}
+                          </button>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            {listedCount < shownCount && (
+              <button
+                type="button"
+                className={secondaryButton}
+                onClick={() => {
+                  nextListFocusId.current = groups.flatMap((group) => group.items)[listedCount]?.id ?? null;
+                  setListLimit((current) => current + STRUCTURE_PAGE_SIZE);
+                }}
+              >
+                show {Math.min(STRUCTURE_PAGE_SIZE, shownCount - listedCount)} more structures
+              </button>
+            )}
+          </div>
+          </>)}
+        </section>
+          </div>
+        </div>
+
+        <div id="lab-more" hidden={!moreOpen} className="space-y-3 border-t border-line p-4" data-testid="anatomy-more">
+          <h2 className="lab-cap">more</h2>
           <details open className="rounded-lg border border-line" data-testid="anatomy-tools">
             <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm text-ink-soft">tools</summary>
             <div className="space-y-3 px-4 pb-4">
@@ -1915,10 +2673,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                       disabled={!ready}
                       onClick={() => {
                         sceneRef.current?.viewPreset(preset);
-                        setAnnounce(`view: ${preset}.`);
+                        setAnnounce(`view: ${VIEW_WORDS[preset]}.`);
                       }}
                     >
-                      {preset}
+                      {VIEW_WORDS[preset]}
                     </button>
                   ))}
                   <button
@@ -1982,9 +2740,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                           className="mt-1 block min-h-11 w-full rounded-md border border-control bg-page px-3 text-ink"
                         />
                       </label>
-                      <button type="submit" className={secondaryButton} disabled={!ready || savingViewBusy(savingViews, system.key) || viewName.trim().length === 0}>
+                      <button type="submit" className={secondaryButton} disabled={!ready || savingViewBusy(savingViews, system.key) || viewName.trim().length === 0 || spreadBlocksSaving(spread)}
+                        aria-describedby={spreadBlocksSaving(spread) ? 'anatomy-save-spread-note' : undefined}>
                         save this view
                       </button>
+                      {spreadBlocksSaving(spread) && <p id="anatomy-save-spread-note" className="w-full text-sm text-ink-soft">{SPREAD_SAVE_NOTE}</p>}
                     </form>
                     {currentSavedViews.length === 0 ? (
                       <p className="text-sm text-ink-soft">no saved views for {system.title} yet.</p>
@@ -2026,7 +2786,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                           comparison.setPosture(p);
                           if (sceneRef.current) comparison.applyCameraState(sceneRef.current.cameraState());
                         }
-                        setAnnounce(p === 'lying' ? 'the model lies on its back, seen from above.' : 'the model stands, seen from the front.');
+                        setAnnounce(p === 'lying' ? 'the model lies down, seen from above.' : 'the model stands, in the anterior view.');
                       }}
                     >
                       {p === 'lying' ? 'lying down' : 'standing'}
@@ -2083,237 +2843,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
             </div>
           </details>
-          {bulkPrompt?.systemKey === system.key && (
-            <div
-              role="group"
-              aria-label={bulkPrompt.kind === 'all' ? 'confirm loading every body layer' : 'confirm opening saved view'}
-              className="space-y-3 rounded-lg border border-line bg-surface p-4"
-              data-testid={bulkPrompt.kind === 'all' ? 'anatomy-bulk-confirm' : 'anatomy-saved-view-confirm'}
-              onKeyDown={(event) => {
-                if (event.key === 'Escape') {
-                  event.preventDefault();
-                  finishBulkPrompt(false);
-                }
-              }}
-            >
-              <p role="status" className="text-sm text-ink">
-                {bulkPrompt.kind === 'all'
-                  ? `showing every layer would download ${bulkPrompt.files} more 3D model files.`
-                  : `opening the saved view "${bulkPrompt.view.name}" would download ${bulkPrompt.files} uncached 3D model files.`}
-                {' '}on a phone, this can slow the view or make it stop responding. choose whether to continue.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button ref={confirmBulkButtonRef} type="button" className={primaryButton} onClick={() => finishBulkPrompt(true)}>
-                  {bulkPrompt.kind === 'all' ? 'load every layer' : 'load this saved view'}
-                </button>
-                <button type="button" className={secondaryButton} onClick={() => finishBulkPrompt(false)}>
-                  keep current view
-                </button>
-              </div>
-            </div>
-          )}
-          {layers.length > 1 && (
-            <fieldset className="space-y-3 rounded-lg border border-line p-4">
-              <legend className="px-1 text-sm text-ink-soft">layers, skin to bone</legend>
-              <div className="flex flex-wrap gap-2">
-                {layers.map((layer) => (
-                  <button
-                    key={layer.id}
-                    type="button"
-                    className={secondaryButton}
-                    aria-pressed={layerShown(layer, hidden)}
-                    disabled={!ready || pending.has(layer.id)}
-                    onClick={() => {
-                      if (pending.has(layer.id)) return;
-                      visibilityIntent.bump();
-                      if (lazy && layerNeedsReveal(
-                        layer, hidden, filesForLayer(system, layer.id), (url) => loaderRef.current?.isLoaded(url) ?? false,
-                      )) reveal(layer);
-                      else setHidden((h) => toggleLayer(h, layer));
-                    }}
-                  >
-                    {layer.id} ({layer.ids.length}){pending.has(layer.id) ? ', loading' : ''}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={secondaryButton}
-                  disabled={!ready || !toPeel || pending.size > 0}
-                  onClick={() => {
-                    if (!toPeel || pending.size > 0) return;
-                    visibilityIntent.bump();
-                    if (peelPlan) {
-                      reveal(peelPlan.show, peelPlan.hide);
-                      return;
-                    }
-                    setHidden((h) => toggleLayer(h, toPeel));
-                    setAnnounce(`peeled away ${toPeel.id}`);
-                  }}
-                >
-                  peel a layer{toPeel ? `: ${toPeel.id}` : ''}
-                </button>
-                <button
-                  type="button"
-                  className={secondaryButton}
-                  disabled={!ready || !toRestore || pending.size > 0}
-                  onClick={() => {
-                    if (!toRestore || pending.size > 0) return;
-                    visibilityIntent.bump();
-                    if (lazy) reveal(toRestore);
-                    else setHidden((h) => toggleLayer(h, toRestore));
-                    setAnnounce(`put back ${toRestore.id}`);
-                  }}
-                >
-                  put a layer back{toRestore ? `: ${toRestore.id}` : ''}
-                </button>
-              </div>
-              {layerGapNote && (
-                <p className="text-sm text-ink-soft" data-testid="anatomy-layer-gaps">
-                  {layerGapNote}
-                </p>
-              )}
-              {system.key === WHOLE_BODY_KEY && (
-                <p className="text-sm text-ink-soft" data-testid="anatomy-files">
-                  the whole body starts with the outer layer only; each deeper layer downloads when you open it.
-                  model files loaded: {filesLoaded} of {system.model.files?.length ?? 0}.
-                </p>
-              )}
-              {pending.size > 0 && (
-                <p role="status" className="text-sm text-ink" data-testid="anatomy-layer-loading">
-                  loading {[...pending].join(', ')}…
-                </p>
-              )}
-              {layerError && (
-                <div role="alert" className="space-y-2 rounded-md border border-line px-3 py-2 text-sm text-ink">
-                  <p>
-                    Could not load {layerError.layer}. <span className="text-ink-soft">{layerError.message}</span>
-                  </p>
-                  <button type="button" className={secondaryButton} onClick={layerError.retry}>
-                    try {layerError.layer} again
-                  </button>
-                </div>
-              )}
-            </fieldset>
-          )}
-          {labelsOn && !quiz && !recall && visible.length > labelIds.length && (
-            <p className="text-sm text-ink-soft">
-              {selected ? 'with this many structures showing, only the selected one is labeled.' : 'with this many structures showing, select one to label it.'}
-            </p>
-          )}
-          {labelNote.length > 0 && (
-            <div className="space-y-1 text-sm text-ink-soft" data-testid="anatomy-label-note">
-              {labelNote.map((note) => <p key={note}>{note}</p>)}
-            </div>
-          )}
-
-          <div className="space-y-1 text-sm text-ink-soft">
-            <p>
-              {system.fixture ? (
-                creditFor(system)
-              ) : (
-                <>
-                  {BODYPARTS3D_CREDIT_LEAD}{' '}
-                  <a className="underline" href={BODYPARTS3D_LICENSE_URL} rel="license noopener">{BODYPARTS3D_LICENSE_NAME}</a>
-                </>
-              )}
-            </p>
-            <p>{releaseNoteFor(system)}</p>
-            {!system.fixture && (
-              <p>{BODYPARTS3D_REFERENCE_NOTE}{' '}
-                <a className="underline" href={BODYPARTS3D_REFERENCE_URL} rel="noopener noreferrer">source details</a>
-              </p>
-            )}
-            {budget && <p className="text-ink" data-testid="anatomy-budget-note">{budget}</p>}
-            {ready && missingCount > 0 && (
-              <p data-testid="anatomy-missing-count">
-                {missingCount} listed structures were not found in the loaded model files.
-              </p>
-            )}
-          </div>
-
-          {selectedName && !quiz && !recall && (
-            <section className="rounded-lg border border-line bg-surface p-4" aria-labelledby="anatomy-name-card">
-              <h2 id="anatomy-name-card" className="text-lg text-ink">{selectedName}</h2>
-              {crumbs.length > 1 ? (
-                <nav aria-label="where it sits" className="mt-1">
-                  <ol className="flex flex-wrap items-center gap-x-1 text-sm text-ink-soft" data-testid="anatomy-breadcrumb">
-                    {crumbs.map((row, index) => (
-                      <li key={`${index}-${row.name}`} className="flex items-center gap-x-1">
-                        {index > 0 && <span aria-hidden="true">›</span>}
-                        {row.current ? (
-                          <span aria-current="location" className="text-ink">{row.name}</span>
-                        ) : row.id ? (
-                          <button
-                            type="button"
-                            className="min-h-11 rounded-md px-1 text-ink underline underline-offset-4 disabled:no-underline disabled:opacity-60"
-                            disabled={!ready || !foundSet.has(row.id)}
-                            onClick={() => pickStructure(row.id!)}
-                          >
-                            {row.name}
-                          </button>
-                        ) : (
-                          <span>{row.name}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </nav>
-              ) : (
-                selectedGroup && <p className="text-sm text-ink-soft">{selectedGroup}</p>
-              )}
-              <p className="mt-1 text-sm text-ink-soft">{nameSourceFor(system)}</p>
-              {showSiblings(siblingList.length) && (
-                <details className="mt-2 rounded-md border border-line" data-testid="anatomy-siblings">
-                  <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm text-ink-soft">
-                    siblings ({siblingList.length})
-                  </summary>
-                  <ul className="flex flex-wrap gap-2 px-3 pb-3">
-                    {siblingList.map((sibling) => (
-                      <li key={sibling.id}>
-                        <button
-                          type="button"
-                          className={secondaryButton}
-                          disabled={!ready || !foundSet.has(sibling.id)}
-                          onClick={() => pickStructure(sibling.id)}
-                        >
-                          {sibling.text}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" className={secondaryButton} onClick={() => { visibilityIntent.bump(); setHidden(onlyThis(system.structures.map((s) => s.id), selected!)); }}>
-                  show only this
-                </button>
-                <button type="button" className={secondaryButton} onClick={() => changeVisibility((v) => hideStructure(v, selected!))}>
-                  {hidden.has(selected!) ? 'show it' : 'hide it'}
-                </button>
-                <button
-                  type="button"
-                  className={secondaryButton}
-                  aria-pressed={structureState({ hidden, faded }, selected!) === 'faded'}
-                  onClick={() => {
-                    changeVisibility((v) => fadeStructure(v, selected!));
-                    setAnnounce(faded.has(selected!) && !hidden.has(selected!) ? `${selectedName} shown in full.` : `${selectedName} faded.`);
-                  }}
-                >
-                  {structureState({ hidden, faded }, selected!) === 'faded' ? 'unfade' : 'fade this'}
-                </button>
-                <button type="button" className={secondaryButton} disabled={!ready || !foundSet.has(selected!)} onClick={showNearby}>
-                  show nearby
-                </button>
-                {speechOn && (
-                  <button type="button" className={secondaryButton} onClick={sayIt}>say it</button>
-                )}
-                <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>
-              </div>
-            </section>
-          )}
-
           <section className="space-y-3 rounded-lg border border-line p-4" aria-labelledby="anatomy-quiz-heading">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 id="anatomy-quiz-heading" className="text-lg text-ink">find it</h2>
@@ -2419,7 +2948,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
             )}
           </section>
-
           <section className="space-y-3 rounded-lg border border-line p-4" aria-labelledby="anatomy-recall-heading">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 id="anatomy-recall-heading" className="text-lg text-ink">name it</h2>
@@ -2560,7 +3088,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
             )}
           </section>
-
           {studyReady && (
             <details className="rounded-lg border border-line" data-testid="anatomy-review-queue">
               <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm text-ink-soft">
@@ -2590,7 +3117,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
             </details>
           )}
-
           <fieldset className="space-y-3 rounded-lg border border-line p-4">
             <legend className="px-1 text-sm text-ink-soft">export a picture</legend>
             <div className="flex flex-wrap gap-2">
@@ -2606,7 +3132,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </label>
             <p className="text-sm text-ink-soft" aria-live="polite">{exporting ? 'drawing the picture…' : exportNote}</p>
           </fieldset>
-
           <section className="space-y-3 rounded-lg border border-line p-4" aria-labelledby="anatomy-worksheet-tools">
             <h2 id="anatomy-worksheet-tools" className="text-lg text-ink">worksheet</h2>
             <p className="text-sm text-ink-soft">
@@ -2615,7 +3140,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <button
               type="button"
               className={secondaryButton}
-              disabled={!ready || worksheetBusy || recall !== null || exporting !== null}
+              disabled={!ready || worksheetBusy || namesHidden || exporting !== null}
               onClick={() => void makeWorksheet()}
             >
               make a worksheet
@@ -2624,6 +3149,41 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               {worksheetBusy ? 'drawing the worksheet…' : worksheetNote}
             </p>
           </section>
+        </div>
+
+        <div className="space-y-1 border-t border-line p-4 text-sm text-ink-soft">
+          {drafts && system.status === 'draft' && <p className="text-ink">draft · labels waiting for review</p>}
+            <p>
+              {system.fixture ? (
+                creditFor(system)
+              ) : (
+                <>
+                  {BODYPARTS3D_CREDIT_LEAD}{' '}
+                  <a className="underline" href={BODYPARTS3D_LICENSE_URL} rel="license noopener">{BODYPARTS3D_LICENSE_NAME}</a>
+                </>
+              )}
+            </p>
+            <p>{releaseNoteFor(system)}</p>
+            {!system.fixture && (
+              <p>{BODYPARTS3D_REFERENCE_NOTE}{' '}
+                <a className="underline" href={BODYPARTS3D_REFERENCE_URL} rel="noopener noreferrer">source details</a>
+              </p>
+            )}
+            {budget && <p className="text-ink" data-testid="anatomy-budget-note">{budget}</p>}
+            {ready && missingCount > 0 && (
+              <p data-testid="anatomy-missing-count">
+                {missingCount} listed structures were not found in the loaded model files.
+              </p>
+            )}
+        </div>
+      </div>
+
+          <p id="anatomy-lab-help" className="sr-only">
+            Turn the model by dragging or with the arrow keys; zoom by pinching, scrolling or pressing plus and minus.
+            Number keys 1 to 5 show the anterior, posterior, lateral, lateral opposite and top views; 0 resets the view.
+            In navigate mode a tap selects a structure; in hide mode a tap hides it. The list of structures does the
+            same as tapping in 3D. Control or Command plus Z undoes a change to what is shown; add Shift to redo.
+          </p>
 
           {worksheet && worksheet.systemKey === system.key && (
             <section className="anatomy-worksheet space-y-4 rounded-lg border border-line bg-page p-4" aria-labelledby="anatomy-worksheet-heading">
@@ -2660,114 +3220,21 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 {worksheetCreditLines(system).map((line) => <p key={line}>{line}</p>)}
               </div>
               <div className="anatomy-worksheet-tools flex flex-wrap gap-2">
-                <button type="button" className={secondaryButton} aria-pressed={answersShown} onClick={() => setAnswersShown((on) => !on)}>
+                <button type="button" className={plainButton} aria-pressed={answersShown} onClick={() => setAnswersShown((on) => !on)}>
                   show answers
                 </button>
-                <button type="button" className={primaryButton} onClick={() => printGame('anatomy-worksheet')}>
+                <button type="button" className={plainPrimaryButton} onClick={() => printGame('anatomy-worksheet')}>
                   print worksheet
                 </button>
-                <a className={`${secondaryButton} inline-flex items-center`} href={worksheet.src} download={worksheet.fileName}>
+                <a className={`${plainButton} inline-flex items-center`} href={worksheet.src} download={worksheet.fileName}>
                   save the picture
                 </a>
-                <button type="button" className={secondaryButton} onClick={() => setWorksheet(null)}>
+                <button type="button" className={plainButton} onClick={() => setWorksheet(null)}>
                   close worksheet
                 </button>
               </div>
             </section>
           )}
-
-        </div>
-
-        <section className="space-y-3" aria-labelledby="anatomy-list-heading">
-          <h2 id="anatomy-list-heading" className="text-lg text-ink">structures</h2>
-          {recall ? (
-            <p className="text-sm text-ink-soft" data-testid="anatomy-list-paused">
-              the list is put away during name it, so it doesn't give the answer away. stop name it to see it again.
-            </p>
-          ) : (<>
-          <label className="block text-sm text-ink-soft" htmlFor="anatomy-search">find a structure by name or source ID</label>
-          <input
-            id="anatomy-search"
-            type="search"
-            value={query}
-            onChange={(e) => {
-              nextListFocusId.current = null;
-              setListLimit(STRUCTURE_PAGE_SIZE);
-              setQuery(e.target.value);
-            }}
-            className="min-h-11 w-full rounded-md border border-control bg-page px-3 text-ink"
-            autoComplete="off"
-          />
-          <p className="text-sm text-ink-soft" aria-live="polite">
-            {listedCount < shownCount
-              ? `showing ${listedCount} of ${shownCount} structures`
-              : shownCount === 1 ? '1 structure' : `${shownCount} structures`}
-          </p>
-          <div className="space-y-4">
-            {listedGroups.map((group) => (
-              <div key={group.group ?? '—'}>
-                {group.group && <h3 className="text-sm text-ink-soft">{group.group}</h3>}
-                <ul className="mt-1 space-y-1">
-                  {group.items.map((item) => {
-                    const inModel = foundSet.has(item.id);
-                    const isHidden = hidden.has(item.id);
-                    const isFaded = !isHidden && faded.has(item.id);
-                    const loadNote = structureLoadNote(
-                      item, foundSet, lazy, (id) => filesForLayer(system, id),
-                      system.model.files ?? [], fileIntegratedForStatus, system.model.fileIds,
-                    );
-                    return (
-                      <li
-                        key={item.id}
-                        ref={nextListFocusId.current === item.id ? nextListItemRef : undefined}
-                        tabIndex={nextListFocusId.current === item.id ? -1 : undefined}
-                        className="flex items-stretch gap-1"
-                      >
-                        <button
-                          type="button"
-                          aria-pressed={selected === item.id}
-                          disabled={!ready || !inModel}
-                          onClick={() => pickStructure(item.id)}
-                          className="min-h-11 min-w-0 flex-1 rounded-md border border-line px-3 py-2 text-left text-sm text-ink aria-pressed:border-button aria-pressed:bg-button aria-pressed:text-on-button disabled:opacity-60"
-                        >
-                          {item.text}
-                          {isHidden && inModel && <span> (hidden)</span>}
-                          {isFaded && inModel && <span> {FADED_MARK}</span>}
-                          {ready && !inModel && loadNote && <span> ({loadNote})</span>}
-                        </button>
-                        {inModel && (
-                          <button
-                            type="button"
-                            aria-label={`${isHidden ? 'show' : 'hide'} ${item.text}`}
-                            disabled={revealedTarget === item.id}
-                            onClick={() => changeVisibility((v) => hideStructure(v, item.id))}
-                            className="min-h-11 min-w-14 rounded-md border border-line px-2 text-sm text-ink"
-                          >
-                            {isHidden ? 'show' : 'hide'}
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-            {listedCount < shownCount && (
-              <button
-                type="button"
-                className={secondaryButton}
-                onClick={() => {
-                  nextListFocusId.current = groups.flatMap((group) => group.items)[listedCount]?.id ?? null;
-                  setListLimit((current) => current + STRUCTURE_PAGE_SIZE);
-                }}
-              >
-                show {Math.min(STRUCTURE_PAGE_SIZE, shownCount - listedCount)} more structures
-              </button>
-            )}
-          </div>
-          </>)}
-        </section>
-      </div>
     </div>
   );
 }
@@ -2824,7 +3291,7 @@ function LabelOverlay({
           key={p.id}
           data-behind={p.behind ? '' : undefined}
           className={`absolute flex flex-col justify-center rounded-md border bg-page px-2 text-sm leading-normal whitespace-nowrap text-ink ${p.behind ? 'border-dashed border-ink-soft' : 'border-line'}`}
-          style={{ left: `${p.x}px`, top: `${p.y}px`, width: `${p.width}px`, height: `${p.height}px` }}
+          style={{ left: `${Math.round(p.x)}px`, top: `${Math.round(p.y)}px`, width: `${p.width}px`, height: `${p.height}px` }}
         >
           {p.lines.map((line, i) => (
             <span key={i} className="block">
