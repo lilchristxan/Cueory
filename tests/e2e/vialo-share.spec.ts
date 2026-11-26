@@ -355,7 +355,8 @@ test.describe('the solve timer', () => {
     // Positions on the page (not the screen), so a scroll caused by the settings dialog does not count as the board moving.
     const where = () => page.locator('.vialo-pack').evaluate((el) => { const r = el.getBoundingClientRect(); return { x: r.x + scrollX, y: r.y + scrollY, height: r.height }; });
     const before = await where();
-    await page.getByTestId('game-settings-button').click();
+    // Vialo is framed (#1227): the settings gear is the frame's corner button, as on every framed game.
+    await page.getByTestId('game-frame-gear').click();
     const toggle = page.getByRole('switch', { name: /show the timer/ });
     await expect(toggle).toHaveAttribute('aria-checked', 'true');
     await toggle.click();
