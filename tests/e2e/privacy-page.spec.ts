@@ -33,9 +33,10 @@ test.describe('Task 422: privacy page', () => {
       await expect(main.getByRole('heading', { level: 2, name: heading, exact: true })).toBeVisible();
     }
 
-    // The notice describes keys in plain words (tests/unit/privacy-keys.test.ts checks each one) and names only the
-    // signup pop-up's key.
-    await expect(main.locator('code')).toHaveText(['cueory-signup-popup-seen']);
+    // The notice describes keys in plain words (tests/unit/privacy-keys.test.ts checks each one) and names only two:
+    // the retired launch-list panel's leftover record (so a visitor can recognise it; wording approved by Christian,
+    // 2026-11-25) and the signup pop-up's key.
+    await expect(main.locator('code')).toHaveText(['cueory-promo-seen', 'cueory-signup-popup-seen']);
     await expect(main.getByText('Effective 19 November 2026', { exact: true })).toBeVisible();
   });
 

@@ -53,8 +53,10 @@ for (const game of games) {
       const settings = game.framed ? page.getByTestId('game-frame-gear') : page.getByTestId('game-settings-button');
       test.skip(game.name === 'crossword' && await settings.count() === 0, 'crossword controls are not rendered in this build');
       await expect(settings).toBeVisible();
-      // Every game page shows its four stats in the frame's left panel; the full stats panel is on the games hub.
-      await expect(page.getByTestId('game-frame-stats')).toBeVisible();
+      // The four stats are for signed-in players only (2026-11-25): a signed-out game page has no stats panel.
+      await expect(page.locator('astro-island[component-url*="GameFrameStats"]:not([ssr])')).toHaveCount(1);
+      await expect(page.getByTestId('game-frame-stats')).toHaveCount(0);
+      await expect(page.getByTestId('game-frame-account-bar')).toBeVisible();
       // The share tags stay those of the game, so a shared result still previews as before.
       await expect(page).toHaveTitle(new RegExp(`^${game.name}`));
       expect(await page.locator('meta[property="og:image"]').getAttribute('content')).toBe('https://cueory.app/share/games-scene.png');
