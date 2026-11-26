@@ -135,11 +135,11 @@ test.describe('anatomy lab study tools', () => {
     const overlay = page.getByTestId('anatomy-labels');
     await expect(overlay.locator(':scope > span', { hasText: 'fixture cube A' })).toHaveCount(1);
 
-    // Hiding drops the fade; "show it" brings it back in full.
-    await card.getByRole('button', { name: 'hide it' }).click();
+    // Hiding drops the fade; "show" brings it back in full.
+    await card.getByRole('button', { name: 'hide', exact: true }).click();
     await expect(cubeA).toContainText('(hidden)');
     await expect(cubeA).not.toContainText('(faded)');
-    await card.getByRole('button', { name: 'show it' }).click();
+    await card.getByRole('button', { name: 'show', exact: true }).click();
     await expect(cubeA).not.toContainText('(hidden)');
     await expect(cubeA).not.toContainText('(faded)');
   });

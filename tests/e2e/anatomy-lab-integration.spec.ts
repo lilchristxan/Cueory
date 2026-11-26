@@ -49,7 +49,7 @@ test.describe('anatomy lab study tools, integration', () => {
     await openLab(page);
     await list(page).getByRole('button', { name: 'fixture cube A', exact: true }).click();
     const cardA = card(page, 'fixture cube A');
-    await cardA.getByRole('button', { name: 'show only this' }).click();
+    await cardA.getByRole('button', { name: 'isolate' }).click();
     await expect(list(page).getByRole('button', { name: /^fixture cube B/ })).toContainText('(hidden)');
     await expect(list(page).getByRole('button', { name: /^fixture slab E/ })).toContainText('(hidden)');
 

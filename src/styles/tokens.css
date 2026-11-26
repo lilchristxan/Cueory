@@ -1711,6 +1711,11 @@
   --lab-button-size: 0.9375em;     /* lab buttons */
   --lab-round-size: 1.125em;       /* round arrow and zoom buttons */
   --lab-row-size: 0.875em;         /* system rows and key/value lines */
+  --lab-name-size: 1.5em;          /* the selected structure's name on the inspector card */
+  --lab-id-size: 0.75em;           /* source ids (they are letters and digits, so Lato at a small size) */
+  --lab-selring-size: 3.5rem;      /* the ring round the selected structure */
+  --lab-leader-width: 0.0625rem;   /* the leader line from the ring to the card */
+  --lab-index-height: 14rem;       /* the index list scrolls inside this height */
   --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
   --lab-rail-width: 16.5rem;       /* orientation, systems and layers */
   --lab-inspector-width: 22.5rem;  /* selected structure and the structure list */
