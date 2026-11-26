@@ -59,7 +59,11 @@ for (const size of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, {
       await expect(row(page, 'pulse').getByRole('link')).toHaveCount(0);
       const print = row(page, 'pulse').getByRole('button', { name: 'print for a patient (vialo)' });
       await expect(print).toHaveText('print for a patient');
-      expect((await print.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      const printBox = (await print.boundingBox())!;
+      expect(printBox.height).toBeGreaterThanOrEqual(44);
+      // The long label stays on one line at 820 and 1440, and may wrap at 390 without clipping.
+      if (size.width >= 820) expect(printBox.height).toBeLessThan(56);
+      expect(await print.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
 
       await expect(words(page, 'triage')).toHaveText('not solved');
       await expect(row(page, 'triage').getByRole('link')).toHaveCount(0);
