@@ -9,6 +9,8 @@ import CardDeck from '../../../islands/CardDeck';
 import { pathsFor, statusNotice, type CatalogLesson } from '../../../lessons/catalog';
 import { lessonCatalog } from '../../../lessons/load';
 import { studyModes } from '../../../config/modes';
+import Wordmark from '../../../components/Wordmark.astro';
+import { site } from '../../../config/site';
 
 export async function getStaticPaths() {
   return pathsFor(await lessonCatalog(), 'cards');
@@ -30,7 +32,7 @@ const otherModes = lesson.modes
 {hold ? <LessonComingSoon /> : (
 <Layout title={title} description={`cards for ${lesson.about}.`} variant="study" bareHeader>
   {/* A focused screen, as in Christian's approved render (2026-11-26): the mode and its menu, the count and deck, close. */}
-  <div class="flex items-center gap-3 px-gutter pt-4 sm:pt-5" data-testid="cards-bar">
+  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-gutter pt-4 sm:pt-5" data-testid="cards-bar">
     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-1">
       <span class="min-w-0 text-lg font-bold">cards</span>
       {otherModes.length > 0 && (
@@ -48,10 +50,11 @@ const otherModes = lesson.modes
         </details>
       )}
     </div>
-    <div class="min-w-0 shrink text-center leading-tight">
-      <p id="cards-bar-count" class="text-sm text-ink-soft"></p>
-      <h1 class="wrap-anywhere text-base font-bold lowercase max-sm:sr-only">{title}</h1>
-    </div>
+    {/* The logo, top middle on every study screen (Christian, 2026-11-26): the full logo from 640 px, the emblem on phones. */}
+    <a href="/" class="shrink-0 p-(--logo-clear) text-ink" aria-label={`${site.name} home`} data-testid="study-logo">
+      <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
+      <Wordmark class="hidden w-(--logo-width) sm:block" sizes="15rem" />
+    </a>
     <div class="flex flex-1 justify-end">
     <a
       href={lesson.href}
@@ -67,7 +70,12 @@ const otherModes = lesson.modes
   </div>
 
   <div class="mx-auto max-w-3xl px-gutter pb-section">
-    <div class="mt-4">
+    {/* The count and the deck's name sit just above the bar, centred. */}
+    <div class="mt-2 text-center leading-tight">
+      <p id="cards-bar-count" class="text-sm text-ink-soft"></p>
+      <h1 class="wrap-anywhere text-base font-bold lowercase">{title}</h1>
+    </div>
+    <div class="mt-3">
       {/* client:only: nothing is pre-rendered, so without JavaScript only the full list below shows. */}
       <CardDeck client:only="react" deckId={deck.id} cards={cards} page={page} />
       <noscript>
