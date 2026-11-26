@@ -94,6 +94,40 @@ test.describe('anatomy lab study round', () => {
     await noSidewaysScroll(page);
   });
 
+  test('after a hint, a switch or skip, typing still goes to the cells', async ({ page }) => {
+    await openLab(page);
+    await begin(page, 'test it');
+    await page.getByRole('button', { name: 'hint: next letter' }).click();
+    await expect(cells(page)).toBeFocused();
+    await page.keyboard.type('x');
+    await expect(cells(page).locator('[data-from="typed"]')).toHaveCount(1);
+    await page.keyboard.press('Backspace');
+    await expect(cells(page).locator('[data-from="typed"]')).toHaveCount(0);
+    await expect(cells(page).locator('[data-from="hint"]')).toHaveCount(1);
+    for (const name of [/first letters/, /show nearby/]) {
+      await side(page).getByRole('switch', { name }).click();
+      await expect(cells(page)).toBeFocused();
+      await page.keyboard.type('x');
+      await expect(cells(page).locator('[data-from="typed"]')).toHaveCount(1);
+      await page.keyboard.press('Backspace');
+    }
+    await page.getByRole('button', { name: 'skip' }).click();
+    await expect(cells(page)).toBeFocused();
+  });
+
+  test('losing the 3D view and trying again ends the round', async ({ page }) => {
+    await openLab(page);
+    await begin(page, 'test it');
+    await expect(side(page)).toBeVisible();
+    await page.locator('canvas').evaluate((canvas) => canvas.dispatchEvent(new Event('webglcontextlost', { cancelable: true })));
+    await expect(page.getByRole('alert')).toContainText('the 3D anatomy lab could not open.');
+    await page.getByRole('button', { name: 'try 3D again' }).click();
+    await expect(page.locator('canvas')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: 'fixture cube A', exact: true })).toBeEnabled({ timeout: 20_000 });
+    await expect(side(page)).toHaveCount(0);
+    await expect(cells(page)).toHaveCount(0);
+  });
+
   test('learn it: the name is shown, and typing it moves on', async ({ page }) => {
     await openLab(page);
     await begin(page, 'learn it');

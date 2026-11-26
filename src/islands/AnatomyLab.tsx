@@ -304,6 +304,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [quiz, setQuiz] = useState<QuizState | null>(null);
   const [recall, setRecall] = useState<RecallState | null>(null);
   const [round, setRound] = useState<StudyRound | null>(null);
+  // The answer cells: a switch or hint hands the keyboard back to them, because typing is handled there.
+  const studyCellsRef = useRef<HTMLDivElement>(null);
   // Names stay off the screen (labels, search, list, card) while a name is being recalled or tested.
   const namesHidden = recall !== null || (round !== null && round.mode === 'test' && !roundFinished(round));
   const [typed, setTyped] = useState('');
@@ -555,6 +557,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSelected(null);
     setQuiz(null);
     setRecall(null);
+    // The old model's study round has nothing to ask about any more.
+    setRound(null);
+    setStudyLocation(null);
+    studyGroupRef.current = null;
     setAlone(false);
     setPending(new Set());
     setLayerError(null);
@@ -626,6 +632,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setSelected(null);
     setQuiz(null);
     setRecall(null);
+    // The old model's study round has nothing to ask about any more.
+    setRound(null);
+    setStudyLocation(null);
+    studyGroupRef.current = null;
     setAlone(false);
     setPending(new Set());
     setLayerError(null);
@@ -945,6 +955,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setFaded(baseline.faded);
       setSelected(null);
       setQuiz(null);
+      setRound(null);
+      setStudyLocation(null);
+      studyGroupRef.current = null;
       setRecallOn(false);
       setRecallRevealed(false);
       // Newer staging's name-it and printable worksheet are also applied presentation.
@@ -1157,6 +1170,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setSelected(null);
       setQuiz(null);
       setRecall(null);
+      setRound(null);
+      setStudyLocation(null);
+      studyGroupRef.current = null;
       setAlone(false);
       setPending(new Set());
       setLayerError(null);
@@ -1872,6 +1888,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setBulkPrompt({ kind: 'saved-view', systemKey: system.key, files: missingFiles.length, view, identity });
       return;
     }
+    stopStudy();
     stopRecall();
     setQuiz(null);
     changeVisibility(() => restored);
@@ -2159,6 +2176,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <div className="lab-glass lab-solid relative mx-3 mt-3 p-4 lg:absolute lg:inset-x-auto lg:right-(--lab-inspector-clear) lg:bottom-3 lg:left-(--lab-rail-clear) lg:z-10 lg:m-0" data-testid="anatomy-round-stage">
               <StudyCells
                 round={round}
+                boxRef={studyCellsRef}
                 official={studyTarget ? officialOf(studyTarget) : null}
                 touch={touchKeys}
                 onLetter={(key) => studyStep((round, id) => typeLetter(round, key, officialOf(id)))}
@@ -2456,8 +2474,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               groupName={studyGroupRef.current?.name ?? ''}
               startedAt={studyStartRef.current}
               onClose={stopStudy}
-              onFirstLetters={(on) => studyStep((round) => setFirstLetters(round, on))}
-              onNearby={(on) => studyStep((round) => setNearby(round, on))}
+              onFirstLetters={(on) => { studyStep((round) => setFirstLetters(round, on)); studyCellsRef.current?.focus(); }}
+              onNearby={(on) => { studyStep((round) => setNearby(round, on)); studyCellsRef.current?.focus(); }}
               thumb={studyLocation?.url}
               viewWord={studyLocation?.word ?? null}
               dot={studyTarget ? (studyLocation?.marks.get(studyTarget) ?? null) : null}

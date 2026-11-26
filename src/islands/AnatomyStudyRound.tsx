@@ -3,7 +3,7 @@
  * it, and during a round the side panel (switches, streak, timer, round list, location) and the answer cells with
  * their keys. The state lives in anatomyround.ts; this file only draws it and passes presses back.
  */
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { answerCells, currentTarget, formatClock, roundFinished, roundRows, type StudyMode, type StudyRound } from './anatomyround';
 
 export type StudyChoice = StudyMode | 'find';
@@ -133,11 +133,13 @@ export function StudyRoundSide({
 
 /** The answer cells, the keys and the buttons under them. */
 export function StudyCells({
-  round, official, touch, onLetter, onBackspace, onHint, onShow, onSkip, onNext, onAgain,
+  round, official, touch, boxRef, onLetter, onBackspace, onHint, onShow, onSkip, onNext, onAgain,
 }: {
   round: StudyRound;
   official: string | null;
   touch: boolean;
+  /** The cells, so a button elsewhere (the switches) can hand the keyboard back to them. */
+  boxRef?: RefObject<HTMLDivElement | null>;
   onLetter: (key: string) => void;
   onBackspace: () => void;
   onHint: () => void;
@@ -146,7 +148,8 @@ export function StudyCells({
   onNext: () => void;
   onAgain: () => void;
 }) {
-  const box = useRef<HTMLDivElement>(null);
+  const ownBox = useRef<HTMLDivElement>(null);
+  const box = boxRef ?? ownBox;
   const nextButton = useRef<HTMLButtonElement>(null);
   const target = currentTarget(round);
   const settled = round.feedback === 'right' || round.feedback === 'shown';
@@ -235,7 +238,7 @@ export function StudyCells({
           <button ref={nextButton} type="button" className="lab-btn lab-btn-primary" onClick={onNext}>next</button>
         ) : (
           <>
-            {test && <button type="button" className="lab-btn" onClick={onHint}>hint: next letter</button>}
+            {test && <button type="button" className="lab-btn" onClick={() => { onHint(); box.current?.focus(); }}>hint: next letter</button>}
             {test && <button type="button" className="lab-btn" onClick={onShow}>show answer</button>}
             {test && <button type="button" className="lab-btn" onClick={onSkip}>skip</button>}
           </>
