@@ -70,6 +70,26 @@ export function createHintTimer(onEnd: () => void, duration = HINT_VISIBLE_MS): 
   };
 }
 
+export type HoldKind = 'hover' | 'focus' | 'touch';
+
+export interface HintHolds {
+  /** Something (the pointer, keyboard focus, a finger) is on the bubble: the countdown waits. */
+  hold(kind: HoldKind): void;
+  /** That thing left; the countdown carries on only when nothing else is still on the bubble. */
+  release(kind: HoldKind): void;
+  active(): boolean;
+}
+
+/** Hover, focus and touch pause the same countdown, but each one is tracked on its own. */
+export function createHintHolds(timer: Pick<HintTimer, 'pause' | 'resume'>): HintHolds {
+  const held = new Set<HoldKind>();
+  return {
+    hold(kind) { held.add(kind); timer.pause(); },
+    release(kind) { held.delete(kind); if (held.size === 0) timer.resume(); },
+    active: () => held.size > 0,
+  };
+}
+
 /** Bubble and obstacle boxes as the browser reports them. */
 export interface Box { left: number; right: number; top: number; bottom: number }
 

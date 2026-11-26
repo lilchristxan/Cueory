@@ -158,6 +158,32 @@ test('keyboard focus on the x pauses the countdown, so it does not vanish under 
   await expect(hint(page)).toHaveAttribute('data-phase', 'fading');
 });
 
+test('focus on the x outlasts hover: un-hovering does not let it vanish under the focused button', async ({ page }) => {
+  await openWithClock(page, '/play/vialo');
+  const close = page.getByTestId('print-hint-close');
+  await page.clock.runFor(2000);
+  await close.focus();
+  await hint(page).hover();
+  await page.mouse.move(5, 5);
+  await page.clock.runFor(30_000);
+  await expect(hint(page)).toHaveAttribute('data-phase', 'shown');
+  await expect(close).toBeFocused();
+  // When focus finally leaves, the countdown carries on and the bubble goes.
+  await page.getByTestId('game-frame-gear').focus();
+  await page.clock.runFor(8100);
+  await expect(hint(page)).toHaveAttribute('data-phase', 'fading');
+  await page.clock.runFor(500);
+  await expect(hint(page)).toHaveCount(0);
+});
+
+test('closing with the x moves focus to the printer button, not the page', async ({ page }) => {
+  await openWithClock(page, '/play/vialo');
+  await page.getByTestId('print-hint-close').focus();
+  await page.keyboard.press('Enter');
+  await expect(hint(page)).toHaveCount(0);
+  await expect(page.getByTestId('game-frame-print')).toBeFocused();
+});
+
 test('reduced motion: the bubble just disappears, with no fade', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openWithClock(page, '/play/vialo');
@@ -223,6 +249,7 @@ test('no bubble if the player has already started playing, so nothing moves unde
   await freezeClock(page);
   await page.goto('/play/vialo');
   await awake(page);
+  await expect(page.getByTestId('print-hint-status')).toBeAttached();
   await page.mouse.click(300, 400);
   await page.clock.runFor(1500);
   await expect(hint(page)).toHaveCount(0);

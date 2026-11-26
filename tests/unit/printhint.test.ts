@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHintTimer, HINT_VISIBLE_MS, roomNeeded } from '../../src/islands/printhint';
+import { createHintHolds, createHintTimer, HINT_VISIBLE_MS, roomNeeded } from '../../src/islands/printhint';
 import { printEventGame, PRINT_EVENT, requestPrint } from '../../src/islands/gameprintevent';
 
 describe('print hint countdown', () => {
@@ -55,6 +55,56 @@ describe('print hint countdown', () => {
     timer.resume();
     vi.advanceTimersByTime(HINT_VISIBLE_MS * 2);
     expect(end).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('hover, focus and touch hold the countdown independently', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+  const setup = () => {
+    const end = vi.fn();
+    const timer = createHintTimer(end);
+    const holds = createHintHolds(timer);
+    timer.start();
+    vi.advanceTimersByTime(2000);
+    return { end, holds };
+  };
+
+  it('focus first, then hover in and out: still held by focus', () => {
+    const { end, holds } = setup();
+    holds.hold('focus'); holds.hold('hover'); holds.release('hover');
+    vi.advanceTimersByTime(HINT_VISIBLE_MS * 3);
+    expect(end).not.toHaveBeenCalled();
+    holds.release('focus');
+    vi.advanceTimersByTime(7999);
+    expect(end).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(end).toHaveBeenCalledTimes(1);
+  });
+
+  it('hover first, then focus, then the pointer leaves: still held by focus', () => {
+    const { end, holds } = setup();
+    holds.hold('hover'); holds.hold('focus'); holds.release('hover');
+    expect(holds.active()).toBe(true);
+    vi.advanceTimersByTime(HINT_VISIBLE_MS * 3);
+    expect(end).not.toHaveBeenCalled();
+  });
+
+  it('hover first, then focus, then focus leaves: still held by the pointer', () => {
+    const { end, holds } = setup();
+    holds.hold('hover'); holds.hold('focus'); holds.release('focus');
+    vi.advanceTimersByTime(HINT_VISIBLE_MS * 3);
+    expect(end).not.toHaveBeenCalled();
+    holds.release('hover');
+    vi.advanceTimersByTime(8000);
+    expect(end).toHaveBeenCalledTimes(1);
+  });
+
+  it('touch counts too', () => {
+    const { end, holds } = setup();
+    holds.hold('touch'); holds.hold('hover'); holds.release('hover');
+    vi.advanceTimersByTime(HINT_VISIBLE_MS * 3);
+    expect(end).not.toHaveBeenCalled();
   });
 });
 

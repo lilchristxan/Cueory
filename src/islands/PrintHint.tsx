@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createHintTimer, HINT_SHOW_AFTER_MS, roomNeeded, type Box, type HintTimer } from './printhint';
+import { createHintHolds, createHintTimer, HINT_SHOW_AFTER_MS, roomNeeded, type Box, type HintHolds, type HintTimer } from './printhint';
 
 /** The things on a game page that the hint must never lie over: the date line's text, the cue, the game's drawn parts. */
 const OBSTACLES = [
@@ -45,6 +45,8 @@ export default function PrintHint() {
   const [phase, setPhase] = useState<'waiting' | 'shown' | 'fading' | 'gone'>('waiting');
   const bubble = useRef<HTMLDivElement>(null);
   const timer = useRef<HintTimer | null>(null);
+  const holds = useRef<HintHolds | null>(null);
+  const hadFocus = useRef(false);
   const reduced = useRef(false);
   /** x and Escape end it at once; only running out of time fades it. */
   const closing = useRef(false);
@@ -100,6 +102,7 @@ export default function PrintHint() {
     };
     const countdown = createHintTimer(end);
     timer.current = countdown;
+    holds.current = createHintHolds(countdown);
     countdown.start();
     makeRoom();
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { closing.current = true; countdown.close(); } };
@@ -108,6 +111,7 @@ export default function PrintHint() {
       document.removeEventListener('keydown', onKey);
       countdown.pause();
       timer.current = null;
+      holds.current = null;
     };
   }, [phase, makeRoom]);
 
@@ -128,9 +132,17 @@ export default function PrintHint() {
     return () => { document.removeEventListener('pointerup', later, true); document.removeEventListener('pointercancel', later, true); };
   }, [phase]);
 
+  /** If the bubble goes away while something inside it has focus, focus goes to the printer button, never to the page. */
+  useEffect(() => {
+    if (phase !== 'gone') return;
+    if (document.activeElement === document.body || document.activeElement === null) {
+      if (hadFocus.current) document.querySelector<HTMLElement>('[data-testid="game-frame-print"]')?.focus();
+    }
+    hadFocus.current = false;
+  }, [phase]);
+
   const visible = phase === 'shown' || phase === 'fading';
-  const pause = () => timer.current?.pause();
-  const resume = () => timer.current?.resume();
+  const pointerHold = (event: { pointerType: string }) => (event.pointerType === 'touch' ? 'touch' : 'hover') as 'touch' | 'hover';
   return (
     <>
       {/* Said once, politely, when the bubble appears; the bubble's own copy is hidden from screen readers. */}
@@ -141,10 +153,11 @@ export default function PrintHint() {
           className="game-frame-hint"
           data-testid="print-hint"
           data-phase={phase}
-          onPointerEnter={pause}
-          onPointerLeave={resume}
-          onFocus={pause}
-          onBlur={resume}
+          onPointerEnter={(event) => holds.current?.hold(pointerHold(event))}
+          onPointerLeave={(event) => holds.current?.release(pointerHold(event))}
+          onPointerCancel={(event) => holds.current?.release(pointerHold(event))}
+          onFocus={() => { hadFocus.current = true; holds.current?.hold('focus'); }}
+          onBlur={() => { hadFocus.current = false; holds.current?.release('focus'); }}
         >
           <span className="game-frame-hint-text" aria-hidden="true">print a copy for your patients!</span>
           <button type="button" className="game-frame-hint-close" aria-label="close" data-testid="print-hint-close" onClick={() => { closing.current = true; timer.current?.close(); }}>
