@@ -61,3 +61,19 @@ export function trapTarget(count: number, current: number, shift: boolean): numb
 export function stickersFor(drawn: { key: string; list: ShareSticker[] } | undefined, key: string): ShareSticker[] {
   return drawn && drawn.key === key ? drawn.list : [];
 }
+
+/**
+ * Lets the browser handle input and paint before the next heavy step (drawing a big sticker canvas is one long task, and
+ * in a slow engine it can hold up every tap and every frame for seconds). A message-channel hop, not a timer, so it also
+ * runs under a faked page clock and does not wait for a frame.
+ */
+export function yieldToBrowser(): Promise<void> {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = () => {
+      channel.port1.close();
+      resolve();
+    };
+    channel.port2.postMessage(undefined);
+  });
+}

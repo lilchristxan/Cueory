@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { gameName } from '../config/games';
 import { buildShareUrl } from './share';
 import ShareDialog from './ShareDialog';
+import { yieldToBrowser } from './sharedialogmodel';
 import type { ShareGame, ShareSticker } from './sharedialogmodel';
 import type { SharePayload } from './vialosharing';
 import type { SudokuLevel } from './sudoku';
@@ -62,6 +63,7 @@ export default function SudokuShare(props: SudokuShareProps) {
     await draw.waitForSudokuFonts(palette);
     const made: ShareSticker[] = [];
     for (const kind of SUDOKU_STICKER_KINDS) {
+      await yieldToBrowser();
       const canvas = draw.renderSudokuSticker(kind, input, palette);
       made.push({
         id: SUDOKU_STICKER_NAMES[kind],

@@ -7,6 +7,7 @@ import { browserStorage } from '../scripts/storage';
 import { gameName } from '../config/games';
 import { buildShareUrl } from './share';
 import ShareDialog from './ShareDialog';
+import { yieldToBrowser } from './sharedialogmodel';
 import type { ShareGame, ShareSticker } from './sharedialogmodel';
 import type { SharePayload } from './vialosharing';
 import {
@@ -83,6 +84,7 @@ export default function PicclineShare(props: PicclineShareProps) {
     const assets: PicclineAssets = await draw.loadPicclineAssets();
     const made: ShareSticker[] = [];
     for (const kind of PICCLINE_STICKER_KINDS) {
+      await yieldToBrowser();
       const canvas = draw.renderPicclineSticker(kind, input, assets, palette);
       made.push({
         id: PICCLINE_STICKER_NAMES[kind],
