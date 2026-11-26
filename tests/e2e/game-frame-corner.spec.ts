@@ -62,8 +62,8 @@ for (const [width, height] of sizes) {
 
       // Same size (44 px tap targets), same top, one centre line.
       for (const button of [m.gear, m.help]) {
-        expect(button.width).toBeGreaterThanOrEqual(43.9);
-        expect(button.height).toBeGreaterThanOrEqual(43.9);
+        expect(button.width).toBeGreaterThanOrEqual(44);
+        expect(button.height).toBeGreaterThanOrEqual(44);
       }
       expect(Math.abs(m.gear.width - m.help.width)).toBeLessThanOrEqual(0.5);
       expect(Math.abs(m.gear.height - m.help.height)).toBeLessThanOrEqual(0.5);
@@ -132,7 +132,7 @@ for (const path of framedRoutes) {
         await page.goto(path);
         await expect(page.getByTestId('game-frame-gear')).toBeVisible();
         const m = await page.evaluate(() => {
-          const r = (n: Element | null) => { const b = n!.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, width: b.width, height: b.height }; };
+          const r = (n: Element | null) => { const b = n!.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom, width: b.width, height: b.height }; };
           const range = document.createRange();
           range.selectNodeContents(document.querySelector('.game-frame-dateline')!);
           return {
@@ -144,8 +144,8 @@ for (const path of framedRoutes) {
           };
         });
         for (const button of [m.gear, m.help]) {
-          expect(button.width).toBeGreaterThanOrEqual(43.9);
-          expect(button.height).toBeGreaterThanOrEqual(43.9);
+          expect(button.width).toBeGreaterThanOrEqual(44);
+          expect(button.height).toBeGreaterThanOrEqual(44);
         }
         expect(Math.abs(m.gear.width - m.help.width)).toBeLessThanOrEqual(0.5);
         expect(Math.abs(m.gear.height - m.help.height)).toBeLessThanOrEqual(0.5);
