@@ -1,4 +1,4 @@
-import { expect, test, type Locator, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { fixClock } from './clock';
 
 // Christian (25 Nov 2026): backspace and enter must work on vialo from every focus position, by physical keyboard,
@@ -23,6 +23,52 @@ async function tap(page: Page, target: Locator, touch: boolean) {
 async function typeOnScreen(page: Page, word: string) {
   for (const letter of word) await key(page, letter).click();
 }
+// TEMPORARY DIAGNOSTICS for the WebKit-only stall of the "after the game is finished" test below (the on-screen `r` key
+// never becomes visible, enabled and stable). It changes no assertion and no timeout. It samples the key and the pack for
+// 12 animation frames and prints one JSON line (job log) and attaches it. Remove it once the cause is fixed.
+async function sampleKeyDiagnostics(page: Page, testInfo: TestInfo, label: string) {
+  const data = await page.evaluate(async () => {
+    const letters = document.querySelector('[role="group"][aria-label="letters"]');
+    const keyEl = Array.from(letters?.querySelectorAll('button') ?? []).find((b) => /^r(,|$)/.test(b.getAttribute('aria-label') ?? b.textContent ?? '')) ?? null;
+    const packEl = document.querySelector('.vialo-pack-wrap');
+    const box = (el: Element | null) => {
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return [r.x, r.y, r.width, r.height].map((n) => Math.round(n * 100) / 100);
+    };
+    const anims = (el: Element | null) => {
+      const out: string[] = [];
+      for (let node: Element | null = el; node; node = node.parentElement) {
+        for (const a of node.getAnimations({ subtree: false })) {
+          const name = (a as CSSAnimation).animationName ?? (a as CSSTransition).transitionProperty ?? '?';
+          out.push(`${node.tagName.toLowerCase()}${node.className && typeof node.className === 'string' ? '.' + node.className.split(' ')[0] : ''}:${name}:${a.playState}`);
+        }
+        if (node === document.body) break;
+      }
+      return out;
+    };
+    const frames: unknown[] = [];
+    for (let i = 0; i < 12; i += 1) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const cs = keyEl ? getComputedStyle(keyEl) : null;
+      frames.push({
+        key: box(keyEl), pack: box(packEl), scroll: Math.round(window.scrollY),
+        disabled: (keyEl as HTMLButtonElement | null)?.disabled, ariaDisabled: keyEl?.getAttribute('aria-disabled'),
+        vis: cs?.visibility, pe: cs?.pointerEvents, op: cs?.opacity, anims: anims(keyEl),
+      });
+    }
+    const active = document.activeElement;
+    return {
+      found: Boolean(keyEl), keyClass: keyEl?.className, frames,
+      active: `${active?.tagName.toLowerCase()}:${active?.getAttribute('aria-label') ?? active?.getAttribute('name') ?? ''}`,
+      openDialogs: document.querySelectorAll('dialog[open], [role="dialog"]').length, inert: document.querySelectorAll('[inert]').length,
+    };
+  });
+  const line = JSON.stringify({ vialoKeyDiagnostics: label, ...data });
+  console.log(line);
+  await testInfo.attach(`vialo-key-diagnostics-${label}`, { body: line, contentType: 'application/json' });
+}
+
 const focusTargets: Record<string, (page: Page) => Promise<void>> = {
   'the page body': async (page) => {
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
@@ -110,7 +156,7 @@ test('Enter on a word that is not in the list shows the message and submits noth
 
 test('Enter and Backspace do nothing while the how-to-play dialog is open', async ({ page }) => {
   await typeOnScreen(page, 'crane');
-  await page.getByTestId('game-help-button').click();
+  await page.getByTestId('game-frame-help-button').click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await page.keyboard.press('Enter');
   await page.keyboard.press('Backspace');
@@ -120,8 +166,11 @@ test('Enter and Backspace do nothing while the how-to-play dialog is open', asyn
   await expect(typed(page)).toHaveCount(5);
 });
 
-test('Enter and Backspace do nothing after the game is finished', async ({ page }) => {
+test('Enter and Backspace do nothing after the game is finished', async ({ page }, testInfo) => {
+  let guess = 0;
   for (const word of ['crane', 'crane', 'crane', 'crane', 'crane', 'crane']) {
+    guess += 1;
+    await sampleKeyDiagnostics(page, testInfo, `before-word-${guess}`); // temporary, see above
     await typeOnScreen(page, word);
     await page.keyboard.press('Enter');
   }
@@ -234,7 +283,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await typeOnScreen(page, 'plant');
     await key(page, 'enter').click();
     await expect(guesses(page)).toHaveCount(2);
-    await page.getByTestId('game-help-button').click();
+    await page.getByTestId('game-frame-help-button').click();
     await expect(page.getByTestId('vialo-legend')).toBeVisible();
     const colours = await page.evaluate(() => {
       const probe = document.createElement('span');
@@ -272,7 +321,7 @@ for (const scheme of ['light', 'dark'] as const) {
 // "on-screen keyboard only" (settings): only the letter keys below type. The physical keyboard must not add, delete
 // or submit, but Enter or Space on a focused key still activates that key.
 async function keysOnlyOn(page: Page) {
-  await page.getByTestId('vialo').getByRole('button', { name: 'wordpill settings' }).click();
+  await page.getByRole('button', { name: 'wordpill settings' }).click();
   const settings = page.getByRole('dialog', { name: 'wordpill settings' });
   await settings.getByRole('switch', { name: /on-screen keyboard only/ }).click();
   await page.keyboard.press('Escape');

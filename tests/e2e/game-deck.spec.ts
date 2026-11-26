@@ -252,7 +252,7 @@ test.describe('card deck at 1440 x 900', () => {
         const pts = ([[-hw, -hh], [hw, -hh], [hw, hh], [-hw, hh]] as P[]).map(([x, y]): P => [cx + x * Math.cos(angle) - y * Math.sin(angle), cy + x * Math.sin(angle) + y * Math.cos(angle)]);
         polys.push({ name: el.dataset.game ?? '', pts });
       });
-      const selector = '.game-frame-board button, .game-frame-board [role="button"], .game-frame-board input, .sudoku-cell, .wordpath-letter, .game-frame-controls-row button, .game-frame-controls-row a'  + ', .vialo-pocket';
+      const selector = '.game-frame-board button, .game-frame-board [role="button"], .game-frame-board input, .sudoku-cell, .wordpath-letter, .game-frame-controls-row button, .game-frame-controls-row a, .game-frame-corner button'  + ', .vialo-pocket';
       const targets = [...document.querySelectorAll<HTMLElement>(selector)].filter((el) => el.offsetWidth > 0 && el.offsetHeight > 0);
       // Separating-axis test between a tilted card and an upright box.
       const hit = (pts: P[], b: DOMRect) => {
