@@ -134,6 +134,7 @@
   --game-frame-corner-inset: 1rem;       /* 16px: the gear and "?" sit this far in from the play area's top and right edges */
   --game-frame-corner-inset-phone: 0.75rem; /* 12px on phones, the same as the play area's side padding there */
   --game-frame-corner-gap: 0.5rem;       /* 8px between the gear and the "?" */
+  --game-frame-corner-buttons: 2;        /* how many buttons are in the corner pair: the gear and the "?" */
   --game-frame-how-font-size: 1.25rem;   /* 20px */
   --game-frame-popover-radius: 1.25rem;  /* 20px */
   --game-frame-popover-padding: 1.25rem 1.375rem; /* 20px 22px */
