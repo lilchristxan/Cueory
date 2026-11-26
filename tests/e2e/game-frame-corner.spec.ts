@@ -182,13 +182,9 @@ for (const path of framedRoutes) {
   }
 }
 
-// The board column is on the play area's centre line at every size. The 720 px showcase boards (piccline, word path) and
-// the wide crossword carry a print button at the board's edge, which must not slide under the fanned cards, so between
-// 1120 and 1340 px they keep a lopsided reserve and sit left of centre there; those widths are not in their list.
-const edgeButtons = new Set(['/play/piccline', '/play/word-path', '/play/crossword']);
+// The board column is on the play area's centre line at every size, on every framed game route.
 for (const path of framedRoutes) {
   for (const [width, height] of sizes) {
-    if (edgeButtons.has(path) && width >= 1120 && width < 1340) continue;
     test(`${path} at ${width}x${height}: board column centred on the play area`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto(path);
