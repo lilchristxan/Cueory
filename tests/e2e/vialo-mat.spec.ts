@@ -1,9 +1,77 @@
-import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { expect, test, type Page } from '@playwright/test';
 import { markPanelsSeen } from './clock';
 
 // The blister artwork file has an ivory mat baked around the foil card. The pack is clipped to the foil, so nothing
 // light shows around the card on the dark Evening page, the live wells stay exactly where they were, and the visible
 // card is centred on the keyboard's centre line. Pixels are read in the browser, so the test needs no image library.
+
+const artwork = readFileSync(new URL('../../public/design/pillo-blister-board.webp', import.meta.url)).toString('base64');
+
+/**
+ * Proves the artwork file itself is drawn, not just the grey fill and hatch behind it: the page must decode the
+ * file's URL, and a patch of foil below the last row of wells (cross-hatch and dashed perforations, no live
+ * element on top) must correlate with the same patch of the file read from disk, scaled to the pack's box.
+ */
+async function artworkDrawn(page: Page, png: Buffer, clip: { x: number; y: number }, box: { x: number; y: number; width: number; height: number }) {
+  return page.evaluate(
+    async ({ b64, ref, clip, box }) => {
+      const loaded = await new Promise<boolean>((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img.naturalWidth > 0);
+        img.onerror = () => resolve(false);
+        img.src = '/design/pillo-blister-board.webp';
+      });
+      const decode = async (data: string, type: string) => createImageBitmap(new Blob([Uint8Array.from(atob(data), (c) => c.charCodeAt(0))], { type }));
+      const shot = await decode(b64, 'image/png');
+      const scale = window.devicePixelRatio || 1;
+      const file = await decode(ref, 'image/webp');
+      const sCanvas = new OffscreenCanvas(shot.width, shot.height);
+      const sCtx = sCanvas.getContext('2d')!;
+      sCtx.drawImage(shot, 0, 0);
+      const rw = Math.round(box.width * scale);
+      const rh = Math.round(box.height * scale);
+      const rCanvas = new OffscreenCanvas(rw, rh);
+      const rCtx = rCanvas.getContext('2d')!;
+      rCtx.drawImage(file, 0, 0, rw, rh);
+      // Patch in the pack's own coordinates: x 8% to 92%, y 90.5% to 95.5% of the box.
+      const px0 = Math.round(0.08 * rw);
+      const px1 = Math.round(0.92 * rw);
+      const py0 = Math.round(0.905 * rh);
+      const py1 = Math.round(0.955 * rh);
+      const a = rCtx.getImageData(px0, py0, px1 - px0, py1 - py0).data;
+      const b = sCtx.getImageData(Math.round((box.x - clip.x) * scale) + px0, Math.round((box.y - clip.y) * scale) + py0, px1 - px0, py1 - py0).data;
+      // Averaged in 4 px blocks, so the fine hatch (which the browser resamples differently from this canvas) does not
+      // matter and the dashed perforations and the shading between wells carry the comparison.
+      const w = px1 - px0;
+      const h = py1 - py0;
+      const block = Math.max(2, Math.round(4 * scale));
+      const grey = (d: Uint8ClampedArray, x: number, y: number) => {
+        let total = 0;
+        let count = 0;
+        for (let yy = y; yy < Math.min(h, y + block); yy += 1) {
+          for (let xx = x; xx < Math.min(w, x + block); xx += 1) {
+            const i = (yy * w + xx) * 4;
+            total += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            count += 1;
+          }
+        }
+        return total / count;
+      };
+      let sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0, n = 0;
+      for (let y = 0; y < h; y += block) {
+        for (let x = 0; x < w; x += block) {
+          const u = grey(a, x, y), v = grey(b, x, y);
+          sa += u; sb += v; saa += u * u; sbb += v * v; sab += u * v; n += 1;
+        }
+      }
+      const cov = sab / n - (sa / n) * (sb / n);
+      const sd = Math.sqrt(Math.max(1e-9, saa / n - (sa / n) ** 2)) * Math.sqrt(Math.max(1e-9, sbb / n - (sb / n) ** 2));
+      return { loaded, correlation: cov / sd };
+    },
+    { b64: png.toString('base64'), ref: artwork, clip, box },
+  );
+}
 
 const sizes = [
   [390, 844],
@@ -109,6 +177,9 @@ for (const scheme of ['light', 'dark'] as const) {
       expect(result.boxShadow).toBe('none');
       expect(result.bandPixels).toBeGreaterThan(1000);
       expect(result.insideDark).toBeGreaterThan(1000); // the card itself is still there
+      const drawn = await artworkDrawn(page, png, clip, box);
+      expect(drawn.loaded).toBe(true);
+      expect(drawn.correlation).toBeGreaterThan(0.7); // the file's own texture is on screen
       // Nothing light survives between the visible card and the page: in Evening the page is dark, so the band
       // around the card (2 to 12 px out, which covers the old mat at every size) must be dark; the old mat was ivory,
       // 223 and up, and the page's own buttons sit further out.
@@ -129,3 +200,22 @@ for (const scheme of ['light', 'dark'] as const) {
     });
   }
 }
+
+// Negative control: with the artwork request blocked, the same check must report that the card is not drawn, so the
+// assertion above is shown to catch a missing artwork (the grey fill and hatch alone would still look like a card).
+test('the artwork check fails when the artwork file does not load', async ({ page }) => {
+  await markPanelsSeen(page);
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
+  await page.route('**/design/pillo-blister-board.webp', (route) => route.abort());
+  await page.goto('/play/vialo');
+  const pack = page.locator('.vialo-pack');
+  await expect(pack).toBeVisible();
+  await pack.evaluate((node) => node.scrollIntoView({ block: 'center' }));
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  const box = (await pack.boundingBox())!;
+  const clip = { x: Math.max(0, Math.floor(box.x) - margin), y: Math.max(0, Math.floor(box.y) - margin) };
+  const png = await page.screenshot({ clip: { ...clip, width: Math.ceil(box.width) + 2 * margin, height: Math.ceil(box.height) + 2 * margin } });
+  const drawn = await artworkDrawn(page, png, clip, box);
+  expect(drawn.loaded).toBe(false);
+  expect(drawn.correlation).toBeLessThan(0.7);
+});
