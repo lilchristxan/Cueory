@@ -206,15 +206,18 @@ export function initGamesCarousel(): void {
     track.style.transform = `translateX(${-offsetFor(virtual, step)}px)`;
   };
 
-  /** Swaps a look-alike position for the real one, instantly: the two look the same, so nothing visibly moves. */
+  /**
+   * Ends every slide the same way, whichever signal arrives first (transitionend, the fallback timer, a resize): the
+   * look-alike position is swapped for the real one if need be, and the row is then put on its final position with no
+   * animation. Safari can start a slide late or lose its end event, so "settled" must never rest on a running slide:
+   * writing the final position here makes the row land exactly where it belongs even if the slide had not begun.
+   */
   const settle = () => {
     if (transitionTimer !== undefined) window.clearTimeout(transitionTimer);
     transitionTimer = undefined;
-    if (needsSnap(virtualIndex, count)) {
-      virtualIndex = activeIndex;
-      paint(virtualIndex, false);
-      void track.offsetWidth; // apply the unanimated jump before any later slide starts
-    }
+    if (needsSnap(virtualIndex, count)) virtualIndex = activeIndex;
+    paint(virtualIndex, false);
+    void track.offsetWidth; // apply the unanimated jump before any later slide starts
     setState('settled');
   };
 
