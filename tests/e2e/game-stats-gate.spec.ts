@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { build } from 'esbuild';
+import { build, type PluginBuild } from 'esbuild';
 import { readFileSync } from 'node:fs';
 
 // Game stats (played, % solved, streaks) are shown only to a signed-in player (Christian, 2026-11-25). The built
@@ -26,7 +26,7 @@ test.beforeAll(async () => {
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     define: { 'process.env.NODE_ENV': '"production"' },
-    plugins: [...(pending ? [{ name: 'launch-box-pending', setup(builder: { onLoad: Function }) {
+    plugins: [...(pending ? [{ name: 'launch-box-pending', setup(builder: PluginBuild) {
       // The same site config with neither Kit's form nor its landing page: the launch box says only "sign ups open soon."
       builder.onLoad({ filter: /src[\\/]config[\\/]site\.ts$/ }, (args: { path: string }) => ({
         contents: readFileSync(args.path, 'utf8').replace(/formAction: '[^']*'/, "formAction: ''").replace(/landingUrl: '[^']*'/, "landingUrl: ''"), loader: 'ts',

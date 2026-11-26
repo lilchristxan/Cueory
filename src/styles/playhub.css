@@ -102,9 +102,10 @@
     text-align: center;
   }
 
-  /* A wordmark drawn larger than its box (piccline's, global.css) grows to the right from the row's left edge, not both
-     ways, so it never reaches back toward the icon. */
-  .play-hub-wordmark img {
+  /* Piccline's wordmark, drawn larger than its box (global.css), grows to the right from the row's left edge, not both
+     ways, so it never reaches back toward the icon. Only piccline's: vialo's Evening wordmark scales about its centre. */
+  .play-hub-wordmark img[src$="piccline-wordmark-light.svg"],
+  .play-hub-wordmark img[src$="piccline-wordmark-dark.svg"] {
     transform-origin: left center;
   }
 }
