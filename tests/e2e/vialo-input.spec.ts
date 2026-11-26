@@ -7,6 +7,60 @@ test.beforeEach(async ({ page }) => {
   await fixClock(page, new Date('2026-11-01T15:00:00'));
   await page.goto('/play/vialo');
   await expect(page.getByTestId('vialo')).toBeVisible();
+  await startStallSampler(page); // temporary, see below
+});
+
+// TEMPORARY DIAGNOSTICS for the WebKit-only stall inside the sixth word (a letter key stops being "stable"). From the
+// page's own animation frames it logs only CHANGES (capped at 20000 frames / 90 s): each letter key's rect and
+// disabled state, the keyboard and pack rects with their computed transform and animation names, the active element,
+// scroll and visual viewport, and how many DOM mutations the keyboard saw. It is printed after every test, also when a
+// click timed out. It changes no assertion and no timeout. Remove it once the cause is fixed.
+async function startStallSampler(page: Page) {
+  await page.evaluate(() => {
+    const w = window as unknown as { __stall: { t: number; what: string }[]; __stallMutations: number };
+    w.__stall = [];
+    w.__stallMutations = 0;
+    const keyboard = document.querySelector('[role="group"][aria-label="letters"]');
+    if (keyboard) new MutationObserver((list) => { w.__stallMutations += list.length; }).observe(keyboard, { subtree: true, childList: true, attributes: true, characterData: true });
+    const round = (n: number) => Math.round(n * 10) / 10;
+    const rect = (el: Element | null) => (el ? (() => { const r = el.getBoundingClientRect(); return [round(r.x), round(r.y), round(r.width), round(r.height)]; })() : null);
+    const names = (el: Element | null) => (el ? el.getAnimations({ subtree: true }).map((a) => `${(a as CSSAnimation).animationName ?? (a as CSSTransition).transitionProperty}:${a.playState}`) : []);
+    let previous = '';
+    let frames = 0;
+    const started = performance.now();
+    const tick = () => {
+      const pack = document.querySelector('.vialo-pack');
+      const wrap = document.querySelector('.vialo-pack-wrap');
+      const letters = Array.from(keyboard?.querySelectorAll('button') ?? []);
+      const state = JSON.stringify({
+        keys: letters.map((b) => [b.getAttribute('aria-label') ?? b.textContent, rect(b), (b as HTMLButtonElement).disabled, b.getAttribute('aria-disabled')]),
+        keyboard: [rect(keyboard), keyboard ? getComputedStyle(keyboard).transform : null, names(keyboard)],
+        pack: [rect(pack), rect(wrap), pack ? getComputedStyle(pack).transform : null, names(pack)],
+        active: `${document.activeElement?.tagName.toLowerCase()}:${document.activeElement?.getAttribute('aria-label') ?? ''}`,
+        scrollY: Math.round(window.scrollY),
+        viewport: window.visualViewport ? [round(window.visualViewport.offsetTop), round(window.visualViewport.height), round(window.visualViewport.scale)] : null,
+        mutations: w.__stallMutations,
+      });
+      if (state !== previous) {
+        w.__stall.push({ t: Math.round(performance.now() - started), what: state });
+        previous = state;
+      }
+      frames += 1;
+      if (frames < 20000 && performance.now() - started < 90000) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+test.afterEach(async ({ page }, testInfo) => {
+  const log = await page.evaluate(() => (window as unknown as { __stall?: unknown[] }).__stall ?? []).catch(() => null);
+  if (!log) return;
+  const text = JSON.stringify({ vialoStallSampler: testInfo.title, changes: log });
+  // Only worth the log space when a test failed or timed out.
+  if (testInfo.status !== testInfo.expectedStatus) {
+    console.log(text);
+    await testInfo.attach('vialo-stall-sampler', { body: text, contentType: 'application/json' });
+  }
 });
 
 const keys = (page: Page) => page.getByRole('group', { name: 'letters' });
