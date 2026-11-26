@@ -81,6 +81,11 @@
     margin-block-end: var(--share-dialog-wordmark-gap);
   }
 
+  .share-dialog-piccline .share-dialog-wordmark {
+    block-size: var(--share-dialog-wordmark-height-piccline);
+    margin-block-end: var(--share-dialog-wordmark-gap-piccline);
+  }
+
   .share-dialog-picker {
     display: grid;
     inline-size: 100%;

@@ -986,6 +986,25 @@
   --vialo-sticker-pack-shadow: rgba(20, 13, 8, 0.28);
   --vialo-sticker-pill-shade: rgba(62, 44, 35, 0.22);
   --vialo-sticker-pill-lift: rgba(62, 44, 35, 0.28);
+  /* Piccline share stickers (always Daytime, never overridden for Evening): the word of the day is teal, the others brown. */
+  --picc-sticker-teal-light: rgb(66, 150, 147);
+  --picc-sticker-teal-mid: rgb(47, 122, 120);
+  --picc-sticker-teal-deep: rgb(30, 90, 88);
+  --picc-sticker-brown-light: rgb(204, 136, 90);
+  --picc-sticker-brown-mid: rgb(176, 106, 62);
+  --picc-sticker-brown-deep: rgb(132, 74, 38);
+  --picc-sticker-accent: #2f7a78;       /* values and site line */
+  --picc-sticker-bar-teal: rgb(58, 140, 139);    /* the bars behind the beads, as pictured in Christian's PNG (his CSS says #2f7a78 and #b06a3e, but his picture is lighter) */
+  --picc-sticker-bar-brown: rgb(191, 126, 79);
+  --picc-sticker-lift: rgba(30, 20, 14, 0.25);
+  --picc-sticker-bead-lift: rgba(30, 20, 14, 0.24);
+  --picc-sticker-bar-lift: rgba(30, 20, 14, 0.22);
+  --picc-sticker-edge: rgba(249, 245, 239, 0.2);   /* fainter than his CSS (0.42): his picture shows hardly any edge */
+  --picc-sticker-ring-color: rgb(255 255 255 / 0.7);  /* the light ring that marks the word of the day, so colour is not the only signal */
+  --picc-sticker-ring-dot: 6px;         /* its thickness inside a 136 px dot, and how far in it sits */
+  --picc-sticker-ring-dot-gap: 10px;
+  --picc-sticker-ring-bead: 3px;        /* the same inside a 54 px bead */
+  --picc-sticker-ring-bead-gap: 5px;
   --vialo-sticker-ring-scale: 2;        /* the board's "elsewhere" ring, scaled up to the sticker's bigger pills */
   --vialo-sticker-pill-gloss: rgba(249, 245, 239, 0.9);
   --vialo-sticker-here-light: rgb(63, 138, 104);
@@ -1026,6 +1045,8 @@
   --share-dialog-corner-shadow: 0 0.25rem 0.75rem rgb(var(--shadow-tint) / 0.16);
   --share-dialog-chosen-shadow: 0 0.5rem 1.375rem rgb(94 26 22 / 0.12);
   --share-dialog-wordmark-gap: 1.625rem;   /* 26 px under the wordmark */
+  --share-dialog-wordmark-height-piccline: 4.625rem; /* 74 px: his script wordmark is taller than vialo's */
+  --share-dialog-wordmark-gap-piccline: 1.375rem;    /* 22 px */
   --share-dialog-section-gap: 1.625rem;
   --share-dialog-option-min: 17.5rem;      /* 280 px: two stickers sit side by side from a card about 600 px wide */
   --share-dialog-action-gap: 0.875rem;     /* 14 px */

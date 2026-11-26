@@ -13,6 +13,8 @@ export const PICCLINE_SAVE_VERSION = 1 as const;
 export const PICCLINE_OWNER = 'device';
 /** Never read or write more than this many characters, so a damaged record cannot grow without bound. */
 const MAX_SAVE_LENGTH = 16_384;
+/** A solve time over a day cannot be real: ignore it. */
+const MAX_MS = 86_400_000;
 
 interface SavedBoard {
   found: number[];
@@ -21,6 +23,8 @@ interface SavedBoard {
   hint: PathHint | null;
   misses: number;
   printed?: true;
+  /** The solve timer's milliseconds so far (Christian, 25 Nov 2026); boards saved before the timer have none. */
+  ms?: number;
 }
 interface SaveFile {
   v: typeof PICCLINE_SAVE_VERSION;
@@ -71,11 +75,18 @@ export function loadPicclineSave(puzzle: SuturePathPuzzle, day: string, storage:
   return restore(boardsFor(read(storage), day)[puzzle.id], puzzle);
 }
 
+/** The solve timer's milliseconds saved with today's board, or undefined for none (an older save, or never started). */
+export function loadPicclineMs(puzzle: SuturePathPuzzle, day: string, storage: KeyValueStorage | undefined = browserStorage()): number | undefined {
+  const board = boardsFor(read(storage), day)[puzzle.id];
+  const ms = isObject(board) ? board.ms : undefined;
+  return whole(ms, MAX_MS) ? ms : undefined;
+}
+
 /** Saves the board after a move. Only today's file is kept: opening a new day starts over. Letters being picked are not saved. */
-export function savePicclineBoard(puzzle: SuturePathPuzzle, day: string, state: PathState, storage: KeyValueStorage | undefined = browserStorage()): void {
+export function savePicclineBoard(puzzle: SuturePathPuzzle, day: string, state: PathState, storage: KeyValueStorage | undefined = browserStorage(), ms?: number): void {
   if (!storage) return;
   try {
-    const board: SavedBoard = { found: state.found, extras: state.extras, hintsUsed: state.hintsUsed, hint: state.hint, misses: state.misses, ...(state.printed ? { printed: true as const } : {}) };
+    const board: SavedBoard = { found: state.found, extras: state.extras, hintsUsed: state.hintsUsed, hint: state.hint, misses: state.misses, ...(state.printed ? { printed: true as const } : {}), ...(ms !== undefined && ms <= MAX_MS ? { ms: Math.round(ms) } : {}) };
     const others = Object.fromEntries(Object.entries(boardsFor(read(storage), day)).filter(([id]) => id !== puzzle.id));
     const file = { v: PICCLINE_SAVE_VERSION, owner: PICCLINE_OWNER, day, boards: { ...others, [puzzle.id]: board } };
     const text = JSON.stringify(file);
