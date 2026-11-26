@@ -7,7 +7,7 @@
  *
  * `icon` and `wordmark` are what the game page and the hub draw: the Daytime file, and the Evening file for the dark
  * palette. `card` is what the carousel draws. Its cards are cream in both palettes, so it always draws Daytime art
- * (dark ink) and never the ivory Evening wordmark, which would vanish on cream.
+ * (dark ink) and never the Evening wordmark: tachyyy's and piccline's are ivory, which would vanish on cream.
  */
 export interface GameImageLogo {
   kind: 'image';
@@ -31,7 +31,7 @@ export const gameLogos = {
   vialo: {
     kind: 'image',
     icon: { day: vialoIcon, evening: vialoIcon },
-    wordmark: { day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/brand/games/vialo-wordmark-dark.svg', width: 4326, height: 1620 },
+    wordmark: { day: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg', evening: '/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg', width: 4326, height: 1620 },
     card: { icon: vialoIcon, wordmark: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg' },
   },
   tachyyy: {

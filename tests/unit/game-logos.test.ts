@@ -19,6 +19,9 @@ function frameConfig(id: string): string {
 }
 const frameValue = (config: string, key: string) => config.match(new RegExp(`${key}: '([^']+)'`))?.[1];
 
+const tokens = readFileSync(new URL('../../src/styles/tokens.css', import.meta.url), 'utf8');
+const globalCss = readFileSync(new URL('../../src/styles/global.css', import.meta.url), 'utf8');
+
 // The verify script builds dist/ before unit tests, so the carousel side is read from the real built home page.
 const home = readFileSync(new URL('../../dist/index.html', import.meta.url), 'utf8');
 
@@ -127,5 +130,43 @@ describe('the shared logo source equals what the game pages use (GameFrame.astro
     expect(frame).toContain('game-frame-emblem-hi">hi<');
     expect(gameLogos.sudoku.text).toBe('9');
     expect(gameLogos.helloCards.text).toBe('hi');
+  });
+});
+
+describe("vialo's Evening wordmark: the Daytime path unchanged, with a 1 px gold outline", () => {
+  const dir = new URL('../../public/design/games-v2/assets/', import.meta.url);
+  const day = readFileSync(new URL('vialo-wordmark-oxblood-v3.svg', dir), 'utf8');
+  const evening = readFileSync(new URL('vialo-wordmark-oxblood-v3-evening.svg', dir), 'utf8');
+  const pathOf = (svg: string) => svg.match(/<path d="([^"]+)"/)![1];
+  const box = (svg: string) => svg.match(/viewBox="([^"]+)"/)![1]!.split(' ').map(Number) as [number, number, number, number];
+
+  it('has the same single path and fill, plus the outline', () => {
+    expect(pathOf(evening)).toBe(pathOf(day));
+    expect(evening.match(/<path /g)).toHaveLength(1);
+    expect(evening).toContain('fill="#5E1914"');
+    expect(evening).toContain('stroke="#d9976a"');
+    expect(evening).toContain('stroke-width="1"');
+    expect(evening).toContain('vector-effect="non-scaling-stroke"');
+    expect(evening).toContain('stroke-linejoin="round"');
+  });
+
+  it('pads the canvas evenly around the Daytime one, in its proportions, and the scale token undoes the padding', () => {
+    const [dx, dy, dw, dh] = box(day);
+    const [ex, ey, ew, eh] = box(evening);
+    expect(ex).toBeLessThan(dx);
+    expect(ey).toBeLessThan(dy);
+    expect(ex + ew - (dx + dw)).toBe(-ex); // the same margin on both sides
+    expect(ey + eh - (dy + dh)).toBe(-ey);
+    expect(Math.abs(ew / eh - dw / dh)).toBeLessThan(0.001); // same proportions: same box at the same CSS height
+    const scale = Number(tokens.match(/--vialo-evening-wordmark-scale:\s*([\d.]+)/)![1]);
+    expect(Math.abs(scale - eh / dh)).toBeLessThan(0.0002);
+    expect(globalCss).toContain('img[src$="vialo-wordmark-oxblood-v3-evening.svg"] {\n    scale: var(--vialo-evening-wordmark-scale);');
+  });
+
+  it('is vialo\'s Evening wordmark on the hub and the game page, and the carousel (cream in both palettes) keeps Daytime', () => {
+    expect(gameLogos.vialo.wordmark.evening).toBe('/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg');
+    expect(gameLogos.vialo.wordmark.day).toBe('/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg');
+    expect(gameLogos.vialo.card.wordmark).toBe(gameLogos.vialo.wordmark.day);
+    expect(frameValue(frameConfig('pulse'), 'wordmarkEveningSrc')).toBe(gameLogos.vialo.wordmark.evening);
   });
 });

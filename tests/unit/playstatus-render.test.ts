@@ -45,7 +45,7 @@ describe('the /play hub rows (option B)', () => {
   it('uses the shared logo artwork (src/config/gamelogos.ts) for vialo and a serif name for the others', () => {
     const html = render(true);
     expect(html).toContain('src="/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg"');
-    expect(html).toContain('src="/brand/games/vialo-wordmark-dark.svg"');
+    expect(html).toContain('src="/design/games-v2/assets/vialo-wordmark-oxblood-v3-evening.svg"');
     expect(html).toContain('src="/design/games-v2/assets/vialo-icon-silver-oxblood.svg"');
     expect(html).toContain('alt="vialo"');
     expect(html).toMatch(/display[^>]*>crossword</);
