@@ -13,7 +13,7 @@ import { dailyStats, recordResult, type DailyStats, type GameStats } from './gam
 import { browserStorage } from '../scripts/storage';
 import { revealDelayMs } from './sharedialogmodel';
 import { useRefreshOnStatsChange } from './finishstatsrefresh';
-import { formatSolveTime } from './vialosticker';
+import { formatSolveTime } from './vialotimer';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
