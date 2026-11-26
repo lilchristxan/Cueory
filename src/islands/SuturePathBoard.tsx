@@ -13,7 +13,6 @@ import { formatSolveTime } from './vialotimer';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import PicclineCue from './PicclineCue';
 import { site } from '../config/site';
-import { shake } from './shake';
 import { loadPicclineMs, loadPicclineSave, savePicclineBoard, savePicclineMs } from './picclinesave';
 import type { Cell } from './suture';
 import {
@@ -272,7 +271,7 @@ export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props)
     apply(next.state);
     if (firstWordFound(before, next.state)) announceProgress(localDay(today));
     setSaid(submitInWords(next.state, puzzle, next.outcome));
-    if (next.outcome.kind === 'unknown') shake(board.current);
+    if (next.outcome.kind === 'unknown') { const target = board.current; void import('./SutureGame').then(({ shake }) => shake(target)); }
     // Only what the game already says in words and marks: a word found (or the finish), an extra word, or a word it refuses.
     const kind = next.outcome.kind;
     if (kind === 'found') playGameCue(pathDone(next.state, puzzle) ? 'solved' : 'good', sound.current);
