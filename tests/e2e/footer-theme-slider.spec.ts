@@ -86,7 +86,7 @@ test('keyboard: one Tab stop, arrows move and pick, Space and Enter keep the pic
 test('the footer slider and the game settings slider stay in sync both ways', async ({ page }) => {
   await openFooter(page, '/play/word-path');
   await picker(page).locator('.theme-slider-option', { hasText: 'dark' }).click();
-  await page.getByTestId('game-settings-button').click();
+  await page.getByTestId('game-frame-gear').click();
   const panel = page.getByRole('dialog').getByRole('group', { name: 'theme' });
   await expect(panel.getByRole('radio', { name: 'dark mode' })).toBeChecked();
   await panel.locator('.theme-slider-option', { hasText: 'light' }).click();

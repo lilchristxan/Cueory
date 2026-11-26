@@ -4,9 +4,9 @@ import { markGameRulesSeen } from './clock';
 test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
 const games = [
-  { path: '/play/pillo', name: 'pillo', framed: false, bridge: false },
+  { path: '/play/pillo', name: 'pillo', framed: true, bridge: true },
   { path: '/play/stat', name: 'stat', framed: true, bridge: false },
-  { path: '/play/word-path', name: 'piccline', framed: false, bridge: false },
+  { path: '/play/word-path', name: 'piccline', framed: true, bridge: true },
   { path: '/play/crossword', name: 'crossword', framed: true, bridge: true },
   { path: '/play/hello-cards', name: 'hello cards', framed: true, bridge: false },
 ] as const;

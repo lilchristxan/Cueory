@@ -18,9 +18,7 @@ const axe = (page: Page, selector: string) =>
   new AxeBuilder({ page }).include(selector).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
 
 const helpButton = (page: Page, game: (typeof games)[number]) =>
-  game.id === 'cueword' || game.id === 'triage'
-    ? page.getByTestId('game-frame-help-button')
-    : page.getByTestId(game.testId).getByRole('button', { name: `how to play ${game.name}` });
+  page.getByTestId('game-frame-help-button');
 
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-11-01T15:00:00'));
@@ -103,8 +101,7 @@ test('piccline help opens from the keyboard at phone width and restores focus', 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/play/word-path');
 
-  const area = page.getByTestId('suture');
-  const button = area.getByRole('button', { name: 'how to play piccline' });
+  const button = page.getByRole('button', { name: 'how to play piccline' });
   await button.focus();
   await expect(button).toBeFocused();
 

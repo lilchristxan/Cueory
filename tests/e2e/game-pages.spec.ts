@@ -10,10 +10,10 @@ import { markPanelsSeen } from './clock';
  */
 
 const games = [
-  { path: '/play/vialo', name: 'vialo', testId: 'vialo', id: 'vialo', framed: false },
+  { path: '/play/vialo', name: 'vialo', testId: 'vialo', id: 'vialo', framed: true },
   { path: '/play/sudoku', name: 'sudoku', testId: 'sudoku', id: 'triage', framed: true },
   { path: '/play/crossword', name: 'crossword', testId: 'cueword', id: 'cueword', framed: true },
-  { path: '/play/word-path', name: 'piccline', testId: 'suture', id: 'suture', framed: false },
+  { path: '/play/word-path', name: 'piccline', testId: 'suture', id: 'suture', framed: true },
 ] as const;
 const others = (testId: string) => games.map((game) => game.testId).filter((other) => other !== testId);
 

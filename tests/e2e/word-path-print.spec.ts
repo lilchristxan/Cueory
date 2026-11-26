@@ -34,30 +34,25 @@ test.beforeEach(async ({ page }) => {
 const printed = (page: Page) => page.evaluate(() => (window as unknown as { printed: number }).printed);
 
 test.describe('piccline: print for a patient (Task 641)', () => {
-  test('a round print button, at least 44 × 44, in the top right corner beside the "?"', async ({ page }) => {
+  test('a round print button, at least 44 × 44, at the top right of the board, below the Frame\'s gear and "?"', async ({ page }) => {
     await expect(printButton(page)).toBeVisible();
     const box = (await printButton(page).boundingBox())!;
     expect(box.width).toBeGreaterThanOrEqual(44);
     expect(box.height).toBeGreaterThanOrEqual(44);
     await expect(printButton(page)).toHaveCSS('border-top-left-radius', /^(?:[2-9]\d|\d{3,})(?:\.\d+)?px$/);
-    // The "?" takes the top right corner on every game (Christian's brief); print sits just to its left, on the same row.
+    // The gear and "?" are the Frame's pair in the play area's corner; print stays at the board's top right edge, under them.
     const area = (await game(page).boundingBox())!;
-    const help = (await game(page).getByRole('button', { name: 'how to play piccline' }).boundingBox())!;
-    expect(help.x + help.width).toBeGreaterThan(area.x + area.width - 2);
-    expect(box.x + box.width).toBeLessThanOrEqual(help.x);
-    expect(help.x - (box.x + box.width)).toBeLessThanOrEqual(16);
-    expect(Math.abs(box.y - help.y)).toBeLessThanOrEqual(2);
+    const help = (await page.getByTestId('game-frame-help-button').boundingBox())!;
+    expect(box.x + box.width).toBeGreaterThan(area.x + area.width - 2);
+    expect(box.y).toBeGreaterThanOrEqual(help.y + help.height);
     // The print-only word list and footer stay off screen.
     await expect(page.getByTestId('suture-print-words')).toBeHidden();
     await expect(page.getByTestId('suture-print-foot')).toBeHidden();
   });
 
   test('the keyboard reaches the print button, and enter prints', async ({ page }) => {
-    // The corner row comes before the grid: gear, print, then "?". So shift+tab from the first letter lands on the "?",
-    // and once more on print.
+    // The Frame's gear and "?" come first, then the board's own row with print. So shift+tab from the first letter lands on print.
     await cell(page, [0, 0]).focus();
-    await page.keyboard.press('Shift+Tab');
-    await expect(game(page).getByRole('button', { name: 'how to play piccline' })).toBeFocused();
     await page.keyboard.press('Shift+Tab');
     await expect(printButton(page)).toBeFocused();
     await page.keyboard.press('Enter');
