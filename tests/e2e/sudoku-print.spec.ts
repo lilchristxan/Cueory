@@ -316,3 +316,28 @@ test('a press before the print island has loaded is remembered and answered once
   await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
   await expect(warning(page)).toHaveCount(0);
 });
+
+test('the printed sheet starts with the cueory logo, centred, and the logo is not fetched on screen', async ({ page }) => {
+  // Replaces the older whole-page print checks for sudoku (games-print.spec.ts, print-logo-not-requested.spec.ts).
+  const requested: string[] = [];
+  page.on('request', (request) => { if (/\/brand\/v1\/logo-full-light-960\.png/.test(request.url())) requested.push(request.url()); });
+  await page.goto('/play/sudoku');
+  await ready(page);
+  await page.waitForLoadState('networkidle');
+  const sheetLogo = sheet(page).getByTestId('sheet-page-1-brand').locator('img.sheet-wordmark');
+  const sheetLogoUrl = await sheetLogo.first().evaluate((image) => (image as HTMLImageElement).currentSrc || (image as HTMLImageElement).src);
+  expect(requested.filter((url) => url === sheetLogoUrl)).toEqual([]);
+  await page.emulateMedia({ media: 'print' });
+  const first = sheet(page).getByTestId('sheet-page-1-brand').locator('img:visible').first();
+  await expect(first).toBeVisible();
+  await expect.poll(() => first.evaluate((image) => (image as HTMLImageElement).complete && (image as HTMLImageElement).naturalWidth > 0)).toBe(true);
+  const box = (await first.boundingBox())!;
+  const width = await page.evaluate(() => document.documentElement.clientWidth);
+  expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThanOrEqual(3);
+  expect(box.height).toBeGreaterThanOrEqual(40);
+  // Nothing on page 1 is printed above the logo.
+  const top = await page.getByTestId('sheet-page-1').evaluate((section) => Math.min(...[...section.querySelectorAll<HTMLElement>('*')]
+    .filter((element) => element.getBoundingClientRect().height > 0 && element.getClientRects().length > 0)
+    .map((element) => element.getBoundingClientRect().top)));
+  expect(Math.abs(box.y - top)).toBeLessThanOrEqual(8);
+});
