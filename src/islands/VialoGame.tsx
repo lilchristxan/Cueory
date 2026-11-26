@@ -236,6 +236,13 @@ export default function VialoGame({ puzzles }: Props) {
 
   useEffect(() => {
     if (state.status === 'playing') return;
+    // The one place the clock stops: every way out of "playing" lands here (a last guess, and "print anyway" through
+    // the forfeit event), so a finished board's time never keeps counting (Codex on #1229).
+    if (!timer.current.stopped) {
+      timer.current = stopTimer(timer.current, Date.now());
+      setTimerRunning(false);
+      if (state.status === 'solved' && timer.current.started) setSolveMs(timerElapsed(timer.current, Date.now()));
+    }
     result.current?.focus();
     if (reported.current) return;
     reported.current = true;
@@ -277,11 +284,6 @@ export default function VialoGame({ puzzles }: Props) {
     }
     const next = playGuess(state, word, list);
     setState(next);
-    if (next.status !== 'playing') {
-      timer.current = stopTimer(timer.current, Date.now());
-      setTimerRunning(false);
-      if (next.status === 'solved' && timer.current.started) setSolveMs(timerElapsed(timer.current, Date.now()));
-    }
     // The row's marks are shown the moment it is accepted, so a cue for the reveal tells nothing new.
     playGameCue(next.status === 'solved' ? 'solved' : next.status === 'out' ? 'invalid' : 'place', soundAllowed());
     if (state.guesses.length === 0) {
