@@ -276,3 +276,23 @@ for (const { path, script } of [
     expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(1);
   });
 }
+
+test('/play/vialo: a printer press before the game has loaded is answered once it arrives (finished game prints once)', async ({ page }) => {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route(/\/_astro\/VialoPrint\.[\w-]+\.js$/, async (route) => { await held; await route.continue(); });
+  await page.addInitScript(() => {
+    window.print = () => { (window as unknown as { printed: number }).printed = ((window as unknown as { printed?: number }).printed ?? 0) + 1; };
+  });
+  await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
+  await awake(page);
+  await page.getByTestId('game-frame-print').click();
+  expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(0);
+  release();
+  // Today's game is not finished here, so the answer is the warning, shown once, and nothing prints until "print anyway".
+  const warning = page.getByRole('dialog');
+  await expect(warning).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(0);
+});
