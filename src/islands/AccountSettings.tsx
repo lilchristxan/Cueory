@@ -6,7 +6,7 @@ import {
 } from './accountsettings-core';
 import { AccountsUnavailable, authButton, authInput } from './SignIn.tsx';
 import { getSupabase } from './supabaseclient';
-import { reauthHref } from './deleteaccount';
+import { reauthHref } from './deletereauth';
 import { localDay } from '../scripts/localday';
 import { browserStorage, type KeyValueStorage } from '../scripts/storage';
 
