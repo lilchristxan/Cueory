@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ComponentType } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { localDay } from './gameresults';
 import { loadSudokuStats } from './sudokustats';
@@ -60,13 +60,22 @@ export default function SudokuPrint() {
     document.querySelector('[data-print-sheet] [data-keeper]')?.setAttribute('data-keeper', answers ? 'ready' : 'locked');
   }, [answers]);
 
-  const puzzle = useMemo(() => (rules ? rules.generateSudoku(rules.dailySudokuSeed(day, level), level) : undefined), [rules, day, level]);
+  // The level this print was authorised for, read once when the request is made. The check, the "print anyway" record, the
+  // answers and the sheet all use it, so switching level while the answers load cannot print another level's solution
+  // that was never checked (Codex on #1236). `pinned` holds the sheet on it until the print is released.
+  const authorized = useRef<SudokuLevel>('easy');
+  const [pinned, setPinned] = useState<SudokuLevel | null>(null);
+  const shown = pinned ?? level;
+  const puzzle = useMemo(() => (rules ? rules.generateSudoku(rules.dailySudokuSeed(day, shown), shown) : undefined), [rules, day, shown]);
 
   const print = useGamePrint({
     game: 'triage',
     forfeitTries: 0,
-    finished: (today) => levelFinished(today, levelNow()),
-    forfeitDetail: () => ({ level: levelNow() }),
+    finished: (today) => {
+      authorized.current = levelNow();
+      return levelFinished(today, authorized.current);
+    },
+    forfeitDetail: () => ({ level: authorized.current }),
     prepare: async (now) => {
       const [loadedRules, loadedParts, { AnswersPage }] = await Promise.all([import('./sudoku'), import('./SudokuSheetParts'), import('./SudokuAnswers')]);
       flushSync(() => {
@@ -74,11 +83,14 @@ export default function SudokuPrint() {
         setParts(loadedParts);
         setAnswersView(() => AnswersPage);
         setDay(localDay(now));
-        setLevel(levelNow());
+        setPinned(authorized.current);
         setAnswers(true);
       });
     },
-    release: () => setAnswers(false),
+    release: () => {
+      setAnswers(false);
+      setPinned(null);
+    },
   });
   useEffect(() => {
     if (print.warning) setWarned(true);

@@ -341,3 +341,33 @@ test('the printed sheet starts with the cueory logo, centred, and the logo is no
     .map((element) => element.getBoundingClientRect().top)));
   expect(Math.abs(box.y - top)).toBeLessThanOrEqual(8);
 });
+
+test('switching level while the answers load prints, and forfeits, only the level that was authorised', async ({ page }) => {
+  // Hold the answers file so "print anyway" is still preparing when the level is changed on the page.
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  let asked = false;
+  await page.route('**/_astro/SudokuAnswers*.js', async (route) => {
+    asked = true;
+    await held;
+    await route.continue();
+  });
+  await page.goto('/play/sudoku');
+  await ready(page);
+  await press(page);
+  await warning(page).getByRole('button', { name: 'print anyway' }).click();
+  await expect.poll(() => asked).toBe(true);
+  expect(await printed(page)).toBe(0);
+  await picker(page).selectOption('hard');
+  release();
+  await expect.poll(() => printed(page)).toBe(1);
+  // The sheet and its answers are easy's, the level that was checked and forfeited.
+  await expect(keeper(page)).toHaveAttribute('data-keeper', 'ready');
+  await expect(page.getByTestId('sheet-level-line').first()).toHaveText('sudoku · easy · 40 given numbers');
+  await expect(page.getByTestId('sheet-level-line').nth(1)).toHaveText('sudoku · easy · 40 given numbers');
+  // Hard was never authorised: it stays playable and carries no forfeit note. Easy ends when it is chosen again.
+  await expect(board(page).getByTestId('sudoku-forfeit-note')).toHaveCount(0);
+  await expect(board(page).getByRole('button', { name: '1', exact: true })).toBeEnabled();
+  await picker(page).selectOption('easy');
+  await expect(board(page).getByTestId('sudoku-forfeit-note')).toBeVisible();
+});
