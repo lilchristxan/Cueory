@@ -177,15 +177,17 @@ test('the gear controls the current puzzle, and the Frame picker stays in sync',
   await settings.getByRole('button', { name: 'resume puzzle' }).click();
   await expect(board).toHaveAttribute('data-paused', 'false');
 
+  // The settings' print button closes the settings and asks the page's print sheet, which warns first on an unfinished level.
   await page.evaluate(() => {
-    window.print = () => {
-      document.body.dataset.printedGame = document.documentElement.dataset.printGame;
-      window.dispatchEvent(new Event('afterprint'));
-    };
+    (window as unknown as { printed: number }).printed = 0;
+    window.print = () => { (window as unknown as { printed: number }).printed += 1; };
   });
   await gear.click();
   await settings.getByRole('button', { name: 'print this puzzle' }).click();
   await expect(settings).toHaveCount(0);
-  await expect(page.locator('body')).toHaveAttribute('data-printed-game', 'sudoku');
-  await expect(gear).toBeFocused();
+  const warning = page.getByRole('dialog', { name: 'print before you finish?' });
+  await expect(warning).toBeVisible();
+  await warning.getByRole('button', { name: 'finish the game first' }).click();
+  await expect(warning).toBeHidden();
+  expect(await page.evaluate(() => (window as unknown as { printed: number }).printed)).toBe(0);
 });

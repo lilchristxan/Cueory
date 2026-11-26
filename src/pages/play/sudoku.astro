@@ -2,6 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import GamePage from '../../components/GamePage.astro';
 import SudokuGame from '../../islands/SudokuGame';
+import SudokuSheet from '../../components/SudokuSheet.astro';
+import SudokuPrint from '../../islands/SudokuPrint';
 import { dailyGames, gamePagesBareHeader } from '../../config/games';
 
 const game = dailyGames.find((item) => item.id === 'triage')!;
@@ -23,6 +25,9 @@ const game = dailyGames.find((item) => item.id === 'triage')!;
     </div>
   </section>
 </GamePage>
+<SudokuSheet />
+<SudokuPrint client:only="react" />
+<noscript><p>printing the {game.name} sheet needs JavaScript.</p></noscript>
 </Layout>
 
 <script>

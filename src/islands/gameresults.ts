@@ -8,7 +8,8 @@
  */
 import type { KeyValueStorage } from '../scripts/storage';
 import { dayLabel } from './daily';
-import { LEVEL_LABELS, type SudokuResult } from './sudoku';
+import { LEVEL_LABELS } from './sudokulevels';
+import type { SudokuResult } from './sudoku';
 import type { StatRoundResult } from './stat';
 import { statGame } from '../config/games';
 import { migratePilloStatsToVialo, parseStats, serialize, type GameId, type GameStats } from './gamestats';

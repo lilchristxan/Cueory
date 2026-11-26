@@ -547,6 +547,8 @@
   --sheet-ink: #3e2c23;         /* Espresso: text on paper (--color-ink by day) */
   --sheet-oxblood: #6e2019;     /* the game's oxblood by day: pack, wells, keys, labels, marks */
   --sheet-oxblood-light: #a0413a;
+  --sheet-teal: #2f7a78;       /* piccline's teal by day (--color-game-teal): its sheet's outlines, labels and answer paths */
+  --sheet-teal-light: #5a9a98;
   --sheet-margin: 0.5in;        /* every side: most home printers cannot print closer. The page rule is zero, so the browser prints no web address or date */
   --sheet-foot-space: 0.3in;    /* room kept above the bottom margin for the footer line */
   --sheet-icon-large: 0.62in;   /* the logo on page 1 takes only the room it needs */
@@ -588,6 +590,31 @@
   --sheet-box-bottom: 0.45in;   /* the word box sits in the lower part of page 2, above the footer */
   --sheet-label-pad-block: 0.04in;
   --sheet-label-pad-inline: 0.2in;
+  --sheet-grid-cell-max: 0.9in; /* piccline page 1: the most one of the 6 × 8 letter squares may take; each paper gets the biggest square that still leaves the words to find their room beside it */
+  --sheet-list-min: 2.05in;     /* the words to find need at least this beside the board (9 letters at 18 pt with a tick box) */
+  --sheet-grid-dot-share: 85%;  /* the circle round a letter, as a share of its square */
+  --sheet-grid-letter: 28pt;
+  --sheet-grid-cell-small: 0.47in; /* the same board on page 2, with the answers drawn through it */
+  --sheet-grid-dot-small: 0.35in;
+  --sheet-grid-letter-small: 15pt;
+  --sheet-spread-gap: 0.25in;
+  --sheet-path-line: 4pt;       /* an answer's path on page 2 */
+  --sheet-path-dash: 10pt 6pt;  /* the thread's path is dashed, so it differs in more than colour */
+  --sheet-number: 12pt;          /* the number where an answer's path starts on page 2, in the cell's top left corner, outside the circle */
+  --sheet-number-pad: 0.01in 0.02in;
+  --sheet-number-offset: -0.07in;
+  --sheet-list-word: 18pt;      /* the words to find on page 1 */
+  --sheet-list-tracking: 0.04em;
+  --sheet-list-gap: 0.14in;
+  --sheet-list-space: 0.2in;
+  --sheet-box-size: 0.28in;     /* a tick box */
+  --sheet-box-radius: 0.04in;
+  --sheet-sudoku-cell: 0.78in;  /* sudoku page 1: each of the 81 squares, so the grid is 7 in wide, as big as Letter's height and A4's width allow */
+  --sheet-sudoku-digit: 36pt;   /* a number in the big grid, bold */
+  --sheet-sudoku-cell-small: 0.4in;  /* the solved grid on page 2 */
+  --sheet-sudoku-digit-small: 18pt;
+  --sheet-sudoku-thin: 1.5pt;   /* the lines between squares */
+  --sheet-sudoku-thick: 3.5pt;  /* the box lines and the grid's outer edge */
   --sheet-dialog-width: min(calc(100vw - 2rem), 28rem); /* the "print before you finish?" dialog */
 
   /* ---------- Motion (D-41 brand bar: 150–400 ms, soft not bouncy, always off under reduced-motion) ---------- */

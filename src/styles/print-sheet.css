@@ -22,6 +22,17 @@
     /* The game's oxblood, by its Daytime values, whatever the screen's palette. */
     --game-oxblood: var(--sheet-oxblood);
     --game-oxblood-light: var(--sheet-oxblood-light);
+    /* Each game's own accent: its outlines, labels and marks. */
+    --sheet-accent: var(--sheet-oxblood);
+    --sheet-accent-light: var(--sheet-oxblood-light);
+  }
+  .sheet-print[data-print-sheet="sudoku"] {
+    --sheet-accent: var(--sheet-ink);
+    --sheet-accent-light: var(--sheet-ink-soft);
+  }
+  .sheet-print[data-print-sheet="piccline"] {
+    --sheet-accent: var(--sheet-teal);
+    --sheet-accent-light: var(--sheet-teal-light);
   }
   .sheet-print .logo-evening { display: none !important; }
 
@@ -51,11 +62,11 @@
   .sheet-label {
     margin-block-start: var(--sheet-gap) !important;
     padding: var(--sheet-label-pad-block) var(--sheet-label-pad-inline);
-    border: var(--sheet-line) solid var(--sheet-oxblood);
+    border: var(--sheet-line) solid var(--sheet-accent);
     border-radius: var(--radius-pill);
     font-size: var(--sheet-label);
     font-weight: 700;
-    color: var(--sheet-oxblood) !important;
+    color: var(--sheet-accent) !important;
     text-align: center;
   }
   .sheet-caption { margin-block: calc(var(--sheet-gap) * 0.5) var(--sheet-gap) !important; font-size: var(--sheet-small); color: var(--sheet-ink-soft) !important; text-align: center; }
@@ -70,7 +81,7 @@
     max-inline-size: var(--sheet-pack-width);
     box-sizing: border-box;
     padding: var(--sheet-pack-pad);
-    border: var(--sheet-line) solid var(--sheet-oxblood);
+    border: var(--sheet-line) solid var(--sheet-accent);
     border-radius: var(--sheet-pack-radius);
   }
   .sheet-cell {
@@ -78,8 +89,8 @@
     align-items: center;
     justify-content: center;
     aspect-ratio: var(--sheet-cell-ratio);
-    border-inline-end: var(--sheet-dash) dashed var(--sheet-oxblood-light);
-    border-block-end: var(--sheet-dash) dashed var(--sheet-oxblood-light);
+    border-inline-end: var(--sheet-dash) dashed var(--sheet-accent-light);
+    border-block-end: var(--sheet-dash) dashed var(--sheet-accent-light);
   }
   .sheet-cell:nth-child(5n) { border-inline-end: 0; }
   .sheet-cell:nth-last-child(-n+5) { border-block-end: 0; }
@@ -87,7 +98,7 @@
     inline-size: var(--sheet-well-width);
     aspect-ratio: var(--sheet-well-ratio);
     box-sizing: border-box;
-    border: var(--sheet-line) solid var(--sheet-oxblood);
+    border: var(--sheet-line) solid var(--sheet-accent);
     border-radius: var(--radius-pill);
   }
 
@@ -110,7 +121,7 @@
     inline-size: calc((100cqi - 9 * var(--sheet-key-gap)) / 10);
     block-size: var(--sheet-key-height);
     box-sizing: border-box;
-    border: var(--sheet-line) solid var(--sheet-oxblood);
+    border: var(--sheet-line) solid var(--sheet-accent);
     border-radius: var(--sheet-key-radius);
     font-size: var(--sheet-key-letter);
     font-weight: 700;
@@ -127,11 +138,11 @@
 
   /* Three pen marks on a sample letter: a single line through it, an x that reaches past it, a ring around it. */
   .sheet-sample { position: relative; display: inline-flex; align-items: center; justify-content: center; inline-size: var(--sheet-sample); aspect-ratio: 1; font-size: var(--sheet-sample-letter); font-weight: 700; line-height: 1; }
-  .sheet-mark-line::after { content: ""; position: absolute; inset-inline: 8%; inset-block-start: 50%; border-block-start: var(--sheet-mark-line) solid var(--sheet-oxblood); }
-  .sheet-mark-cross::before, .sheet-mark-cross::after { content: ""; position: absolute; inset-inline-start: 50%; inset-block: -4%; border-inline-start: var(--sheet-mark-line) solid var(--sheet-oxblood); }
+  .sheet-mark-line::after { content: ""; position: absolute; inset-inline: 8%; inset-block-start: 50%; border-block-start: var(--sheet-mark-line) solid var(--sheet-accent); }
+  .sheet-mark-cross::before, .sheet-mark-cross::after { content: ""; position: absolute; inset-inline-start: 50%; inset-block: -4%; border-inline-start: var(--sheet-mark-line) solid var(--sheet-accent); }
   .sheet-mark-cross::before { transform: rotate(45deg); }
   .sheet-mark-cross::after { transform: rotate(-45deg); }
-  .sheet-mark-ring { box-sizing: border-box; border: var(--sheet-mark-line) solid var(--sheet-oxblood); border-radius: 50%; }
+  .sheet-mark-ring { box-sizing: border-box; border: var(--sheet-mark-line) solid var(--sheet-accent); border-radius: 50%; }
 
   /* The fold line: dashed, edge to edge, label in the middle. The answers go below it, so folding hides them. */
   .sheet-fold {
@@ -145,7 +156,7 @@
     color: var(--sheet-ink-soft) !important;
     white-space: nowrap;
   }
-  .sheet-fold::before, .sheet-fold::after { content: ""; flex: 1; border-block-start: var(--sheet-dash) dashed var(--sheet-oxblood-light); }
+  .sheet-fold::before, .sheet-fold::after { content: ""; flex: 1; border-block-start: var(--sheet-dash) dashed var(--sheet-accent-light); }
 
   /* The word of the day, low on page 2 (so it does not sit behind the board when printed back to back). It is filled in
      only at print time, and only when printing is allowed (src/scripts/printsheet.ts). */
@@ -154,7 +165,7 @@
     margin-block: 0 var(--sheet-box-bottom) !important;
     box-sizing: border-box;
     padding: var(--sheet-box-pad-block) var(--sheet-box-pad-inline);
-    border: var(--sheet-line) solid var(--sheet-oxblood);
+    border: var(--sheet-line) solid var(--sheet-accent);
     border-radius: var(--sheet-pack-radius);
     text-align: center;
   }
@@ -162,4 +173,94 @@
   .sheet-locked { font-size: var(--sheet-text); }
   .sheet-keeper[data-keeper="ready"] .sheet-locked { display: none; }
   .sheet-keeper:not([data-keeper="ready"]) .sheet-reveal { display: none; }
+}
+
+@media print {
+  /* piccline: the letter board with a numbered list beside it (page 1), and the board with every answer's path drawn through it (page 2). */
+  [data-sheet-slot] { inline-size: 100%; }
+  .sheet-clue { margin-block: 0 var(--sheet-gap) !important; font-size: var(--sheet-text); font-weight: 700; text-align: center; }
+  .sheet-spread { container-type: inline-size; display: flex; align-items: flex-start; justify-content: center; gap: var(--sheet-spread-gap); inline-size: 100%; }
+  .sheet-grid { --sheet-square: min(var(--sheet-grid-cell-max), calc((100cqi - var(--sheet-list-min) - var(--sheet-spread-gap)) / 6)); position: relative; display: grid; grid-template-columns: repeat(6, var(--sheet-square)); flex: none; }
+  .sheet-grid-small { --sheet-square: var(--sheet-grid-cell-small); grid-template-columns: repeat(6, var(--sheet-square)); }
+  .sheet-grid-cell {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--sheet-square);
+    block-size: var(--sheet-square);
+  }
+  .sheet-grid-letter {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--sheet-grid-dot-share);
+    block-size: var(--sheet-grid-dot-share);
+    border: var(--sheet-line) solid var(--sheet-accent);
+    border-radius: 50%;
+    background: var(--print-paper); /* covers the path's line, so it runs from circle to circle */
+    font-size: var(--sheet-grid-letter);
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+  .sheet-grid-small .sheet-grid-letter { inline-size: var(--sheet-grid-dot-small); block-size: var(--sheet-grid-dot-small); font-size: var(--sheet-grid-letter-small); }
+  .sheet-paths { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; }
+  .sheet-path { fill: none; stroke: var(--sheet-accent); stroke-width: var(--sheet-path-line); stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .sheet-path-thread { stroke-dasharray: var(--sheet-path-dash); }
+  .sheet-grid-number { position: absolute; inset-block-start: var(--sheet-number-offset); inset-inline-start: var(--sheet-number-offset); font-size: var(--sheet-number); font-weight: 700; line-height: 1; padding: var(--sheet-number-pad); background: var(--print-paper); color: var(--sheet-ink); z-index: 1; }
+
+  .sheet-list ol { list-style: none; margin: 0; padding: 0; }
+  .sheet-grid-cell { position: relative; z-index: 1; }
+  .sheet-list { flex: 1 1 0; min-inline-size: 0; margin: 0; padding: 0; list-style: none; }
+  .sheet-list-title { margin-block-end: var(--sheet-gap) !important; font-size: var(--sheet-small); color: var(--sheet-ink-soft) !important; }
+  .sheet-list li { display: flex; align-items: baseline; gap: var(--sheet-key-gap); font-size: var(--sheet-text); }
+  .sheet-list-number { flex: none; font-weight: 700; min-inline-size: 1.4em; }
+  .sheet-list-checks li { align-items: center; gap: var(--sheet-list-gap); font-size: var(--sheet-list-word); font-weight: 700; letter-spacing: var(--sheet-list-tracking); }
+  .sheet-list-checks li + li { margin-block-start: var(--sheet-list-space); }
+  .sheet-list-word { min-inline-size: 0; overflow-wrap: anywhere; }
+  .sheet-box { flex: none; box-sizing: border-box; inline-size: var(--sheet-box-size); block-size: var(--sheet-box-size); border: var(--sheet-line) solid var(--sheet-accent); border-radius: var(--sheet-box-radius); }
+  .sheet-list-answers li + li { margin-block-start: var(--sheet-step-gap); }
+  .sheet-list-tag { font-size: var(--sheet-small); color: var(--sheet-ink-soft); }
+
+  /* The answers block on page 2, below the fold. Its words stay out of the page until printing is allowed. */
+  .sheet-answers { align-self: stretch; margin-block: 0 !important; text-align: center; }
+  .sheet-answers .sheet-spread { justify-content: center; align-items: center; }
+  .sheet-answers[data-keeper="ready"] .sheet-locked { display: none; }
+  .sheet-answers:not([data-keeper="ready"]) .sheet-locked { display: block; padding: var(--sheet-box-pad-block) var(--sheet-box-pad-inline); border: var(--sheet-line) solid var(--sheet-accent); border-radius: var(--sheet-pack-radius); }
+}
+
+@media print {
+  /* sudoku: the 9 by 9 grid with bold box lines. Page 1 has the given numbers; page 2 the solved grid, the given numbers in bold and the rest lighter. */
+  .sheet-sudoku {
+    --sheet-square: var(--sheet-sudoku-cell);
+    --sheet-digit: var(--sheet-sudoku-digit);
+    display: grid;
+    grid-template-columns: repeat(9, var(--sheet-square));
+    inline-size: max-content;
+    margin-inline: auto;
+    box-sizing: content-box;
+    border: var(--sheet-sudoku-thick) solid var(--sheet-ink);
+  }
+  .sheet-sudoku-small { --sheet-square: var(--sheet-sudoku-cell-small); --sheet-digit: var(--sheet-sudoku-digit-small); }
+  .sheet-sudoku-cell {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: var(--sheet-square);
+    block-size: var(--sheet-square);
+    border-inline-end: var(--sheet-sudoku-thin) solid var(--sheet-ink-soft);
+    border-block-end: var(--sheet-sudoku-thin) solid var(--sheet-ink-soft);
+    font-size: var(--sheet-digit);
+    font-weight: 400;
+    line-height: 1;
+    color: var(--sheet-ink);
+  }
+  .sheet-sudoku-cell.sheet-given { font-weight: 700; }
+  .sheet-sudoku-cell:nth-child(9n) { border-inline-end: 0; }
+  .sheet-sudoku-cell:nth-last-child(-n+9) { border-block-end: 0; }
+  .sheet-sudoku-cell.sheet-box-right { border-inline-end: var(--sheet-sudoku-thick) solid var(--sheet-ink); }
+  .sheet-sudoku-cell.sheet-box-bottom { border-block-end: var(--sheet-sudoku-thick) solid var(--sheet-ink); }
 }
