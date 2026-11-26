@@ -902,9 +902,8 @@ const helloCardsAvailable = helloCardsPage(
 
   /* Vialo Demo: a miniature of the live board (src/styles/vialo.css). Oblong capsule pills in a strip of the same grey
      blister foil, drawn in CSS from the board's own tokens; the card stays light in Evening, so the foil and the pill
-     colours are the Daytime ones (--game-demo-vialo-*). The guess is CARES against NURSE: in place is green with a
-     filled dot, elsewhere in the word is red with an open dot, not in the word is white with a small dot, so colour is
-     never the only signal. The first look at rest (and under reduced motion) is the finished rows. */
+     colours are the Daytime ones (--game-demo-vialo-*). The guess is CARES against NURSE: in place is green, elsewhere in
+     the word is red with a thin light ring inside its edge, not in the word is white, so colour is never the only signal. The first look at rest (and under reduced motion) is the finished rows. */
   .vialo-grid {
     display: grid;
     gap: var(--game-demo-vialo-grid-gap);
@@ -927,7 +926,7 @@ const helloCardsAvailable = helloCardsPage(
     --gc-face: var(--game-demo-vialo-green);
     --gc-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-demo-vialo-green-light) 38%, var(--game-demo-vialo-green-deep)), var(--game-demo-vialo-green) 55%, var(--game-demo-vialo-green-deep));
     --gc-ink: var(--game-frame-pill-text-color);
-    --gc-rim: 0 0 0 0 transparent;
+    --gc-ring: var(--game-demo-vialo-ring-color);
     position: relative;
     width: var(--game-demo-vialo-cell-width);
     height: var(--game-demo-vialo-cell-height);
@@ -941,14 +940,13 @@ const helloCardsAvailable = helloCardsPage(
     color: var(--gc-ink);
     background-color: var(--gc-face);
     background-image: var(--gc-image);
-    box-shadow: var(--gc-rim), var(--shadow-pillo-pill);
+    box-shadow: var(--shadow-pillo-pill);
     animation: gfill 4.8s ease-in-out infinite;
   }
 
   .gc.gc-elsewhere {
     --gc-face: var(--game-demo-vialo-red);
     --gc-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-demo-vialo-red-light) 80%, var(--game-demo-vialo-red)), var(--game-demo-vialo-red) 55%, var(--game-demo-vialo-red-deep));
-    --gc-rim: inset 0 0 0 var(--pillo-contrast-rim) var(--game-demo-vialo-red-light);
   }
 
   .gc.gc-absent {
@@ -957,24 +955,22 @@ const helloCardsAvailable = helloCardsPage(
     --gc-ink: var(--game-demo-vialo-absent-ink);
   }
 
-  /* The letter sits a little high and its mark under it, as on the live board: ● in place, ○ elsewhere, · not in the word. */
-  .gc::after {
+  /* Elsewhere in the word: a thin light ring inside the pill's edge (as on the live board and its key), so red differs from
+     green by more than colour. Green and white carry no mark. */
+  .gc.gc-elsewhere::before {
+    content: "";
     position: absolute;
-    inset-block-end: var(--pillo-mark-drop);
-    font-size: var(--game-demo-vialo-mark-size);
-    line-height: 1;
-    padding-block-end: var(--game-demo-vialo-mark-pad);
+    inset: var(--game-demo-vialo-ring-gap);
+    border: var(--game-demo-vialo-ring) solid var(--gc-ring);
+    border-radius: inherit;
+    pointer-events: none;
   }
-
-  .gc.gc-here::after { content: "\25CF" / ""; }
-  .gc.gc-elsewhere::after { content: "\25CB" / ""; }
-  .gc.gc-absent::after { content: "\00B7" / ""; }
 
   /* Each pocket starts empty (the foil's well) and its pill drops in. */
   @keyframes gfill {
-    0%, 8% { background-image: none; background-color: transparent; color: transparent; box-shadow: var(--shadow-pillo-pocket); }
-    18%, 86% { background-image: var(--gc-image); background-color: var(--gc-face); color: var(--gc-ink); box-shadow: var(--gc-rim), var(--shadow-pillo-pill); }
-    100% { background-image: none; background-color: transparent; color: transparent; box-shadow: var(--shadow-pillo-pocket); }
+    0%, 8% { background-image: none; background-color: transparent; color: transparent; box-shadow: var(--shadow-pillo-pocket); --gc-ring: transparent; }
+    18%, 86% { background-image: var(--gc-image); background-color: var(--gc-face); color: var(--gc-ink); box-shadow: var(--shadow-pillo-pill); --gc-ring: var(--game-demo-vialo-ring-color); }
+    100% { background-image: none; background-color: transparent; color: transparent; box-shadow: var(--shadow-pillo-pocket); --gc-ring: transparent; }
   }
 
   /* Tachyyy Demo */

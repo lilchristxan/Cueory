@@ -7,7 +7,6 @@ const root = new URL('../../', import.meta.url);
 const read = (path: string) => readFileSync(new URL(path, root), 'utf8');
 const card = read('src/components/DailyGamesSection.astro');
 const tokens = read('src/styles/tokens.css');
-const live = read('src/styles/vialo.css');
 
 const token = (name: string) => tokens.match(new RegExp(`--${name}:\\s*([^;]+);`))![1]!.trim();
 const rem = (name: string) => Number.parseFloat(token(name));
@@ -23,23 +22,25 @@ const contrast = (a: string, b: string) => {
 const demoStyle = card.slice(card.indexOf('/* Vialo Demo'), card.indexOf('/* Reduced Motion */'));
 
 describe('the home vialo card preview', () => {
-  it('draws capsules, wider than tall, not circles', () => {
-    expect(rem('game-demo-vialo-cell-width')).toBeGreaterThan(rem('game-demo-vialo-cell-height'));
+  it('draws capsules in the live board\'s proportions (about 1.49 to 1), not circles', () => {
+    const ratio = rem('game-demo-vialo-cell-width') / rem('game-demo-vialo-cell-height');
+    expect(ratio).toBeGreaterThanOrEqual(1.45);
+    expect(ratio).toBeLessThanOrEqual(1.55);
     expect(demoStyle).toContain('width: var(--game-demo-vialo-cell-width)');
     expect(demoStyle).toContain('height: var(--game-demo-vialo-cell-height)');
     expect(demoStyle).toContain('border-radius: var(--radius-pill)');
   });
 
-  it('uses the live board\'s states: white absent, red elsewhere, green in place, each with its own mark', () => {
+  it('uses the live board\'s states: white absent, red elsewhere, green in place; no marks under the letters', () => {
     expect(token('game-demo-vialo-green')).toBe(token('game-dark-green'));
     expect(token('game-demo-vialo-red')).toBe(token('game-oxblood'));
     expect(token('game-demo-vialo-absent-face')).toBe(token('vialo-absent-face'));
     expect(token('game-demo-vialo-absent-ink')).toBe(token('vialo-absent-ink'));
-    for (const [state, mark] of [['here', '25CF'], ['elsewhere', '25CB'], ['absent', '00B7']] as const) {
-      expect(live).toContain(`.vialo-pill.vialo-${state}::after { content: "\\${mark}" / ""; }`);
-      expect(demoStyle).toContain(`.gc.gc-${state}::after { content: "\\${mark}" / ""; }`);
-    }
-    // The three results appear in the markup, and the guess is a real one: CARES against NURSE.
+    expect(demoStyle).not.toMatch(/::after/);
+    expect(demoStyle).not.toContain('\\25CF');
+    // Only the red pill carries the thin light inset ring.
+    expect(demoStyle).toMatch(/\.gc\.gc-elsewhere::before \{[^}]*inset: var\(--game-demo-vialo-ring-gap\);[^}]*border: var\(--game-demo-vialo-ring\) solid var\(--gc-ring\)/);
+    expect(demoStyle.match(/::before/g)).toHaveLength(1);
     expect(card.match(/class="gc gc-here/g)!.length).toBeGreaterThan(0);
     expect(card.match(/class="gc gc-elsewhere/g)!.length).toBeGreaterThan(0);
     expect(card.match(/class="gc gc-absent/g)!.length).toBeGreaterThan(0);
