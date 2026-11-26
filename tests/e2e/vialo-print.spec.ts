@@ -350,7 +350,7 @@ test('two print requests during the picture wait print once, keep the word fille
 test('a picture that never arrives holds the print back for the capped wait, and no longer', async ({ page }) => {
   await finish(page);
   let seen = false;
-  await page.route('**/vialo-wordmark-oxblood-v3.svg', () => {
+  await page.route('**/wordpill-wordmark-light.svg', () => {
     seen = true;
     return new Promise<void>(() => { /* never answered */ });
   });

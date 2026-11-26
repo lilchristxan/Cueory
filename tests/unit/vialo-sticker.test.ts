@@ -138,8 +138,8 @@ describe('wording', () => {
   });
 
   it('names the files by kind and local date', () => {
-    expect(stickerFileName('centered', new Date(2026, 10, 5))).toBe('vialo-portrait-2026-11-05.png');
-    expect(stickerFileName('lower-third', new Date(2026, 10, 25))).toBe('vialo-landscape-2026-11-25.png');
+    expect(stickerFileName('centered', new Date(2026, 10, 5))).toBe('wordpill-portrait-2026-11-05.png');
+    expect(stickerFileName('lower-third', new Date(2026, 10, 25))).toBe('wordpill-landscape-2026-11-25.png');
   });
 });
 

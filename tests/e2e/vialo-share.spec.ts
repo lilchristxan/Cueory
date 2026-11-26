@@ -55,8 +55,8 @@ async function download(page: Page, button: string) {
 }
 
 for (const [kind, option, name] of [
-  ['centered', 'portrait', 'vialo-portrait-2026-11-01.png'],
-  ['lower-third', 'landscape', 'vialo-landscape-2026-11-01.png'],
+  ['centered', 'portrait', 'wordpill-portrait-2026-11-01.png'],
+  ['lower-third', 'landscape', 'wordpill-landscape-2026-11-01.png'],
 ] as const) {
   test(`exports the ${option} sticker at its size: transparent corners and the right pill colours`, async ({ page }) => {
     await open(page);
@@ -89,8 +89,8 @@ test('the sticker has no letters and the card says the result in words', async (
   expect(text).toMatch(/solved in 2 of 6/);
   expect(text).toMatch(/no letters/);
   expect(text).not.toMatch(/grace|crane/i);
-  await expect(card.getByText('next vialo in')).toBeVisible();
-  await expect(page.getByTestId('share-dialog-countdown')).toHaveText(/^next vialo in \d\d:\d\d:\d\d$/);
+  await expect(card.getByText('next wordpill in')).toBeVisible();
+  await expect(page.getByTestId('share-dialog-countdown')).toHaveText(/^next wordpill in \d\d:\d\d:\d\d$/);
 });
 
 test('the signed-out sticker shows the solve time only (the one switch is stickerStats)', async ({ page }) => {
@@ -144,7 +144,7 @@ test.describe('share where the browser can share files', () => {
     expect(shared[0]!.files).toHaveLength(1);
     expect(shared[0]!.files[0]!.type).toBe('image/png');
     expect(shared[0]!.files[0]!.size).toBeGreaterThan(20_000);
-    expect(shared[0]!.files[0]!.name).toBe('vialo-landscape-2026-11-01.png');
+    expect(shared[0]!.files[0]!.name).toBe('wordpill-landscape-2026-11-01.png');
     expect(shared[0]!.text).toMatch(/cueory\.app$/);
     expect(shared[0]!.url).toBe('https://cueory.app/play/wordpill');
   });
@@ -158,7 +158,7 @@ test.describe('share where the browser can share files', () => {
     });
     await finish(page);
     const saved = await download(page, 'share-dialog-save');
-    expect(saved.name).toBe('vialo-portrait-2026-11-01.png');
+    expect(saved.name).toBe('wordpill-portrait-2026-11-01.png');
     expect(await page.evaluate(() => (window as unknown as { __shared: number }).__shared)).toBe(0);
     await expect(page.getByTestId('share-dialog-status')).toContainText('saved');
   });
@@ -191,7 +191,7 @@ test.describe('share where the browser cannot share files', () => {
     expect(xUrl.origin + xUrl.pathname).toBe('https://x.com/intent/post');
     expect([...xUrl.searchParams.keys()].sort()).toEqual(['text', 'url']);
     expect(xUrl.searchParams.get('url')).toBe('https://cueory.app/play/wordpill');
-    expect(xUrl.searchParams.get('text')).toMatch(/^vialo · .* · 1\/6 · cueory\.app$/);
+    expect(xUrl.searchParams.get('text')).toMatch(/^wordpill · .* · 1\/6 · cueory\.app$/);
     const fbUrl = new URL((await facebook.getAttribute('href'))!);
     expect(fbUrl.origin + fbUrl.pathname).toBe('https://www.facebook.com/sharer/sharer.php');
     expect(fbUrl.searchParams.get('u')).toBe('https://cueory.app/play/wordpill');
@@ -214,7 +214,7 @@ test.describe('share where the browser cannot share files', () => {
     await finish(page);
     await page.getByTestId('share-dialog-share').click();
     const [file] = await Promise.all([page.waitForEvent('download'), page.getByTestId('share-dialog-menu').getByRole('menuitem', { name: 'save', exact: true }).click()]);
-    expect(file.suggestedFilename()).toBe('vialo-portrait-2026-11-01.png');
+    expect(file.suggestedFilename()).toBe('wordpill-portrait-2026-11-01.png');
     await expect(page.getByTestId('share-dialog-menu')).toHaveCount(0);
     await page.getByTestId('share-dialog-share').click();
     await expect(page.getByTestId('share-dialog-menu')).toBeVisible();
@@ -231,7 +231,7 @@ test.describe('share where the browser cannot share files', () => {
     const message = page.getByTestId('share-dialog-menu').getByRole('menuitem', { name: 'send a message' });
     const href = (await message.getAttribute('href'))!;
     expect(href.startsWith('sms:?&body=')).toBe(true);
-    expect(decodeURIComponent(href.slice('sms:?&body='.length))).toMatch(/cueory\.app https:\/\/cueory\.app\/play\/vialo$/);
+    expect(decodeURIComponent(href.slice('sms:?&body='.length))).toMatch(/cueory\.app https:\/\/cueory\.app\/play\/wordpill$/);
     await expect(message).not.toHaveAttribute('target', '_blank');
     await context.close();
   });
@@ -261,7 +261,7 @@ test.describe('copy sticker', () => {
     });
     await finish(page);
     const [file] = await Promise.all([page.waitForEvent('download'), page.getByTestId('share-dialog-copy').click()]);
-    expect(file.suggestedFilename()).toBe('vialo-portrait-2026-11-01.png');
+    expect(file.suggestedFilename()).toBe('wordpill-portrait-2026-11-01.png');
     await expect(page.getByTestId('share-dialog-status')).toContainText("can't copy pictures");
     await expect(page.getByTestId('share-dialog-status')).toHaveAttribute('aria-live', 'polite');
   });
@@ -397,7 +397,7 @@ test.describe('the share card is a modal dialog over the board', () => {
     await expect(card).toBeFocused();
     // Announced once, as the dialog's description: the result line and the sticker in words.
     const described = await card.getAttribute('aria-describedby');
-    await expect(page.locator(`#${described}`)).toContainText('vialo · ');
+    await expect(page.locator(`#${described}`)).toContainText('wordpill · ');
     // The page behind is inert; Tab stays inside, wrapping from the last control to the first.
     expect(await page.evaluate(() => document.querySelector('.vialo-pack-wrap')!.closest('[inert]') !== null)).toBe(true);
     const stops = ['share-dialog-close', 'share-dialog-option-portrait', 'share-dialog-option-landscape', 'share-dialog-share', 'share-dialog-save', 'share-dialog-copy'];
