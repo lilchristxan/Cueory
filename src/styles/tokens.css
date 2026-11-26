@@ -130,6 +130,10 @@
   --game-frame-dateline-size: 0.875rem;  /* 14px */
   --game-frame-dateline-lh: 1.3125rem;   /* 21px, 1.5 at 14px */
   --game-frame-gear-size: 1.5rem;        /* 24px */
+  --game-frame-gear-stroke: 2;           /* outline weight of the gear, level with the bold "?" beside it */
+  --game-frame-corner-inset: 1rem;       /* 16px: the gear and "?" sit this far in from the play area's top and right edges */
+  --game-frame-corner-inset-phone: 0.75rem; /* 12px on phones, the same as the play area's side padding there */
+  --game-frame-corner-gap: 0.5rem;       /* 8px between the gear and the "?" */
   --game-frame-how-font-size: 1.25rem;   /* 20px */
   --game-frame-popover-radius: 1.25rem;  /* 20px */
   --game-frame-popover-padding: 1.25rem 1.375rem; /* 20px 22px */

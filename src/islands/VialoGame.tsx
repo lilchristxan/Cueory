@@ -48,6 +48,8 @@ interface Puzzle {
 interface Props {
   /** Sample puzzles: the page picks one for the visitor's own date. */
   puzzles: Puzzle[];
+  /** The page's Frame owns the gear and the "?" (GameFrame, top right of the play area); this game keeps only the dialogs. */
+  framed?: boolean;
 }
 
 const primaryButton = 'rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
@@ -126,7 +128,7 @@ function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; t
   );
 }
 
-export default function VialoGame({ puzzles }: Props) {
+export default function VialoGame({ puzzles, framed = false }: Props) {
   const today = useMemo(() => new Date(), []);
   const day = localDay(today);
   const puzzle = useMemo(() => puzzleForDay(playablePuzzles(puzzles), dayNumber(today)), [puzzles, today]);
@@ -294,6 +296,7 @@ export default function VialoGame({ puzzles }: Props) {
   return (
     <div className={`vialo${contrast ? ' vialo-contrast' : ''}`} data-testid="vialo">
       <GameHeader
+        framed={framed}
         name={gameName('vialo')}
         help={howToPlay}
         helpExtra={<VialoLegend />}

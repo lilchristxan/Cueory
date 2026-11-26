@@ -167,6 +167,9 @@ const key =
               : game;
 
 const currentConfig: GameConfig = configs[key] ?? configs.pulse!;
+// The corner buttons are named for the page's own game, the name the game island uses for its dialogs: vialo's page is
+// "vialo" although it shares pillo's art, and word path's page is "piccline".
+const controlName = game === 'vialo' ? 'vialo' : key === 'suture' ? 'piccline' : currentConfig.name;
 
 const activeTagline = propTagline ?? currentConfig.defaultTagline;
 const activeSteps = propHowSteps ?? currentConfig.defaultSteps;
@@ -315,7 +318,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- Row above the board: Settings gear (top-left), middle slot for game-specific controls, ? popover (top-right) -->
       {framed && (
-        <GameFrameControls client:load gameName={currentConfig.name} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge} wide={wide}>
+        <GameFrameControls client:load gameName={controlName} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge} wide={wide}>
           <slot name="controls" />
         </GameFrameControls>
       )}

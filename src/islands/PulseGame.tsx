@@ -42,6 +42,8 @@ interface Puzzle {
 interface Props {
   /** Sample puzzles: the page picks one for the visitor's own date. */
   puzzles: Puzzle[];
+  /** The page's Frame owns the gear and the "?" (GameFrame, top right of the play area); this game keeps only the dialogs. */
+  framed?: boolean;
 }
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
@@ -135,7 +137,7 @@ function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; t
  * for screen readers, never by color alone. Type in the field that lies over the row being typed, or tap the letter
  * keys. Rendered only in the browser (client:only); without JavaScript the page shows its <noscript> note instead.
  */
-export default function PulseGame({ puzzles }: Props) {
+export default function PulseGame({ puzzles, framed = false }: Props) {
   const today = useMemo(() => new Date(), []);
   const puzzle = useMemo(() => puzzleForDay(playablePuzzles(puzzles), dayNumber(today)), [puzzles, today]);
   const [state, setState] = useState<PulseState>(() => startPulse(puzzle?.word ?? ''));
@@ -272,6 +274,7 @@ export default function PulseGame({ puzzles }: Props) {
           "?" at the top right how to play. The guesses left are no longer shown on the box, but screen readers still
           hear them here. */}
       <GameHeader
+        framed={framed}
         name={gameName('pulse')}
         help={howToPlay}
         helpExtra={<PilloLegend />}

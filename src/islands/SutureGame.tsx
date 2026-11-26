@@ -11,7 +11,7 @@ import { announceProgress } from './suturepath';
 import PrintLogo from './PrintLogo';
 import { cellLabel, clearPick, foundWord, isDone, moveCursor, outcomeInWords, parsePuzzle, pick, printableWords, selection, shareLine, startSuture, type Cell, type SuturePuzzle } from './suture';
 
-interface Props { puzzle: SuturePuzzle; name: string }
+interface Props { puzzle: SuturePuzzle; name: string; framed?: boolean }
 const printFoot = new URL(site.url).host;
 const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 py-2 text-ink disabled:opacity-50';
 // These static classes keep the grid width CSP-safe: style-src permits no inline styles.
@@ -44,7 +44,7 @@ export function shake(element: HTMLElement | null) {
   void animation.finished.then(cleanup, cleanup);
 }
 
-function Board({ puzzle, name }: Props) {
+function Board({ puzzle, name, framed = false }: Props) {
   const [state, setState] = useState(() => startSuture(puzzle));
   const [focused, setFocused] = useState(0);
   const [said, setSaid] = useState('');
@@ -144,6 +144,7 @@ function Board({ puzzle, name }: Props) {
       {/* The corner row (Christian's brief): the gear at the top left (word path has no settings of its own, so it holds
           the shared ones); print and the "?" at the top right. */}
       <GameHeader
+        framed={framed}
         name={name}
         help={howToPlay}
         end={
@@ -255,9 +256,9 @@ function Board({ puzzle, name }: Props) {
 }
 
 /** Reviewed puzzle data and the configurable display name are supplied by the page. */
-export default function SutureGame({ puzzle, name }: Props) {
+export default function SutureGame({ puzzle, name, framed = false }: Props) {
   try {
     const parsed = parsePuzzle(puzzle);
-    return <Board key={JSON.stringify(parsed)} puzzle={parsed} name={name} />;
+    return <Board key={JSON.stringify(parsed)} puzzle={parsed} name={name} framed={framed} />;
   } catch { return <p role="alert">this puzzle could not be loaded. please try again later.</p>; }
 }
