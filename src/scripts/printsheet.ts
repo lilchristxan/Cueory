@@ -21,11 +21,15 @@ export function keeperFor(puzzles: readonly SheetPuzzle[], saved: SavedStats, no
   return { word: puzzle.word, number: dayNumber(now) + 1, date };
 }
 
-/** Waits until the sheet's pictures have loaded, so none is missing when the print dialog draws the pages. */
+const SHEET_IMAGE_WAIT_MS = 1500;
+
+/** Waits (briefly) until the sheet's pictures have loaded, so none is missing when the print dialog draws the pages. */
 export async function sheetImagesReady(root: Document = document): Promise<void> {
   const images = [...root.querySelectorAll<HTMLImageElement>('[data-print-sheet] img')];
   for (const image of images) image.loading = 'eager';
-  await Promise.all(images.map((image) => (image.complete ? Promise.resolve() : image.decode().catch(() => undefined))));
+  const loaded = Promise.all(images.map((image) => (image.complete ? Promise.resolve() : image.decode().catch(() => undefined))));
+  // Never hold the print dialog back for long: a picture that is slow still prints, as the browser has it.
+  await Promise.race([loaded, new Promise((resolve) => window.setTimeout(resolve, SHEET_IMAGE_WAIT_MS))]);
 }
 
 /** Fills the word box on page 2 for printing. Nothing is in the page before this. */
