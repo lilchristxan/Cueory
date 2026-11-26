@@ -322,7 +322,7 @@ export function PathBoard({ puzzle, name, framed = false, printable }: Props) {
     catch { setCopied(shared); }
   };
 
-  /** The printer button asks the page's print sheet (src/islands/PicclinePrint.tsx): it warns first when the board is not finished. */
+  /** The printer button asks the page's print sheet (src/islands/PicclinePrintView.tsx): it warns first when the board is not finished. */
   const printPuzzle = () => sendPrint('piccline');
 
   // "print anyway" on an unfinished board (usegameprint.ts): today is already stored as not solved, so the board on screen
