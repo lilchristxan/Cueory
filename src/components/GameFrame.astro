@@ -2,6 +2,7 @@
 import '../styles/gameframe.css';
 import GameFrameControls from '../islands/GameFrameControls';
 import GameFrameStats from '../islands/GameFrameStats';
+import { statsCta } from '../config/statscta';
 import GameDeck from './GameDeck.astro';
 import { formatGameDateLine } from '../scripts/gamedateline';
 
@@ -285,7 +286,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- The four stats are drawn by the island itself, and only for a signed-in visitor (nothing is rendered, and no gap
            kept, for anyone else). They are still recorded in this browser either way. -->
-      {(showStats ?? framed) && <GameFrameStats client:load game={currentConfig.id} />}
+      {(showStats ?? framed) && <GameFrameStats client:load game={currentConfig.id} cta={statsCta} />}
     </aside>
 
     <!-- Center area -->

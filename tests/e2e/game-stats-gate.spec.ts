@@ -20,8 +20,9 @@ test.beforeAll(async () => {
       import React from 'react';
       import { createRoot } from 'react-dom/client';
       import GameFrameStats from './src/islands/GameFrameStats.tsx';
+      import { statsCta } from './src/config/statscta';
       const params = new URLSearchParams(location.search);
-      createRoot(document.getElementById('fixture')).render(<GameFrameStats game={params.get('game') ?? 'vialo'} />);
+      createRoot(document.getElementById('fixture')).render(<GameFrameStats game={params.get('game') ?? 'vialo'} cta={statsCta} />);
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_STATS_CHANGED_EVENT, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
-import { statsCta } from '../config/site';
+import type { StatsCta } from './GameFrameStats';
 import { useStatsGate } from './gamestatsgate';
 import { hubTotals } from './playhub';
 
@@ -11,12 +11,12 @@ import { hubTotals } from './playhub';
  * keeps and are never sent anywhere (recording is unchanged for everyone; only the display is gated). Anyone else
  * (signed out, accounts off, or a failed session check) sees the same copper bar the game frame shows ("create an account"
  * with "to save your daily game stats" under it once accounts are open; the launch-list wording until then, see
- * accountStatsCta in site.ts). Nothing is drawn until the session check has resolved, inside a
+ * accountStatsCta in statscta.ts). Nothing is drawn until the session check has resolved, inside a
  * holder that keeps the room either answer takes, so nothing flashes and nothing below moves. Signed in, the totals
  * stay dashes until the page has read the browser (and a browser that cannot save shows none), so no zero jumps to a
  * real number.
  */
-export default function PlayTotals() {
+export default function PlayTotals({ cta }: { cta: StatsCta }) {
   const gate = useStatsGate();
   const [state, setState] = useState<{ saved: SavedStats; today: string } | undefined>();
 
@@ -48,8 +48,8 @@ export default function PlayTotals() {
   if (!gate) {
     return (
       <div className="play-hub-account-slot" data-testid="play-account-bar">
-        {statsCta.href ? <a href={statsCta.href} className="copper-button" aria-describedby="play-account-note">{statsCta.label}</a> : <p className="play-hub-account-note" data-testid="play-account-message">{statsCta.label}</p>}
-        {statsCta.href && <p id="play-account-note" className="play-hub-account-note">{statsCta.note}</p>}
+        {cta.href ? <a href={cta.href} className="copper-button" aria-describedby="play-account-note">{cta.label}</a> : <p className="play-hub-account-note" data-testid="play-account-message">{cta.label}</p>}
+        {cta.href && <p id="play-account-note" className="play-hub-account-note">{cta.note}</p>}
       </div>
     );
   }

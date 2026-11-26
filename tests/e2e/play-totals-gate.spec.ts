@@ -21,7 +21,8 @@ test.beforeAll(async () => {
       import React from 'react';
       import { createRoot } from 'react-dom/client';
       import PlayTotals from './src/islands/PlayTotals.tsx';
-      createRoot(document.getElementById('fixture')).render(<PlayTotals />);
+      import { statsCta } from './src/config/statscta';
+      createRoot(document.getElementById('fixture')).render(<PlayTotals cta={statsCta} />);
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],

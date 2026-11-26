@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { followStatsAuth, statsVisibleFor } from '../../src/islands/gamestatsgate';
-import { accountLaunch, accountStatsCta, signupState } from '../../src/config/site';
+import { accountLaunch, signupState } from '../../src/config/site';
+import { accountStatsCta } from '../../src/config/statscta';
 
 const root = resolve(__dirname, '../..');
 const read = (path: string) => readFileSync(resolve(root, path), 'utf-8');
@@ -24,9 +25,11 @@ describe('game stats are shown only to a signed-in visitor (2026-11-25)', () => 
     const panel = read('src/islands/GameFrameStats.tsx');
     expect(panel).toContain('const visible = useStatsVisible();');
     expect(panel).toContain('if (!visible) {');
-    expect(panel).toContain('{statsCta.label}');
-    expect(panel).toContain('{statsCta.note}');
-    expect(read('src/islands/PlayTotals.tsx')).toContain('{statsCta.label}');
+    expect(panel).toContain('{cta.label}');
+    expect(panel).toContain('{cta.note}');
+    // The words come from the page (GameFrame.astro passes statscta.ts's statsCta), so they are not island JavaScript.
+    expect(panel).not.toContain("config/site");
+    expect(read('src/islands/PlayTotals.tsx')).toContain('{cta.label}');
   });
 
   it('still records and tracks stats while hidden: the listeners sit above the early return', () => {
