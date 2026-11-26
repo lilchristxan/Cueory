@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
-import { printGame } from './gameprint';
+import { FORFEIT_EVENT, PRINT_EVENT } from '../scripts/printgate';
 import { GameHelpButton, GameHelpDialog, useGameHelp } from './GameHelp';
 import { gameName } from '../config/games';
 import { deleteStats, forgetHeldRounds, localDay, reportStatsChanged, showResultCard, sudokuResultCard } from './gameresults';
@@ -63,6 +63,10 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const cells = useRef(new Map<number, HTMLButtonElement>());
   const { entries, marks, notes } = board;
   const solved = entries.every((value, index) => value === puzzle.solution[index]);
+  // "print anyway" on an unfinished level (usegameprint.ts) ends that level on screen as lost. Not saved: a reload starts the
+  // level fresh, and the stored first result of the day stands.
+  const [lostLevel, setLostLevel] = useState<SudokuLevel | null>(null);
+  const over = solved || lostLevel === level;
   const conflicts = useMemo(() => new Set(conflictIndices(entries)), [entries]);
   const wrong = useMemo(() => sudokuWrongCells(entries, puzzle.puzzle, puzzle.solution, settings.checkGuesses, checked),
     [entries, puzzle, settings.checkGuesses, checked]);
@@ -163,10 +167,20 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   }, [puzzle]);
 
   useEffect(() => {
-    if (paused || solved) return;
-    const timer = window.setInterval(() => setSeconds((value) => advanceSudokuSeconds(value, paused, solved)), 1000);
+    const onForfeit = (event: Event) => {
+      const detail = (event as CustomEvent<{ game?: string; day?: string; level?: string }>).detail;
+      if (detail?.game !== 'triage' || detail.day !== day) return;
+      if (detail.level === 'easy' || detail.level === 'medium' || detail.level === 'hard') setLostLevel(detail.level);
+    };
+    window.addEventListener(FORFEIT_EVENT, onForfeit);
+    return () => window.removeEventListener(FORFEIT_EVENT, onForfeit);
+  }, [day]);
+
+  useEffect(() => {
+    if (paused || over) return;
+    const timer = window.setInterval(() => setSeconds((value) => advanceSudokuSeconds(value, paused, over)), 1000);
     return () => window.clearInterval(timer);
-  }, [paused, solved]);
+  }, [paused, over]);
 
   // The latest shared settings (theme, motion, contrast, sound), followed live like useSharedGameSettings does: from the
   // same-page event (so a change still counts when browser storage refuses to save it) and from other tabs. Kept in a
@@ -231,7 +245,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
 
   /** Every edit goes through the one pure rule and is pushed to the undo history when it changes something. */
   const apply = (action: SudokuBoardAction): SudokuBoard | undefined => {
-    if (paused || solved) return;
+    if (paused || over) return;
     const next = editSudokuBoard(board, puzzle.puzzle, selected, action, auto);
     if (!next) {
       if (puzzle.puzzle[selected]) { setSaid('given numbers cannot be changed.'); cue('invalid'); }
@@ -268,19 +282,19 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     if (next) setSaid(next.marks.has(selected) ? 'x mark added.' : 'mark removed.');
   };
   const clearCell = () => {
-    if (paused || solved) return;
+    if (paused || over) return;
     if (apply({ kind: 'clear' })) { cue('remove'); setSaid(`${where(selected)} cleared.`); }
     else if (!puzzle.puzzle[selected]) setSaid('that square is already empty.');
   };
   const undo = () => {
-    if (paused || solved) return;
+    if (paused || over) return;
     const step = undoSudoku(history);
     if (!step) { setSaid('nothing to undo.'); return; }
     setBoard(step.board); setHistory(step.history);
     setSaid('last move undone.');
   };
   const switchMode = (next?: SudokuMode) => {
-    if (paused || solved) return;
+    if (paused || over) return;
     const chosen = next ?? (mode === 'normal' ? 'candidate' : 'normal');
     setMode(chosen);
     setSaid(chosen === 'candidate' ? 'pencil mode. numbers add or remove small pencil marks.' : 'normal mode. numbers fill the square.');
@@ -288,7 +302,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const toggleAuto = (on: boolean) => {
     if (on === auto) return;
     setAuto(on);
-    if (!paused && !solved) {
+    if (!paused && !over) {
       setHistory((past) => pushSudokuHistory(past, board));
       if (on) {
         ownNotes.current = [...notes];
@@ -301,7 +315,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setSaid(on ? 'auto pencil marks on. every empty square shows its possible numbers.' : 'auto pencil marks off. your own pencil marks are back, and undo brings the automatic ones back.');
   };
   const checkPuzzle = () => {
-    if (paused || solved) return;
+    if (paused || over) return;
     const result = checkSudoku(entries, puzzle.puzzle, puzzle.solution);
     setChecked(new Set(result.wrong));
     setSaid(result.wrong.length
@@ -352,7 +366,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (settingsOpen || howOpen || paused || solved || event.altKey) return;
+      if (settingsOpen || howOpen || paused || over || event.altKey) return;
       const target = event.target as HTMLElement | null;
       // Ctrl+Z (Cmd+Z on a Mac) undoes anywhere in the game, except while typing in a form field.
       if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === 'z' && target?.closest('.sudoku-game') && !target.closest('input, textarea')) {
@@ -382,8 +396,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setSettings(next);
     if (key === 'autoCandidates') toggleAuto(next.autoCandidates);
   };
-  // The shared print helper (Task 641): marks the page for sudoku's print rules and clears the mark after printing.
-  const printPuzzle = () => printGame('sudoku');
+  // Both print buttons ask the page's print sheet (src/islands/SudokuPrint.tsx), which warns first when the level is not finished.
+  const printPuzzle = () => document.dispatchEvent(new CustomEvent(PRINT_EVENT, { detail: { game: 'triage' } }));
   const runFromSettings = (action: () => void) => {
     setSettingsOpen(false);
     action();
@@ -401,7 +415,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       {/* Five equal icon buttons spread across the board's width: settings, pause or play, print, stats, how to play. */}
       <div className="sudoku-toolbar" role="group" aria-label="sudoku tools" data-testid="sudoku-toolbar">
         {!framed && <button ref={settingsButton} type="button" className="sudoku-icon-button" aria-label="sudoku settings" aria-haspopup="dialog" data-testid="game-settings-button" onClick={() => setSettingsOpen(true)}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg></button>}
-        <button type="button" className="sudoku-icon-button sudoku-pause-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} disabled={solved} onClick={togglePause}>{paused
+        <button type="button" className="sudoku-icon-button sudoku-pause-button" aria-label={paused ? 'resume puzzle' : 'pause puzzle'} disabled={over} onClick={togglePause}>{paused
           ? <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M8.5 6.5v11l9-5.5z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" /></svg>
           : <svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M9 6.5v11M15 6.5v11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>}</button>
         <button type="button" className="sudoku-icon-button print-control" aria-label="print this puzzle" onClick={printPuzzle}><svg viewBox="0 0 24 24" className="size-6" aria-hidden="true" focusable="false"><path d="M7 9V4h10v5M7 17H5.5A2.5 2.5 0 0 1 3 14.5v-3A2.5 2.5 0 0 1 5.5 9h13a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H17M7 14h10v6H7z" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
@@ -449,22 +463,23 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
           {PAD_GROUPS.map((digits) => (
             <div className="sudoku-pad-digits" key={digits[0]}>
               {digits.map((number) => (
-                <button type="button" key={number} onClick={() => enter(number)} disabled={paused || solved} aria-disabled={donePad.has(number) ? 'true' : undefined} aria-label={donePad.has(number) ? `${number}, all placed` : undefined} className={donePad.has(number) ? 'is-done' : undefined}>{number}</button>
+                <button type="button" key={number} onClick={() => enter(number)} disabled={paused || over} aria-disabled={donePad.has(number) ? 'true' : undefined} aria-label={donePad.has(number) ? `${number}, all placed` : undefined} className={donePad.has(number) ? 'is-done' : undefined}>{number}</button>
               ))}
             </div>
           ))}
         </div>
         <div className="sudoku-tools" role="group" aria-label="board tools" data-testid="sudoku-mode">
-          <button type="button" className="sudoku-tool-button" aria-pressed={activeMode === 'candidate'} aria-keyshortcuts="P" disabled={paused || solved} onClick={() => switchMode()}>
+          <button type="button" className="sudoku-tool-button" aria-pressed={activeMode === 'candidate'} aria-keyshortcuts="P" disabled={paused || over} onClick={() => switchMode()}>
             {activeMode === 'candidate' && <span className="sudoku-toggle-mark" aria-hidden="true">✓ </span>}Pencil <span aria-hidden="true">· P</span>
           </button>
-          <button type="button" className="sudoku-tool-button" onClick={undo} disabled={paused || solved || history.length === 0}>Undo</button>
-          <button type="button" className="sudoku-tool-button" aria-pressed={auto} onClick={() => toggleAuto(!auto)} disabled={paused || solved}>
+          <button type="button" className="sudoku-tool-button" onClick={undo} disabled={paused || over || history.length === 0}>Undo</button>
+          <button type="button" className="sudoku-tool-button" aria-pressed={auto} onClick={() => toggleAuto(!auto)} disabled={paused || over}>
             {auto && <span className="sudoku-toggle-mark" aria-hidden="true">✓ </span>}Hint
           </button>
         </div>
       </div>
     </div>
+    {lostLevel === level && !solved && <p className="sudoku-solved" role="status" data-testid="sudoku-forfeit-note">you printed before finishing, so this level counts as not solved today.</p>}
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
     {/* The same settings dialog as the other games (#823): the shared settings first, then sudoku's own. */}
     {framed && <GameHelpDialog help={help} name={gameName('triage')} />}
@@ -485,13 +500,13 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         </label>
         <label className="game-settings-option">
           <span>automatic pencil marks for this puzzle</span>
-          <input type="checkbox" checked={auto} disabled={paused || solved} onChange={() => toggleAuto(!auto)} />
+          <input type="checkbox" checked={auto} disabled={paused || over} onChange={() => toggleAuto(!auto)} />
         </label>
         <div className="sudoku-tools">
-          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(mark)} aria-label="add or remove x mark" disabled={paused || solved}>x mark</button>
-          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(clearCell)} disabled={paused || solved}>clear cell</button>
-          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(checkPuzzle)} disabled={paused || solved}>check puzzle</button>
-          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(togglePause)} disabled={solved}>{paused ? 'resume puzzle' : 'pause puzzle'}</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(mark)} aria-label="add or remove x mark" disabled={paused || over}>x mark</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(clearCell)} disabled={paused || over}>clear cell</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(checkPuzzle)} disabled={paused || over}>check puzzle</button>
+          <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(togglePause)} disabled={over}>{paused ? 'resume puzzle' : 'pause puzzle'}</button>
           <button type="button" className="sudoku-tool-button" onClick={() => runFromSettings(() => requestAnimationFrame(printPuzzle))}>print this puzzle</button>
         </div>
       </fieldset>
