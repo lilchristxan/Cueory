@@ -72,7 +72,9 @@ export function useGamePrint(options: GamePrintOptions) {
     const { game } = latest.current;
     const day = localDay(new Date());
     const saved = loadStats(browserStorage(), day);
-    const finished = saved.on && (latest.current.finished ? latest.current.finished(day) : isFinished(saved.stats, game, day));
+    // Always asked, even when results cannot be read: a game's own check (sudoku's) also notes what this print is for.
+    const confirmed = latest.current.finished ? latest.current.finished(day) : isFinished(saved.stats, game, day);
+    const finished = saved.on && confirmed;
     answersOk.current = finished;
     requestPrint({ finished, keepsResults: saved.on }, () => void print(), () => {
       busy.current = true;

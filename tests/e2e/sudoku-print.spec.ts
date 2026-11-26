@@ -400,8 +400,12 @@ test('when results cannot be read, the sheet prints but the answers stay locked 
     };
   }, DAY_KEY);
   await page.goto('/play/sudoku');
+  await ready(page);
+  await picker(page).selectOption('hard');
   await press(page);
   await expect.poll(() => printed(page)).toBe(1);
+  // The fallback sheet is still the level on the page.
+  await expect(page.getByTestId('sheet-level-line').first()).toHaveText(/^sudoku · hard · /);
   await expect(warning(page)).toHaveCount(0);
   await expect(keeper(page)).toHaveAttribute('data-keeper', 'locked');
   await expect(page.getByTestId('sheet-solved-grid')).toHaveCount(0);
