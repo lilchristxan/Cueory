@@ -60,8 +60,8 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
         </details>
       )}
     </div>
-    {/* The logo, top middle on every study screen (Christian, 2026-11-26): the full logo from 640 px, the emblem on phones. */}
-    <a href="/" class="shrink-0 p-(--logo-clear) text-ink" aria-label={`${site.name} home`} data-testid="study-logo">
+    {/* The logo, top middle on every study screen (Christian, 2026-11-26): the full logo from 640 px; on phones the emblem, on its own line above the bar. */}
+    <a href="/" class="shrink-0 p-(--logo-clear) text-ink max-sm:order-first max-sm:flex max-sm:w-full max-sm:justify-center max-sm:py-0" aria-label={`${site.name} home`} data-testid="study-logo">
       <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
       <Wordmark class="hidden w-(--logo-width) sm:block" sizes="15rem" />
     </a>
