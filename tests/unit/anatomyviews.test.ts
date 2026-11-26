@@ -12,7 +12,7 @@ import {
 } from '../../src/islands/anatomyviews';
 
 describe('anatomy lab preset views', () => {
-  it('offers front, back, both sides and top, each with its own number key', () => {
+  it('offers the model\'s front, back, both sides and top, each with its own number key', () => {
     expect(VIEW_PRESETS.map((p) => p.id)).toEqual(['front', 'back', 'left', 'right', 'top']);
     expect(new Set(VIEW_PRESETS.map((p) => p.key)).size).toBe(VIEW_PRESETS.length);
     expect(new Set(VIEW_PRESETS.map((p) => p.label)).size).toBe(VIEW_PRESETS.length);
