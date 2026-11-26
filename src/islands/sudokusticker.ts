@@ -99,6 +99,9 @@ function centered(input: SudokuStickerInput): SudokuLayout {
   };
 }
 
+/** Space kept between the text column and the right edge of the landscape sticker. */
+const TEXT_RIGHT_MARGIN = 0;
+
 function lowerThird(input: SudokuStickerInput): SudokuLayout {
   const { width, height } = SUDOKU_STICKER_SIZE['lower-third'];
   // Read from his exported picture: the grid from x 56, the text column from x 868.
@@ -122,7 +125,7 @@ function lowerThird(input: SudokuStickerInput): SudokuLayout {
     width,
     height,
     wordmark: wordmarkLine(metaX, top, 'left', 140.6),
-    date: { ...ABOVE, text: input.dateLine, x: metaX, y: top + 140.6 + 37, lineHeight: 50, size: 42, weight: 400, align: 'left', letterSpacing: 1.6 },
+    date: { ...ABOVE, text: input.dateLine, x: metaX, y: top + 140.6 + 37, lineHeight: 50, size: 42, weight: 400, align: 'left', letterSpacing: 1.6, maxWidth: width - metaX - TEXT_RIGHT_MARGIN },
     grid: { x: left, y: top, width: gridSize, height: gridSize, radius: 30, border: 4, thin: 2 },
     statValues,
     statLabels,

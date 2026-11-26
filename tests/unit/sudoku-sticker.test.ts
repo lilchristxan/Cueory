@@ -63,3 +63,11 @@ describe('the sudoku stickers', () => {
     expect(sudokuFileName('lower-third', new Date(2026, 10, 20))).toBe('sudoku-landscape-2026-11-20.png');
   });
 });
+
+describe('long date lines on the landscape sticker (Codex on #1233)', () => {
+  it('give the date line the width left in the text column, so a long line is drawn smaller, not clipped', () => {
+    const long = sudokuLayout('lower-third', { dateLine: 'wednesday, september 30th · medium', stats: [] });
+    expect(long.date.maxWidth).toBe(SUDOKU_STICKER_SIZE['lower-third'].width - long.date.x);
+    expect(long.date.maxWidth).toBe(732);
+  });
+});

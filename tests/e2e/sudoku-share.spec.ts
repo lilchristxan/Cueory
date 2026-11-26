@@ -190,3 +190,25 @@ test('a second solve after switching level opens the card again, with that level
   await expect(page.getByTestId('share-dialog-save')).toBeEnabled({ timeout: 20_000 });
   await expect(page.getByTestId('share-dialog-description')).toContainText('· medium');
 });
+
+test('a long date line on the landscape sticker is drawn to fit: nothing touches the right edge (Codex on #1233)', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-30T15:00:00-07:00'));
+  await markPanelsSeen(page);
+  await page.goto('/play/sudoku');
+  const cells = page.getByTestId('sudoku').getByRole('grid', { name: 'sudoku grid' }).getByRole('gridcell');
+  await expect(cells).toHaveCount(81);
+  await page.getByRole('combobox', { name: 'difficulty' }).selectOption('medium');
+  const medium = generateSudoku(dailySudokuSeed('2026-09-30', 'medium'), 'medium');
+  for (const [index, digit] of medium.puzzle.entries()) {
+    if (digit !== 0) continue;
+    await cells.nth(index).click();
+    await page.keyboard.press(String(medium.solution[index]));
+  }
+  await expect(page.getByTestId('share-dialog-save')).toBeEnabled({ timeout: 20_000 });
+  await expect(page.getByTestId('share-dialog-description')).toContainText('wednesday, september 30th · medium');
+  await page.getByTestId('share-dialog-option-landscape').click();
+  const saved = await download(page, 'share-dialog-save');
+  // The date line sits at y 241 to 291; the last 4 columns of the picture must be empty there.
+  const strip = await inspect(page, saved.path, [[1596, 255], [1597, 265], [1598, 275], [1599, 285]]);
+  expect(strip.points.map((p) => p[3])).toEqual([0, 0, 0, 0]);
+});
