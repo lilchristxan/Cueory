@@ -12,6 +12,7 @@ import { useStatsVisible } from './gamestatsgate';
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { browserStorage } from '../scripts/storage';
 import { revealDelayMs } from './sharedialogmodel';
+import { useRefreshOnStatsChange } from './finishstatsrefresh';
 import { formatSolveTime } from './vialosticker';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import PicclineCue from './PicclineCue';
@@ -219,6 +220,7 @@ export function PathBoard({ puzzle, name }: Props) {
   useEffect(() => { if (done && !restoredDone) result.current?.focus(); }, [done]);
   // A board that reopens finished still offers its share card, with today's numbers.
   useEffect(() => { if (restored && pathDone(restored, puzzle)) setFinish(finishStats(localDay(new Date()))); }, []);
+  useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))));
 
   // Measure every letter's circle, again whenever the board changes size (rotation, text size, a narrower window).
   useLayoutEffect(() => {
