@@ -117,8 +117,12 @@ export function StudyRoundSide({
         <section aria-labelledby="anatomy-location-heading" className="lab-location" data-testid="anatomy-location">
           <h3 id="anatomy-location-heading" className="lab-cap">location</h3>
           <div className="lab-location-frame">
-            <div className="lab-thumb"><img src={thumb} alt="" /></div>
-            {dot && <span className="lab-location-dot" aria-hidden="true" data-testid="anatomy-location-dot" style={{ left: `${dot.x * 100}%`, top: `${dot.y * 100}%` }} />}
+            <div className="lab-thumb"><img src={thumb} alt="" width={136} height={216} loading="lazy" /></div>
+            {dot && (
+              <svg className="lab-location-layer" aria-hidden="true" focusable="false">
+                <circle className="lab-location-dot" data-testid="anatomy-location-dot" cx={`${dot.x * 100}%`} cy={`${dot.y * 100}%`} />
+              </svg>
+            )}
           </div>
           {viewWord && <p className="lab-cap">{viewWord}</p>}
         </section>

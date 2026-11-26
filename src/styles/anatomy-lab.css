@@ -404,15 +404,19 @@
     width: var(--lab-thumb-width);
     margin-top: calc(var(--spacing) * 2);
   }
-  .lab-location-dot {
+  .lab-location-layer {
     position: absolute;
-    display: block;
-    width: var(--lab-location-dot);
-    height: var(--lab-location-dot);
-    margin: calc(var(--lab-location-dot) / -2) 0 0 calc(var(--lab-location-dot) / -2);
-    border-radius: 50%;
-    border: calc(var(--lab-edge) * 2) solid var(--lab-copper-glow);
-    background: var(--lab-charcoal);
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+  .lab-location-dot {
+    r: calc(var(--lab-location-dot) / 2);
+    fill: var(--lab-charcoal);
+    stroke: var(--lab-copper-glow);
+    stroke-width: calc(var(--lab-edge) * 2);
   }
   .lab-cells {
     display: flex;
