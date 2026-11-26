@@ -3,7 +3,7 @@ import PrintLogo from './PrintLogo';
 import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import { FORFEIT_EVENT, PRINT_EVENT } from '../scripts/printgate';
+import { FORFEIT_EVENT, sendPrint } from '../scripts/printgate';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { playGameCue } from './gamesound';
@@ -322,7 +322,7 @@ export function PathBoard({ puzzle, name, printable }: Props) {
   };
 
   /** The printer button asks the page's print sheet (src/islands/PicclinePrint.tsx): it warns first when the board is not finished. */
-  const printPuzzle = () => document.dispatchEvent(new CustomEvent(PRINT_EVENT, { detail: { game: 'piccline' } }));
+  const printPuzzle = () => sendPrint('piccline');
 
   // "print anyway" on an unfinished board (usegameprint.ts): today is already stored as not solved, so the board on screen
   // ends too (not saved: a reload starts a fresh board, and the stored first result of the day stands).

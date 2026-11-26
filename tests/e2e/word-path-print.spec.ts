@@ -220,6 +220,56 @@ test.describe('printing an unfinished board', () => {
     await expect.poll(() => printed(page)).toBe(1);
     await expect(warning(page)).toHaveCount(0);
   });
+
+  test('a press before the print island has loaded is remembered and answered once, when it is ready', async ({ page }) => {
+    // Hold the print island's file, so the board and its printer button are up while nothing is listening yet.
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    let asked = false;
+    await page.route('**/_astro/PicclinePrint*.js', async (route) => {
+      asked = true;
+      await held;
+      await route.continue();
+    });
+    await page.goto('/play/piccline');
+    const button = game(page).getByTestId('suture-print');
+    await expect(button).toBeVisible();
+    await expect.poll(() => asked).toBe(true);
+    await expect(sheet(page)).not.toHaveAttribute('data-print-ready', 'true');
+    await button.click();
+    await expect(warning(page)).toHaveCount(0);
+    release();
+    // Nothing was lost: the warning opens once, and a press is not needed again.
+    await expect(warning(page)).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(1);
+    expect(await printed(page)).toBe(0);
+    await warning(page).getByRole('button', { name: 'finish the game first' }).click();
+    await expect(warning(page)).toBeHidden();
+    // The remembered press was used up: the dialog does not come back by itself.
+    await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
+    await expect(warning(page)).toHaveCount(0);
+  });
+
+  test('a finished board pressed before the print island has loaded prints once when it is ready', async ({ page }) => {
+    await finish(page);
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await page.route('**/_astro/PicclinePrint*.js', async (route) => {
+      await held;
+      await route.continue();
+    });
+    await page.goto('/play/piccline');
+    const button = game(page).getByTestId('suture-print');
+    await expect(button).toBeVisible();
+    await button.click();
+    await button.click();
+    expect(await printed(page)).toBe(0);
+    release();
+    await expect.poll(() => printed(page)).toBe(1);
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await expect(keeper(page)).toHaveAttribute('data-keeper', 'locked');
+    expect(await printed(page)).toBe(1);
+  });
 });
 
 test('the older word path route has no print button', async ({ page }) => {
