@@ -219,6 +219,38 @@ test.describe('printing an unfinished level', () => {
     await expect(board(page).getByTestId('sudoku-forfeit-note')).toBeVisible();
   });
 
+  test('every printed level stays ended: easy, then hard, then back to easy', async ({ page }) => {
+    await page.goto('/play/sudoku');
+    await ready(page);
+    await press(page);
+    await warning(page).getByRole('button', { name: 'print anyway' }).click();
+    await expect.poll(() => printed(page)).toBe(1);
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await picker(page).selectOption('hard');
+    await press(page);
+    await warning(page).getByRole('button', { name: 'print anyway' }).click();
+    await expect.poll(() => printed(page)).toBe(2);
+    await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await picker(page).selectOption('easy');
+    await expect(board(page).getByTestId('sudoku-forfeit-note')).toBeVisible();
+    await expect(board(page).getByRole('button', { name: '1', exact: true })).toBeDisabled();
+  });
+
+  test('a paused level that is printed anyway is not left paused, and leaving the page does not pause it again', async ({ page }) => {
+    await page.goto('/play/sudoku');
+    await ready(page);
+    await board(page).getByRole('button', { name: 'pause puzzle' }).click();
+    await expect(board(page)).toHaveAttribute('data-paused', 'true');
+    await press(page);
+    await warning(page).getByRole('button', { name: 'print anyway' }).click();
+    await expect.poll(() => printed(page)).toBe(1);
+    await expect(board(page)).toHaveAttribute('data-paused', 'false');
+    await expect(picker(page)).toBeEnabled();
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await expect(board(page)).toHaveAttribute('data-paused', 'false');
+    await expect(picker(page)).toBeEnabled();
+  });
+
   test('"finish the game first" just closes the dialog; the level stays playable', async ({ page }) => {
     await page.goto('/play/sudoku');
     await press(page);

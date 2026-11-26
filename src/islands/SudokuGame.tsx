@@ -65,8 +65,9 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const solved = entries.every((value, index) => value === puzzle.solution[index]);
   // "print anyway" on an unfinished level (usegameprint.ts) ends that level on screen as lost. Not saved: a reload starts the
   // level fresh, and the stored first result of the day stands.
-  const [lostLevel, setLostLevel] = useState<SudokuLevel | null>(null);
-  const over = solved || lostLevel === level;
+  const [lostLevels, setLostLevels] = useState<ReadonlySet<SudokuLevel>>(() => new Set());
+  const lost = lostLevels.has(level);
+  const over = solved || lost;
   const conflicts = useMemo(() => new Set(conflictIndices(entries)), [entries]);
   const wrong = useMemo(() => sudokuWrongCells(entries, puzzle.puzzle, puzzle.solution, settings.checkGuesses, checked),
     [entries, puzzle, settings.checkGuesses, checked]);
@@ -170,7 +171,12 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     const onForfeit = (event: Event) => {
       const detail = (event as CustomEvent<{ game?: string; day?: string; level?: string }>).detail;
       if (detail?.game !== 'triage' || detail.day !== day) return;
-      if (detail.level === 'easy' || detail.level === 'medium' || detail.level === 'hard') setLostLevel(detail.level);
+      if (detail.level === 'easy' || detail.level === 'medium' || detail.level === 'hard') {
+        const forfeited = detail.level;
+        setLostLevels((current) => new Set(current).add(forfeited));
+        // A paused level must not stay paused: nothing could resume it, and the picker stays locked while paused.
+        setPaused(false);
+      }
     };
     window.addEventListener(FORFEIT_EVENT, onForfeit);
     return () => window.removeEventListener(FORFEIT_EVENT, onForfeit);
@@ -228,7 +234,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   // Leaving the game (another app or tab, or another window) pauses it, and it stays paused until the player presses
   // play, so the clock never runs while nobody is looking.
   useEffect(() => {
-    if (solved) return;
+    if (over) return;
     const leave = () => {
       if (pausedNow.current) return;
       setPaused(true);
@@ -238,7 +244,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     document.addEventListener('visibilitychange', hidden);
     window.addEventListener('blur', leave);
     return () => { document.removeEventListener('visibilitychange', hidden); window.removeEventListener('blur', leave); };
-  }, [solved]);
+  }, [over]);
 
   /** Short cues for entries and erasing: only the shared "game sounds" switch applies (the solve sound has its own setting). */
   const cue = (name: GameCue) => playGameCue(name, gameSoundAllowed(shared.current ?? loadGameSettings(browserStorage())));
@@ -479,7 +485,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
         </div>
       </div>
     </div>
-    {lostLevel === level && !solved && <p className="sudoku-solved" role="status" data-testid="sudoku-forfeit-note">you printed before finishing, so this level counts as not solved today.</p>}
+    {lost && !solved && <p className="sudoku-solved" role="status" data-testid="sudoku-forfeit-note">you printed before finishing, so this level counts as not solved today.</p>}
     {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p></div>}
     {/* The same settings dialog as the other games (#823): the shared settings first, then sudoku's own. */}
     {framed && <GameHelpDialog help={help} name={gameName('triage')} />}
