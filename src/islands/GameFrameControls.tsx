@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GameSettingsDialog } from './GameSettings.tsx';
 import GearIcon from './GearIcon';
+import PrintHint from './PrintHint';
+import { requestPrint } from './gameprintevent';
 
 interface Props {
   gameName: string;
   steps: readonly string[];
   hasPillLegend?: boolean;
+  /** The id this game's print rules use (gameprint.ts), when the game can print: the printer button shows and announces it. */
+  printId?: string;
   /** Framed daily-game islands listen for the events and retain their existing dialogs. */
   bridge?: boolean;
   wide?: boolean;
@@ -49,7 +53,7 @@ export function announceFrameListening(gameName: string) {
 }
 
 /** The shared Frame owns the visible controls; the framed island retains its established dialog content and state. */
-export default function GameFrameControls({ gameName, steps, hasPillLegend = false, bridge = false, wide = false, children }: Props) {
+export default function GameFrameControls({ gameName, steps, hasPillLegend = false, printId, bridge = false, wide = false, children }: Props) {
   const gearRef = useRef<HTMLButtonElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const helpBtnRef = useRef<HTMLButtonElement>(null);
@@ -126,7 +130,25 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
         <GearIcon className="game-frame-gear-icon" />
       </button>
 
-      {/* The ? sits to the right of the gear, at the very corner */}
+      {/* The printer sits just left of the "?" on games that print. It announces the print on the document and decides
+          nothing itself: the game's own code answers (gameprintevent.ts). */}
+      {printId && (
+        <button
+          type="button"
+          className="game-frame-btn game-frame-print"
+          aria-label="print"
+          data-testid="game-frame-print"
+          onClick={() => requestPrint(printId)}
+        >
+          <svg viewBox="0 0 24 24" className="game-frame-print-icon" aria-hidden="true" focusable="false">
+            <path d="M7 9V4h10v5" />
+            <path d="M7 17H5.5A2.5 2.5 0 0 1 3 14.5v-3A2.5 2.5 0 0 1 5.5 9h13a2.5 2.5 0 0 1 2.5 2.5v3a2.5 2.5 0 0 1-2.5 2.5H17" />
+            <path d="M7 14h10v6H7z" />
+          </svg>
+        </button>
+      )}
+
+      {/* The ? sits to the right of the printer, at the very corner */}
       {bridge ? (
         <button
           ref={helpBtnRef}
@@ -172,7 +194,9 @@ export default function GameFrameControls({ gameName, steps, hasPillLegend = fal
           </div>
         </div>
       )}
+      {printId && <PrintHint />}
     </div>
+    {printId && <div className="game-frame-hint-room" aria-hidden="true" />}
     {/* Game-specific controls (the sudoku difficulty menu) keep their own row above the board, centred on it. */}
     <div className={`game-frame-controls-row${wide ? ' is-wide' : ''}`} data-print-hidden>
       <div className="game-frame-controls-middle">

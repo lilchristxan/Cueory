@@ -168,6 +168,11 @@ const currentConfig: GameConfig = configs[key] ?? configs.pulse!;
 // "vialo" although it shares pillo's art, and word path's page is "piccline".
 const controlName = game === 'vialo' ? 'vialo' : key === 'suture' ? 'piccline' : currentConfig.name;
 
+// The games that can print from their own page get the Frame's printer button (it announces cueory:print with this id).
+// Vialo and piccline print their own two-page sheets (their print islands answer); sudoku and crossword print what they printed before.
+// The older word path route has no sheet, so no printer.
+const printId = game === 'vialo' ? 'vialo' : key === 'triage' ? 'sudoku' : key === 'cueword' ? 'crossword' : key === 'suture' && game === 'piccline' ? 'suture' : undefined;
+
 const activeTagline = propTagline ?? currentConfig.defaultTagline;
 const activeSteps = propHowSteps ?? currentConfig.defaultSteps;
 // The static fallback makes the page useful before hydration. The browser replaces it with the visitor's own day
@@ -297,7 +302,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- Row above the board: Settings gear (top-left), middle slot for game-specific controls, ? popover (top-right) -->
       {framed && (
-        <GameFrameControls client:load gameName={controlName} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge} wide={wide}>
+        <GameFrameControls client:load gameName={controlName} printId={printId} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge} wide={wide}>
           <slot name="controls" />
         </GameFrameControls>
       )}

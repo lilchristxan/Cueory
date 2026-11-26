@@ -366,6 +366,26 @@ test('two print requests during the picture wait print once, keep the word fille
   await expect.poll(() => printed(page)).toBe(2);
 });
 
+test('with BOTH the Frame controls and the print island delayed, one press prints exactly once', async ({ page }) => {
+  await finish(page);
+  let releaseFrame!: () => void;
+  let releaseIsland!: () => void;
+  const frameHeld = new Promise<void>((resolve) => { releaseFrame = resolve; });
+  const islandHeld = new Promise<void>((resolve) => { releaseIsland = resolve; });
+  await page.route('**/_astro/GameFrameControls*.js', async (route) => { await frameHeld; await route.continue(); });
+  await page.route('**/_astro/VialoPrint*.js', async (route) => { await islandHeld; await route.continue(); });
+  await page.goto('/play/vialo');
+  releaseFrame();
+  const button = page.getByTestId('game-frame-print');
+  await expect(button).toBeVisible();
+  await button.click();
+  expect(await printed(page)).toBe(0);
+  releaseIsland();
+  await expect.poll(() => printed(page)).toBe(1);
+  await expect(sheet(page)).toHaveAttribute('data-print-ready', 'true');
+  expect(await printed(page)).toBe(1);
+});
+
 test('a picture that never arrives holds the print back for the capped wait, and no longer', async ({ page }) => {
   await finish(page);
   let seen = false;
