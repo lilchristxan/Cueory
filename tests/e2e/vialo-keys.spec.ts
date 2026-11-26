@@ -140,3 +140,29 @@ test('vialo keys show each mark by finish and by name, never by colour alone', a
   const scan = await new AxeBuilder({ page }).include('.vialo-keys').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
   expect(scan.violations).toEqual([]);
 });
+
+// Christian saw the blister pack against the left edge of the game column while the keyboard sat in the middle
+// (about 812 px wide). The pack and the keyboard must share one centre line at every width.
+for (const width of [390, 700, 812, 1024, 1440]) {
+  test(`vialo board and keyboard share a centre line at ${width} px wide`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const pack = page.locator('.vialo-pack');
+    const keyRow = page.locator('.vialo-keys .vialo-key-row').first();
+    await expect(keyRow).toBeVisible();
+    const centres = await page.evaluate(() => {
+      const centre = (node: Element) => {
+        const box = node.getBoundingClientRect();
+        return box.left + box.width / 2;
+      };
+      const packNode = document.querySelector('.vialo-pack')!;
+      return {
+        pack: centre(packNode),
+        keys: centre(document.querySelector('.vialo-keys .vialo-key-row')!),
+        column: centre(packNode.parentElement!),
+      };
+    });
+    expect(Math.abs(centres.pack - centres.keys)).toBeLessThanOrEqual(1);
+    expect(Math.abs(centres.pack - centres.column)).toBeLessThanOrEqual(1);
+    await expect(pack).toBeVisible();
+  });
+}

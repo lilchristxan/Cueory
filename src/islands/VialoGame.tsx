@@ -147,6 +147,15 @@ export default function VialoGame({ puzzles }: Props) {
   const reported = useRef(false);
   const words = useRef<ReadonlySet<string> | undefined>(undefined);
   const busy = useRef(false);
+  const onKey = useRef<(event: KeyboardEvent) => void>(() => {});
+
+  // The physical keyboard works from anywhere on the page, not only while the hidden guess field has focus: after a tap
+  // on an on-screen key focus sits on that button, where Backspace did nothing and Enter pressed the button again.
+  useEffect(() => {
+    const listener = (event: KeyboardEvent) => onKey.current(event);
+    document.addEventListener('keydown', listener);
+    return () => document.removeEventListener('keydown', listener);
+  }, []);
 
   useEffect(() => {
     void loadWordList().then((list) => {
@@ -226,7 +235,7 @@ export default function VialoGame({ puzzles }: Props) {
       next.status === 'solved'
         ? ' solved.'
         : next.status === 'out'
-          ? ` out of guesses. the word was ${next.answer}.`
+          ? ' out of guesses. the game is over.'
           : ` ${n} ${n === 1 ? 'guess' : 'guesses'} left.`;
     setSaid(`${guessInWords(last)}${end}`);
   };
@@ -234,6 +243,30 @@ export default function VialoGame({ puzzles }: Props) {
   const type = (value: string) => {
     setText(cleanGuess(value).slice(0, WORD_LENGTH));
     setProblem('');
+  };
+
+  // With "on-screen keyboard only" on, only the letter keys below type; Enter or Space on a focused key still activates it.
+  onKey.current = (event) => {
+    if (event.defaultPrevented || !playing || keysOnly || event.ctrlKey || event.metaKey || event.altKey) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (document.querySelector('dialog[open]') || target?.closest('dialog, [role="dialog"]')) return;
+    // The hidden guess field already types, backspaces and submits natively (only Delete is ours there); any other
+    // field is not ours.
+    const guessField = target?.id === 'vialo-guess';
+    if (target?.closest('input, textarea, select, [contenteditable]') && !(guessField && event.key === 'Delete')) return;
+    // Only from the page itself, the board or the on-screen keys: Enter on a header, settings or other button keeps its own job.
+    if (target && target !== document.body && target !== document.documentElement && !target.closest('.vialo-pack, .vialo-keys')) return;
+    if (event.key === 'Backspace' || event.key === 'Delete') {
+      event.preventDefault();
+      type(text.slice(0, -1));
+    } else if (event.key === 'Enter') {
+      // Stops a focused key button from also activating, so Enter always means "submit the row".
+      event.preventDefault();
+      if (!event.repeat) void submit();
+    } else if (/^[a-z]$/i.test(event.key)) {
+      event.preventDefault();
+      type(text + event.key);
+    }
   };
 
   const share = async () => {
@@ -402,7 +435,7 @@ export default function VialoGame({ puzzles }: Props) {
       ) : (
         <div ref={result} tabIndex={-1} className="vialo-result mt-6" data-testid="vialo-result">
           <p className="text-lg font-medium">
-            {state.status === 'solved' ? 'solved.' : `the word was ${state.answer}.`}
+            {state.status === 'solved' ? 'solved.' : 'out of guesses. the game is over.'}
           </p>
           <p className="mt-1 text-ink-soft">{vialoShareText(state, dayLabel(today))}</p>
           <button type="button" className={`${primaryButton} mt-4`} onClick={share}>
