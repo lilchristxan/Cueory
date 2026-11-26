@@ -41,6 +41,9 @@ import { useSharedGameSettings } from './GameSettings.tsx';
 import { playGameCue } from './gamesound';
 import { browserStorage } from '../scripts/storage';
 import { FORFEIT_EVENT, rememberedForfeits } from '../scripts/printgate';
+
+/** The event vialo heard before the shared one; still accepted, with just the day in its detail. */
+const VIALO_FORFEIT_EVENT = 'cueory:vialo-forfeited';
 import { VIALO_KEY_ROWS } from './vialokeys';
 import { newTimer, pauseTimer, resumeTimer, startTimer, stopTimer, timerElapsed, type SolveTimer } from './vialotimer';
 import { site } from '../config/site';
@@ -189,14 +192,19 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
   useEffect(() => {
     const forfeit = (event: Event) => {
       // Only the game of the day that was forfeited: a tab left open past midnight keeps its own day's round.
+      // The shared event names its game; the older vialo-only event (the share dialog's tests still send it) names only the day.
       const detail = (event as CustomEvent<{ game?: string; day?: string }>).detail;
-      if (detail?.game !== 'vialo' || detail.day !== day) return;
+      if ((event.type === FORFEIT_EVENT && detail?.game !== 'vialo') || detail?.day !== day) return;
       setState((now) => (now.status === 'playing' ? { ...now, status: 'out' } : now));
     };
     // A forfeit confirmed before the game was listening is remembered on the page (printgate.ts).
     if (rememberedForfeits('vialo', day).length > 0) setState((now) => (now.status === 'playing' ? { ...now, status: 'out' } : now));
     window.addEventListener(FORFEIT_EVENT, forfeit);
-    return () => window.removeEventListener(FORFEIT_EVENT, forfeit);
+    window.addEventListener(VIALO_FORFEIT_EVENT, forfeit);
+    return () => {
+      window.removeEventListener(FORFEIT_EVENT, forfeit);
+      window.removeEventListener(VIALO_FORFEIT_EVENT, forfeit);
+    };
   }, [day]);
 
   useEffect(() => {
