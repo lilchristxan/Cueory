@@ -171,3 +171,22 @@ test.describe('the share card fits every screen', () => {
     });
   }
 });
+
+test('a second solve after switching level opens the card again, with that level on the date line (Codex on #1233)', async ({ page }) => {
+  await start(page);
+  await solve(page);
+  await page.getByTestId('share-dialog-close').click();
+  await expect(page.getByTestId('share-dialog')).toBeHidden();
+  await page.getByRole('combobox', { name: 'difficulty' }).selectOption('medium');
+  await expect(page.getByTestId('sudoku-result')).toHaveCount(0);
+  const medium = generateSudoku(dailySudokuSeed('2026-11-01', 'medium'), 'medium');
+  const cells = page.getByTestId('sudoku').getByRole('grid', { name: 'sudoku grid' }).getByRole('gridcell');
+  for (const [index, digit] of medium.puzzle.entries()) {
+    if (digit !== 0) continue;
+    await cells.nth(index).click();
+    await page.keyboard.press(String(medium.solution[index]));
+  }
+  await expect(page.getByTestId('share-dialog')).toBeVisible();
+  await expect(page.getByTestId('share-dialog-save')).toBeEnabled({ timeout: 20_000 });
+  await expect(page.getByTestId('share-dialog-description')).toContainText('· medium');
+});

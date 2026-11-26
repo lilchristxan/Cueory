@@ -9,6 +9,7 @@ import { useStatsVisible } from './gamestatsgate';
 import { dayLabel } from './daily';
 import { site } from '../config/site';
 import { revealDelayMs } from './sharedialogmodel';
+import { useRefreshOnStatsChange } from './finishstatsrefresh';
 import { GameSettingsDialog, useSharedGameSettings } from './GameSettings.tsx';
 import { announceFrameListening, frameHelpButton, GAME_FRAME_HELP_EVENT, GAME_FRAME_HELP_READY_EVENT, GAME_FRAME_SETTINGS_EVENT } from './GameFrameControls';
 import { playGameCue, type GameCue } from './gamesound';
@@ -183,6 +184,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     setSelected(firstOpen(puzzle.puzzle));
     setSeconds(0); setErrors(0); setPaused(false); setAuto(settings.autoCandidates);
     setSaid(`${LEVEL_LABELS[level]} puzzle ready. ${LEVEL_RULES[level].givens} given numbers.`); reported.current = false;
+    // A new puzzle or level starts a new card: the next solve opens it again, with that level and fresh numbers.
+    setShareReady(false); setShareOpen(false); setFinish({ on: false });
   }, [puzzle]);
 
   useEffect(() => {
@@ -233,6 +236,8 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
     const id = window.setTimeout(() => setShareOpen(true), delay);
     return () => window.clearTimeout(id);
   }, [shareReady]);
+
+  useRefreshOnStatsChange(shareReady, () => setFinish(finishStats(localDay(new Date()))), [SUDOKU_STATS_STORAGE_KEY]);
 
   useEffect(() => { saveSudokuSettings(browserStorage(), settings); }, [settings]);
 
