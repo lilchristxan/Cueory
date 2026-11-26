@@ -32,6 +32,11 @@ async function begin(page: Page, mode: 'learn it' | 'test it' | 'find it') {
   await entry(page).getByRole('button', { name: /^begin/ }).click();
 }
 
+async function noSidewaysScroll(page: Page) {
+  const width = page.viewportSize()!.width;
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+}
+
 /** Types on the real keyboard, into the cells (they hold focus when a question starts). */
 async function typeName(page: Page, text: string) {
   await expect(cells(page)).toBeFocused();
@@ -64,6 +69,29 @@ test.describe('anatomy lab study round', () => {
     await expect(side(page)).toHaveCount(0);
     await expect(cells(page)).toHaveCount(0);
     await expect(page.getByTestId('anatomy-study-done')).toHaveCount(0);
+  });
+
+  test('a round keeps room under the model for the answer panel on desktop, and a word of cells can wrap', async ({ page }) => {
+    await openLab(page);
+    const row = page.getByTestId('anatomy-views-row');
+    const before = await row.evaluate((el) => getComputedStyle(el).paddingBottom);
+    await begin(page, 'test it');
+    await expect(cells(page)).toBeVisible();
+    const reserve = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.style.height = 'var(--lab-study-clear)';
+      document.body.append(probe);
+      const value = getComputedStyle(probe).height;
+      probe.remove();
+      return value;
+    });
+    const during = await row.evaluate((el) => getComputedStyle(el).paddingBottom);
+    if ((page.viewportSize()?.width ?? 0) >= 1024) {
+      expect(during).toBe(reserve);
+      expect(during).not.toBe(before);
+    }
+    expect(await cells(page).locator('.lab-word').first().evaluate((el) => getComputedStyle(el).flexWrap)).toBe('wrap');
+    await noSidewaysScroll(page);
   });
 
   test('learn it: the name is shown, and typing it moves on', async ({ page }) => {

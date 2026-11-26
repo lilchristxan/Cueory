@@ -435,6 +435,9 @@
   }
   .lab-word {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
     gap: var(--lab-cell-gap);
   }
   .lab-cell {

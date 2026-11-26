@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ORIENTATIONS, VIEW_PRESETS, VIEW_WORDS, KEY_MAP } from '../../src/islands/anatomyviews';
 import { contrastRatio } from './contrast';
+import { nameWords } from '../../src/islands/anatomyround';
 
 const read = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), 'utf8');
 const tokens = read('src/styles/tokens.css');
@@ -87,5 +88,32 @@ describe('anatomy lab: the dark look', () => {
     expect(solid).not.toMatch(/gradient/);
     expect(solid).toMatch(/backdrop-filter:\s*none/);
     expect(tokens.match(/--lab-panel-solid:([^;]*);/)![1]).not.toMatch(/transparent|rgba/);
+  });
+
+  it('declares every --lab-* token the lab uses', () => {
+    const declared = new Set([...tokens.matchAll(/(--lab-[a-z0-9-]+)\s*:/g)].map((m) => m[1]));
+    const used = new Set([
+      ...labCss.matchAll(/(--lab-[a-z0-9-]+)/g),
+      ...labSource.matchAll(/(--lab-[a-z0-9-]+)/g),
+      ...read('src/islands/AnatomyStudyRound.tsx').matchAll(/(--lab-[a-z0-9-]+)/g),
+    ].map((m) => m[1]));
+    expect([...used].filter((name) => !declared.has(name!))).toEqual([]);
+  });
+
+  it('lets a long word of answer cells wrap on a phone: the longest real label word is wider than the panel', () => {
+    const rem = (name: string) => Number(new RegExp(`${name}:\\s*([0-9.]+)rem`).exec(tokens)![1]) * 16;
+    const files = readdirSync(new URL('../../content/visuals/', import.meta.url)).filter((f) => /^anatomy-.*\.json$/.test(f));
+    let longest = 0;
+    for (const file of files) {
+      const data = JSON.parse(read(`content/visuals/${file}`)) as { labels?: { text: string }[] };
+      for (const label of data.labels ?? []) for (const word of nameWords(label.text)) longest = Math.max(longest, [...word].length);
+    }
+    expect(longest).toBeGreaterThan(0);
+    const wordWidth = longest * rem('--lab-cell-size-small') + (longest - 1) * rem('--lab-cell-gap');
+    // A 390 px phone: 12 px page margin each side, 16 px panel padding each side, 8 px cell-row padding each side.
+    const room = 390 - 2 * 12 - 2 * 16 - 2 * 8;
+    // Whether or not today's longest word fits, a word must wrap rather than run past the panel.
+    expect(wordWidth > 0 && room > 0).toBe(true);
+    expect(labCss).toMatch(/\.lab-word \{[^}]*flex-wrap:\s*wrap[^}]*max-width:\s*100%/);
   });
 });
