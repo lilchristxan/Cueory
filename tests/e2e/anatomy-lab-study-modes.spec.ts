@@ -40,14 +40,26 @@ const overlay = (page: Page) => page.getByTestId('anatomy-labels');
 
 /** Where every label sits on screen, by name: it changes when the camera really moves. */
 async function labelSpots(page: Page): Promise<Record<string, string>> {
-  // Measured from the 3D view's own corner, so scrolling the page changes nothing.
-  return overlay(page).locator(':scope > span').evaluateAll((spans) =>
-    Object.fromEntries(spans.map((span) => {
+  // Wait for a rendered label, then query and measure within one browser callback. The overlay can replace
+  // spans between a locator's selector resolution and its evaluation while the camera moves.
+  const snapshot = await page.waitForFunction(() => {
+    const overlay = document.querySelector('[data-testid="anatomy-labels"]');
+    const spans = overlay?.querySelectorAll(':scope > span');
+    if (!overlay || !spans?.length) return null;
+    // Measured from the 3D view's own corner, so scrolling the page changes nothing.
+    const frame = overlay.getBoundingClientRect();
+    return Object.fromEntries(Array.from(spans, (span) => {
       const box = span.getBoundingClientRect();
-      const frame = span.parentElement!.getBoundingClientRect();
       return [span.textContent ?? '', `${Math.round(box.x - frame.x)},${Math.round(box.y - frame.y)}`];
-    })),
-  );
+    }));
+  });
+  try {
+    const spots = await snapshot.jsonValue();
+    if (!spots) throw new Error('label geometry snapshot must contain rendered labels');
+    return spots;
+  } finally {
+    await snapshot.dispose();
+  }
 }
 
 async function noSidewaysScroll(page: Page) {
