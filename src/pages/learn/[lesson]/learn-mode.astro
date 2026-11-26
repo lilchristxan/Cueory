@@ -7,6 +7,7 @@ import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
 import LearnSession from '../../../islands/LearnSession';
+import StudySettings from '../../../islands/StudySettings';
 import { pathsFor, statusNotice, type CatalogLesson } from '../../../lessons/catalog';
 import { lessonCatalog } from '../../../lessons/load';
 import { studyModes } from '../../../config/modes';
@@ -32,7 +33,7 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
 ---
 
 {hold ? <LessonComingSoon /> : (
-<Layout title={`learn mode: ${title}`} description={`learn mode for ${lesson.about}.`} variant="study" bareHeader keepNotice>
+<Layout title={`learn mode: ${title}`} description={`learn mode for ${lesson.about}.`} variant="study" bareHeader>
   {/* A focused screen, as in Christian's approved draft (2026-11-26): back and the mode's menu on the left, close on the right. */}
   <div class="flex items-center justify-between gap-3 px-gutter pt-4 sm:pt-5" data-testid="learn-bar">
     <div class="flex min-w-0 flex-wrap items-center gap-2">
@@ -41,7 +42,7 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
           <path d="M15 6l-6 6 6 6" />
         </svg>
       </a>
-      <h1 class="min-w-0 text-lg font-medium">learn<span class="sr-only"> mode</span></h1>
+      <h1 class="min-w-0 text-lg font-bold">learn<span class="sr-only"> mode</span></h1>
       {otherModes.length > 0 && (
         <details class="relative" data-testid="learn-switch">
           <summary aria-label="other ways to study this lesson" class="inline-flex size-(--tap-min) cursor-pointer list-none items-center justify-center rounded-pill text-ink">
@@ -57,11 +58,14 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
         </details>
       )}
     </div>
-    <a href={lesson.href} aria-label="close learn mode" data-testid="learn-close" class="press inline-flex size-(--tap-min) shrink-0 items-center justify-center rounded-pill border border-line text-ink no-underline">
+    <div class="flex shrink-0 items-center gap-3">
+      <StudySettings client:only="react" />
+      <a href={lesson.href} aria-label="close learn mode" data-testid="learn-close" class="press inline-flex size-(--tap-min) shrink-0 items-center justify-center rounded-pill border border-line text-ink no-underline">
       <svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
         <path d="M6 6l12 12M18 6 6 18" />
       </svg>
-    </a>
+      </a>
+    </div>
   </div>
 
   <div class="mx-auto max-w-3xl px-gutter pb-section">

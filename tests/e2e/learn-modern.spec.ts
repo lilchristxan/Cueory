@@ -46,13 +46,13 @@ const stepOf = async (page: Page) => (await page.getByTestId('learn-step').textC
 const cardOnScreen = async (page: Page) => deck[(await page.getByTestId('learn-prompt').textContent()) ?? '']!;
 const answers = (page: Page) => page.getByRole('list', { name: 'Answers' });
 
-/** Shows and passes every new card by keyboard until the first "Choose the answer" step is on screen. */
+/** Shows and passes every new card by keyboard until the first "Choose an answer" step is on screen. */
 async function reachChoice(page: Page) {
   for (let turn = 0; turn < 5 && (await stepOf(page)) === 'New card'; turn++) {
     await pressEnter(page, page.getByRole('button', { name: 'Show answer' }));
     await pressEnter(page, page.getByRole('button', { name: 'Next card' }));
   }
-  await expect(page.getByTestId('learn-step')).toHaveText('Choose the answer');
+  await expect(page.getByTestId('learn-step')).toHaveText('Choose an answer');
 }
 
 for (const size of sizes) {
@@ -77,7 +77,7 @@ for (const size of sizes) {
         await pressEnter(page, page.getByRole('button', { name: 'Show answer' }));
         await expect(page.getByTestId('learn-card')).toContainText(card.back);
         await pressEnter(page, page.getByRole('button', { name: 'Next card' }));
-      } else if (step === 'Choose the answer') {
+      } else if (step === 'Choose an answer') {
         const right = answers(page).getByRole('button', { name: card.back, exact: true });
         await pressEnter(page, right);
         await expect(page.getByTestId('learn-feedback')).toContainText('Correct.');
@@ -98,7 +98,7 @@ for (const size of sizes) {
 
     // Three cards, each seen, chosen and recalled once when every answer is right.
     expect(steps.filter((s) => s === 'New card')).toHaveLength(3);
-    expect(steps.filter((s) => s === 'Choose the answer')).toHaveLength(3);
+    expect(steps.filter((s) => s === 'Choose an answer')).toHaveLength(3);
     expect(steps.filter((s) => s === 'Type the answer' || s === 'Fill in the blank')).toHaveLength(3);
 
     // The calm summary: how many are recalled today, what is still learning, go again or back to the lesson.
@@ -133,7 +133,7 @@ test('the progress bar fills as cards are recalled today', async ({ page }) => {
   for (let turn = 0; turn < 6 && (await page.getByText('recalled today 0 of 3').isVisible()); turn++) {
     const now = await cardOnScreen(page);
     const step = await stepOf(page);
-    if (step === 'Choose the answer') {
+    if (step === 'Choose an answer') {
       await answers(page).getByRole('button', { name: now.back, exact: true }).click();
     } else {
       await page.getByRole('textbox').fill(step === 'Fill in the blank' ? now.blank! : now.back);
@@ -176,7 +176,7 @@ test('a wrong typed answer shows what was written and offers "I was right"', asy
   await answers(page).getByRole('button', { name: card.back, exact: true }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
   // Pass the other cards' choices until a recall step comes up.
-  for (let turn = 0; turn < 4 && (await stepOf(page)) === 'Choose the answer'; turn++) {
+  for (let turn = 0; turn < 4 && (await stepOf(page)) === 'Choose an answer'; turn++) {
     const now = await cardOnScreen(page);
     await answers(page).getByRole('button', { name: now.back, exact: true }).click();
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -273,11 +273,11 @@ test("don't know? counts as a miss, shows the answer, and the card comes back sa
     const now = await cardOnScreen(page);
     const step = await stepOf(page);
     const nowFront = (await page.getByTestId('learn-prompt').textContent()) ?? '';
-    if (nowFront === front && step === 'Choose the answer') break;
+    if (nowFront === front && step === 'Choose an answer') break;
     if (step === 'New card') {
       await page.getByRole('button', { name: 'Show answer' }).click();
       await page.getByRole('button', { name: 'Next card' }).click();
-    } else if (step === 'Choose the answer') {
+    } else if (step === 'Choose an answer') {
       await answers(page).getByRole('button', { name: now.back, exact: true }).click();
       await page.getByRole('button', { name: 'Continue' }).click();
     } else {

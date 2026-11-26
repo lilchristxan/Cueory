@@ -31,14 +31,14 @@ const secondaryButton =
 // The summary card: a plain surface with the soft card shadow (Task 77). Study screens stay plain.
 const cardClass = 'rounded-xl border border-line bg-surface px-6 py-10 shadow-card sm:px-10';
 // One panel holds the prompt, the answers and the buttons (Christian, 2026-11-26): a focused card on the plain page.
-const panelClass = 'mt-6 rounded-2xl border border-line bg-page px-5 py-6 shadow-card sm:px-8 sm:py-8';
+const panelClass = 'mt-6 rounded-2xl border border-line bg-(--study-card) px-5 py-6 shadow-card sm:px-8 sm:py-8';
 const bubble = 'inline-flex h-10 min-w-10 shrink-0 items-center justify-center rounded-pill px-2 text-sm font-medium';
 /** The progress row is cut into at most this many pieces. */
 const MAX_SEGMENTS = 6;
 
 const stepLabel: Record<Step, string> = {
   see: 'New card',
-  choose: 'Choose the answer',
+  choose: 'Choose an answer',
   type: 'Type the answer',
   fill: 'Fill in the blank',
 };
@@ -227,7 +227,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
               {card.front}
             </p>
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <span data-testid="learn-step" className="text-sm font-medium text-ink-soft lowercase">
+              <span data-testid="learn-step" className="text-sm font-bold text-ink-soft lowercase">
                 {stepLabel[step]}
               </span>
               {retry && (
@@ -295,7 +295,7 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
                     onClick={() => act((s) => choose(s, cards, choice))}
                     disabled={result !== null}
                     aria-pressed={result ? picked : undefined}
-                    className={`press flex h-full min-h-15 w-full items-center gap-3 rounded-xl border bg-page px-5 py-4 text-left text-ink disabled:cursor-default ${tone}`}
+                    className={`press flex h-full min-h-15 w-full items-center gap-3 rounded-xl border bg-(--study-card) px-5 py-4 text-left text-ink disabled:cursor-default ${tone}`}
                   >
                     {result && (isAnswer || picked) && (
                       <span className="flex shrink-0">
@@ -362,11 +362,29 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
           {step !== 'see' && !result && (
             <button
               type="button"
+              aria-label="flag or comment on this card"
+              data-testid="learn-flag"
+              onClick={() => {
+                // One report form per page (Task 115): this opens the page's own, in the footer.
+                const flag = document.querySelector<HTMLElement>('#footer-flag button, #footer-flag a');
+                flag?.scrollIntoView({ block: 'center' });
+                flag?.click();
+              }}
+              className="press ml-auto inline-flex size-(--tap-min) items-center justify-center rounded-pill text-ink"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5 21V4h11l-2 4 2 4H5" />
+              </svg>
+            </button>
+          )}
+          {step !== 'see' && !result && (
+            <button
+              type="button"
               onClick={() => {
                 setProblem('');
                 act((s) => giveUp(s, cards));
               }}
-              className="press ml-auto inline-flex min-h-(--tap-min) items-center px-2 font-medium text-ink underline underline-offset-4"
+              className="press inline-flex min-h-(--tap-min) items-center px-2 font-bold text-ink underline underline-offset-4"
             >
               don't know?
             </button>

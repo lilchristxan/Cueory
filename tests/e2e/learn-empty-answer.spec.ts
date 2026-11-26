@@ -29,7 +29,7 @@ async function reachTypedStep(page: Page) {
   for (let turn = 0; turn < 20 && !(await field.isVisible()); turn++) {
     const step = (await page.getByTestId('learn-step').textContent()) ?? '';
     const prompt = (await page.getByTestId('learn-prompt').textContent()) ?? '';
-    if (step === 'Choose the answer') {
+    if (step === 'Choose an answer') {
       await page.getByRole('list', { name: 'Answers' }).getByRole('button', { name: backs[prompt]!, exact: true }).click();
       await page.getByRole('button', { name: 'Continue' }).click();
     } else if (step === 'New card') {
