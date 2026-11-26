@@ -62,7 +62,8 @@ node work/adaptive/simulation.cjs
 
 ## Progress log
 
-- `task-adaptive/design` — proposed model, release boundaries and research references.
+- `task-adaptive/design` (#1256) — proposed model, release boundaries and research references.
+- `task-adaptive/engine` (#1257) — pure engine, module tests and fixed-seed simulation.
 
 ## Needs Christian
 
