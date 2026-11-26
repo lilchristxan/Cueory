@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { GAME_RESULT_EVENT, GAME_STATS_CHANGED_EVENT, heldRounds, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
 import { sameGame } from './gamestats';
+import PrintWarning from './PrintWarning';
+import { printAnyway, requestPrint } from '../scripts/printgate';
 import { playedLabel, statusWords } from './playhub';
 import { GAME_PROGRESS_EVENT, readHeard, statusFor, type GameId, type HeardToday } from './playstatus';
 
@@ -28,6 +30,8 @@ interface Row {
   linkTestId?: string;
   /** hello cards: how many cards it has, shown instead of a daily status. */
   cards?: number;
+  /** The game's printable paper sheet. A game with one offers "print" (a warning first while it is unfinished); a played game with none shows its status only. */
+  print?: string;
 }
 
 interface Props {
@@ -53,9 +57,10 @@ const ICON: Readonly<Record<Art, { day: string; evening: string }>> = {
 
 const BUTTON = 'inline-flex min-h-11 min-w-24 items-center justify-center rounded-pill border-2 px-6 font-bold no-underline after:absolute after:inset-0';
 const PLAY = `${BUTTON} border-button bg-button text-on-button hover:border-button-hover hover:bg-button-hover`;
-/** The game page starts a fresh round (it keeps no saved result), so after a finished game the button says so. D-pending until a saved-result view exists. */
-export const PLAY_AGAIN = 'play again';
-const RESULT = `${BUTTON} border-ink bg-transparent text-ink hover:bg-surface`;
+/** A game played today is not replayed (Christian, 2026-11-25): its row offers its paper sheet instead. A game that is not finished warns before printing. D-pending. */
+export const PRINT = 'print for a patient';
+/** The print button sits above the row's whole-row link so it stays its own target. */
+const PRINT_BUTTON = 'relative z-10 inline-flex min-h-11 min-w-24 items-center justify-center py-1 text-center leading-tight @4xl:whitespace-nowrap rounded-pill border-2 border-ink bg-transparent px-6 font-bold text-ink hover:bg-surface';
 
 function Tile({ row }: { row: Row }) {
   return (
@@ -92,7 +97,7 @@ function Name({ row }: { row: Row }) {
 /**
  * The /play hub's game rows (option B, Christian 2026-11-23). Server-rendered with a dash for each status, so the page
  * never jumps; once it loads in the browser each row shows today's status from this device only (nothing is sent):
- * "new today" + play, "in progress" + play, or "played · solved in 4" + result. A game closed in this build says
+ * "new today" + play, "in progress" + play, or "solved in 4" + print for a patient (where the game has a paper sheet). A game closed in this build says
  * "coming soon", has no button and is not a link. A browser that cannot save shows every open game as "new today".
  */
 export default function PlayStatus({ games }: Props) {
@@ -100,6 +105,8 @@ export default function PlayStatus({ games }: Props) {
   const [loaded, setLoaded] = useState(false);
   const [today, setToday] = useState('');
   const [saved, setSaved] = useState<SavedStats>({ on: false, stats: [] });
+  /** The game whose print is waiting on the "print before you finish?" warning, and the button to give focus back to. */
+  const [warning, setWarning] = useState<Row | undefined>(undefined);
   const [heard, setHeard] = useState<HeardToday>({ started: new Set(), finished: new Set() });
 
   useEffect(() => {
@@ -142,8 +149,26 @@ export default function PlayStatus({ games }: Props) {
     };
   }, []);
 
+  const openSheet = (row: Row) => window.location.assign(row.print!);
+  /** Print: a finished game opens its sheet straight away; an unfinished one warns first (src/scripts/printgate.ts). */
+  const print = (row: Row, finished: boolean) => {
+    requestPrint({ finished, keepsResults: saved.on }, () => openSheet(row), () => setWarning(row));
+  };
+  /** "print anyway": today is recorded as not solved before any answer shows. */
+  const confirmPrint = () => {
+    const row = warning!;
+    setWarning(undefined);
+    printAnyway(browserStorage(), 'vialo', today, 6, () => openSheet(row));
+  };
+
   return (
     <section aria-labelledby="today-status-heading" data-testid="play-status">
+      <PrintWarning
+        open={warning !== undefined}
+        onFinish={() => { const row = warning!; setWarning(undefined); window.location.assign(row.href); }}
+        onPrint={confirmPrint}
+        onCancel={() => setWarning(undefined)}
+      />
       <h2 id="today-status-heading" className="sr-only">today</h2>
       <ul className="flex flex-col gap-3 @4xl:gap-0 @4xl:border-b @4xl:border-line">
         {games.map((row) => {
@@ -155,7 +180,10 @@ export default function PlayStatus({ games }: Props) {
           if (!row.open) words = 'coming soon';
           else if (!daily) words = row.cards === undefined ? undefined : `${row.cards} cards`;
           else if (status) words = statusWords(status, playedLabel(row.id, result));
-          const action = row.open ? (status === 'done' ? PLAY_AGAIN : 'play') : undefined;
+          // Played today: no replay, so no "play". A game with a paper sheet offers "print" whether or not it is finished.
+          const played = status === 'done';
+          const showPlay = row.open && !played;
+          const showPrint = row.open && Boolean(row.print);
           return (
             <li
               key={row.id}
@@ -174,15 +202,19 @@ export default function PlayStatus({ games }: Props) {
                 <p className="text-sm font-medium text-ink-soft" data-testid="play-status-words">
                   {words ?? <span aria-hidden="true">–</span>}
                 </p>
-                {action && (
-                  <a
-                    href={row.href}
-                    className={`${action === PLAY_AGAIN ? RESULT : PLAY} @4xl:justify-self-end`}
-                    aria-label={`${action} ${row.name}`}
-                    data-testid={row.linkTestId}
-                  >
-                    {action}
-                  </a>
+                {(showPlay || showPrint) && (
+                  <div className="flex flex-wrap items-center gap-3 @4xl:flex-col @4xl:items-end @4xl:justify-self-end">
+                    {showPlay && (
+                      <a href={row.href} className={PLAY} aria-label={`play ${row.name}`} data-testid={row.linkTestId}>
+                        play
+                      </a>
+                    )}
+                    {showPrint && (
+                      <button type="button" className={PRINT_BUTTON} aria-label={`${PRINT} (${row.name})`} data-testid={`print-${row.testId}`} onClick={() => print(row, played)}>
+                        {PRINT}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </li>

@@ -1,0 +1,85 @@
+---
+/**
+ * vialo's paper sheet (Christian, 2026-11-25): a two-person paper game. A played game offers "print" on /play instead
+ * of "play again". The browser prints it as exactly two pages: page 1 is the player's (branding, empty pill pack,
+ * alphabet), page 2 is the word keeper's (instructions and the word of the day, in the lower part of the page so it
+ * does not sit behind the board when printed back to back). The word shows only after today's vialo is finished in this
+ * browser (src/scripts/printsheet.ts); without JavaScript the page says to finish first. The text is in
+ * src/config/vialo-print.ts, the look in src/styles/print-sheet.css (shared by every game's sheet). Known: the sample answers are in the page source.
+ */
+import Layout from '../../../layouts/Layout.astro';
+import PrintSheetPage from '../../../components/PrintSheetPage.astro';
+import { vialoSheet as t } from '../../../config/vialo-print';
+import { pilloSamples } from '../../../config/gamesamples';
+import { VIALO_KEY_ROWS } from '../../../islands/vialokeys';
+import { GUESSES, WORD_LENGTH } from '../../../islands/pulse';
+import '../../../styles/print-sheet.css';
+
+const rows = Array.from({ length: GUESSES }, (_, row) => row);
+const columns = Array.from({ length: WORD_LENGTH }, (_, column) => column);
+const puzzles = JSON.stringify((await pilloSamples()).map(({ word }) => ({ word })));
+// The current vialo artwork (the same files the /play hub shows).
+const wordmark = '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg';
+const icon = '/design/games-v2/assets/vialo-icon-silver-oxblood.svg';
+---
+<Layout title={t.title} description={t.description} noindex promo={false} hideFlag>
+  <div class="sheet">
+    <div class="sheet-bar" data-print-hidden>
+      <a class="sheet-link" href="/play" data-testid="back-to-games">{t.backLink}</a>
+      <button type="button" class="sheet-button" data-print-sheet data-testid="print-sheet">{t.printButton}</button>
+    </div>
+    <h1 class="sr-only">{t.title}</h1>
+    <p class="sheet-intro" data-print-hidden>{t.intro}</p>
+
+    <PrintSheetPage page={1} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={4326} wordmarkHeight={1620} label={t.copyGuesser} caption={t.caption} footer={t.footerOne} testid="sheet-page-1">
+      <div class="sheet-pack" role="img" aria-label={t.boardLabel} data-testid="sheet-board">
+        {rows.map(() => columns.map(() => <span class="sheet-cell"><span class="sheet-well"></span></span>))}
+      </div>
+      <div class="sheet-keys" role="img" aria-label={t.keysLabel} data-testid="sheet-keys">
+        {VIALO_KEY_ROWS.map((row) => (
+          <div class="sheet-key-row" aria-hidden="true">
+            {Array.from(row, (letter) => <span class="sheet-key" data-testid="sheet-key">{letter}</span>)}
+          </div>
+        ))}
+      </div>
+    </PrintSheetPage>
+
+    <PrintSheetPage page={2} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={4326} wordmarkHeight={1620} label={t.copyKeeper} caption={t.keeperLine} footer={t.footerTwo} testid="sheet-page-2">
+      <h2 id="sheet-howto" class="sheet-heading">{t.howHeading}</h2>
+      <ol class="sheet-steps">
+        {t.steps.map((step, index) => (
+          <li>
+            {step}
+            {index === t.markStep && (
+              <ul class="sheet-legend" data-testid="sheet-legend">
+                {t.marks.map((mark) => (
+                  <li>
+                    <span class={`sheet-sample sheet-mark-${mark.kind}`} role="img" aria-label={mark.label}>
+                      <span aria-hidden="true">{t.sampleLetter}</span>
+                    </span>
+                    <span aria-hidden="true">{mark.words}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ol>
+      <p class="sheet-fold" data-testid="sheet-fold">{t.foldLabel}</p>
+      <div class="sheet-keeper" data-keeper="locked" data-testid="sheet-keeper" data-puzzles={puzzles}>
+        <p class="sheet-locked">{t.locked}</p>
+        <div class="sheet-reveal">
+          <p class="sheet-small">{t.wordLabel}</p>
+          <p class="sheet-word display" data-keeper-word></p>
+          <p class="sheet-small" data-keeper-date></p>
+        </div>
+      </div>
+    </PrintSheetPage>
+  </div>
+</Layout>
+
+<script>
+  import { showKeeperWord, wirePrintButtons } from '../../../scripts/printsheet';
+  wirePrintButtons();
+  showKeeperWord();
+</script>

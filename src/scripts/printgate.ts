@@ -1,0 +1,53 @@
+import { loadStats, reportStatsChanged, saveStats } from '../islands/gameresults';
+import { recordResult, sameGame, type GameStats } from '../islands/gamestats';
+import type { KeyValueStorage } from './storage';
+
+/**
+ * The shared print gate (Christian, 2026-11-25). A game's paper sheet shows today's answers, so printing a game that is
+ * not finished is a forfeit: the day is recorded as not solved first (in the same result record the stats and the /play
+ * status read), and only then does the sheet open. Every game's print entry uses this.
+ */
+export type PrintDecision = 'open' | 'warn';
+
+/** A finished game (won or lost) prints straight away. An unfinished one warns first. */
+export function decidePrint(needsWarning: boolean): PrintDecision {
+  return needsWarning ? 'warn' : 'open';
+}
+
+/** True when this browser holds a result (won or lost) for the game on that day. */
+export function isFinished(stats: GameStats, game: string, day: string): boolean {
+  return stats.some((entry) => entry.day === day && sameGame(entry.game, game));
+}
+
+/**
+ * Records today's game as not solved. The first result of a day is the one kept (recordResult), so a later replay
+ * cannot change it. Returns false when the browser won't keep it. Nothing is changed unless the save succeeds.
+ */
+export function forfeitToday(storage: KeyValueStorage | undefined, game: 'vialo', day: string, tries: number): boolean {
+  const saved = loadStats(storage, day);
+  if (!saved.on) return false;
+  if (isFinished(saved.stats, game, day)) return true;
+  const next = recordResult(saved.stats, { game, day, solved: false, tries });
+  if (!saveStats(storage, next)) return false;
+  reportStatsChanged();
+  return true;
+}
+
+/** What a game's print entry gives the caller: open the sheet now, or show the warning first. */
+export interface PrintEntry {
+  /** Today's finished state from the saved results; true when this browser keeps results at all. */
+  finished: boolean;
+  keepsResults: boolean;
+}
+
+/** Step 1 of every print entry (the hub's button, and the game frame's printer button once it lands). */
+export function requestPrint(entry: PrintEntry, open: () => void, warn: () => void): void {
+  if (decidePrint(!entry.finished && entry.keepsResults) === 'open') open();
+  else warn();
+}
+
+/** Step 2, on "print anyway": record today as not solved first, and only then open the sheet. */
+export function printAnyway(storage: KeyValueStorage | undefined, game: 'vialo', day: string, tries: number, open: () => void): void {
+  forfeitToday(storage, game, day, tries);
+  open();
+}

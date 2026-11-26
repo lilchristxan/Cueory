@@ -1,0 +1,2 @@
+status: in review · task-games-v2/print-to-share · /play offers "print" instead of "play again"; vialo has a two-page paper sheet (guesser's copy and keeper's copy) with a warning before printing an unfinished game
+decision: D-pending · vialo's print sheet is a two-person paper game: page 1 the guesser's board and alphabet, page 2 the keeper's instructions and the word of the day behind a fold line; printing before finishing warns, and "print anyway" records today as not solved first (Christian, 2026-11-25)

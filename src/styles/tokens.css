@@ -521,6 +521,52 @@
   --print-figure: 13cm;         /* an anatomy worksheet's picture on paper: leaves room for the numbered list below */
   --worksheet-blank: 1.75rem;   /* the height of a write-in line on an anatomy worksheet */
 
+  /* ---------- Paper sheets (/play/vialo/print and the other games' sheets): page 1 the game, page 2 how to play. Outlines only, so nothing needs background graphics. Matches Christian's approved rendering on Letter. ---------- */
+  --sheet-ink-soft: #6b5243;    /* Bronze: captions and footers (--color-ink-soft by day; paper is Daytime even in Evening) */
+  --sheet-ink: #3e2c23;         /* Espresso: text on paper (--color-ink by day) */
+  --sheet-oxblood: #6e2019;     /* the game's oxblood by day: pack, wells, keys, labels, marks */
+  --sheet-oxblood-light: #a0413a;
+  --sheet-margin: 1.78cm;       /* top and bottom of a page (0.7 in) */
+  --sheet-margin-side: 2.03cm;  /* left and right (0.8 in). The page rule is zero, so the browser prints no web address or date */
+  --sheet-top-one: 1.27cm;      /* page 1 starts a little higher so the footer clears the keys */
+  --sheet-icon-large: 1.68cm;   /* the logo on page 1 */
+  --sheet-wordmark-large: 1.52cm;
+  --sheet-icon-small: 1.27cm;   /* the logo on page 2 */
+  --sheet-wordmark-small: 1.14cm;
+  --sheet-logo-gap: 0.56cm;
+  --sheet-pack-pad: 0.46cm;
+  --sheet-pack-radius: 0.58cm;
+  --sheet-cell-width: 2.67cm;   /* one cell of the pack: five across make the pack's width */
+  --sheet-well-width: 82%;      /* the outlined pill inside a cell */
+  --sheet-line: 1.5pt;          /* every solid outline */
+  --sheet-dash: 1.1pt;          /* the dashed cell dividers */
+  --sheet-mark-line: 1.9pt;     /* the three pen marks in the legend */
+  --sheet-card-line: 1px;       /* the edge of a page card on screen only */
+  --sheet-button-line: 2px;
+  --sheet-key-line: 1.1pt;      /* a key's outline is finer than the pack's */
+  --sheet-key-width: 1.32cm;
+  --sheet-key-gap: 0.23cm;
+  --sheet-key-radius: 0.23cm;
+  --sheet-key-letter: 17pt;
+  --sheet-keys-top: 0.76cm;     /* space between the pack and the keys */
+  --sheet-text: 14pt;
+  --sheet-small: 12pt;
+  --sheet-label: 12.5pt;
+  --sheet-foot: 10pt;
+  --sheet-heading: 30pt;        /* "how to play", set in Bodoni Moda */
+  --sheet-word: 54pt;           /* the word of the day */
+  --sheet-steps-width: 15.7cm;
+  --sheet-step-gap: 0.36cm;
+  --sheet-sample: 1.17cm;       /* a sample letter in the legend */
+  --sheet-legend-gap: 0.56cm;
+  --sheet-box-pad-block: 0.64cm;
+  --sheet-box-pad-inline: 2.03cm;
+  --sheet-box-bottom: 1.9cm;    /* the word box sits in the lower part of page 2, above the footer */
+  --sheet-dialog-width: min(calc(100vw - 2rem), 28rem); /* the "print before you finish?" dialog */
+  --sheet-foot-bottom: 1.27cm;
+  --sheet-label-pad-block: 0.13cm;
+  --sheet-label-pad-inline: 0.56cm;
+
   /* ---------- Motion (D-41 brand bar: 150–400 ms, soft not bouncy, always off under reduced-motion) ---------- */
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);     /* gentle UI transitions */
   --ease-emphasis: cubic-bezier(0.2, 0, 0, 1);   /* snappier entrances */
@@ -1293,7 +1339,7 @@
   --play-hub-panel-width: 25rem;        /* the left panel on desktop (400 px) */
   --play-hub-split: var(--play-hub-panel-width) 1fr; /* desktop: left panel, then the rows */
   --play-hub-cols-stacked: auto minmax(0, 1fr); /* phone and tablet row: tile, then the wordmark; line and status row span both */
-  --play-hub-cols: 4rem 12.5rem 1fr 11rem 7.5rem; /* desktop row: icon tile, wordmark, line, status, button */
+  --play-hub-cols: 4rem 12.5rem 1fr 9rem 13rem; /* desktop row: icon tile, wordmark, line, status, buttons (play and "print for a patient" stack) */
   --play-hub-tile: 4rem;                /* the game's icon tile (64 px) */
   --play-hub-tile-icon: 2.875rem;       /* the artwork inside the tile (46 px) */
   --play-hub-wordmark-height: 2.625rem; /* wordmark artwork (42 px) */

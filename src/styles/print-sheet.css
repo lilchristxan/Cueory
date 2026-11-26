@@ -1,0 +1,258 @@
+/* Paper sheets (/play/vialo/print and the other games' sheets): page 1 the game, page 2 how to play. On screen the two
+   pages are white paper cards in Light and Evening alike; on paper they are ink on white with outlines only, so nothing
+   depends on "background graphics". Always the Daytime look. Every size is a token (--sheet-* in tokens.css). */
+
+.sheet {
+  page: sheet;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--spacing) * 6);
+  padding-block: calc(var(--spacing) * 6);
+  color: var(--sheet-ink);
+  /* Paper is always the Daytime look: the game's oxblood, by its Daytime values, in Light and Evening alike. */
+  --game-oxblood: var(--sheet-oxblood);
+  --game-oxblood-light: var(--sheet-oxblood-light);
+}
+
+@page sheet {
+  size: auto;
+  margin: 0;
+}
+
+.sheet-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--spacing) * 3);
+  inline-size: 100%;
+  max-inline-size: calc(var(--sheet-cell-width) * 5 + var(--sheet-margin-side) * 2);
+  color: var(--color-ink);
+}
+
+.sheet-intro {
+  max-inline-size: calc(var(--sheet-cell-width) * 5 + var(--sheet-margin-side) * 2);
+  color: var(--color-ink-soft);
+}
+
+.sheet-link {
+  min-block-size: calc(var(--spacing) * 11);
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-ink);
+  text-decoration: underline;
+}
+
+.sheet-button {
+  min-block-size: calc(var(--spacing) * 11);
+  min-inline-size: calc(var(--spacing) * 24);
+  padding-inline: calc(var(--spacing) * 6);
+  border: var(--sheet-button-line) solid var(--color-button);
+  border-radius: var(--radius-pill);
+  background: var(--color-button);
+  color: var(--color-on-button);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sheet-button:hover {
+  background: var(--color-button-hover);
+  border-color: var(--color-button-hover);
+}
+
+/* A page of paper. */
+.sheet-page {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  inline-size: 100%;
+  max-inline-size: calc(var(--sheet-cell-width) * 5 + var(--sheet-margin-side) * 2);
+  padding: var(--sheet-margin) calc(var(--sheet-margin-side) * 0.4);
+  background: white;
+  color: var(--sheet-ink);
+  line-height: 1.5;
+  border: var(--sheet-card-line) solid var(--color-line);
+  border-radius: var(--radius-lg);
+}
+.sheet-page :is(h1, h2, p, li) { margin: 0; color: var(--sheet-ink); }
+
+.sheet-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sheet-logo-gap);
+  font-size: inherit;
+}
+.sheet-icon { block-size: var(--sheet-icon-large); inline-size: auto; }
+.sheet-wordmark { block-size: var(--sheet-wordmark-large); inline-size: auto; max-inline-size: 60%; }
+.sheet-page-two .sheet-icon { block-size: var(--sheet-icon-small); }
+.sheet-page-two .sheet-wordmark { block-size: var(--sheet-wordmark-small); }
+
+.sheet-label {
+  margin-block-start: calc(var(--sheet-label-pad-block) * 1.6) !important;
+  padding: var(--sheet-label-pad-block) var(--sheet-label-pad-inline);
+  border: var(--sheet-line) solid var(--sheet-oxblood);
+  border-radius: var(--radius-pill);
+  font-size: var(--sheet-label);
+  font-weight: 700;
+  color: var(--sheet-oxblood) !important;
+  text-align: center;
+}
+.sheet-caption {
+  margin-block: calc(var(--sheet-label-pad-block) * 0.3) calc(var(--sheet-keys-top) * 1.15) !important;
+  font-size: var(--sheet-small);
+  color: var(--sheet-ink-soft) !important;
+  text-align: center;
+}
+.sheet-page-two .sheet-caption { margin-block: calc(var(--sheet-label-pad-block) * 0.8) 0 !important; }
+.sheet-small { font-size: var(--sheet-small); color: var(--sheet-ink-soft) !important; }
+.sheet-footer { margin-block-start: auto !important; padding-block-start: var(--sheet-key-gap); font-size: var(--sheet-foot); color: var(--sheet-ink-soft) !important; text-align: center; }
+
+/* The pill pack: a rounded oxblood outline, dashed dividers, an outlined pill in each cell. */
+.sheet-pack {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  inline-size: 100%;
+  max-inline-size: calc(var(--sheet-cell-width) * 5 + var(--sheet-pack-pad) * 2);
+  box-sizing: border-box;
+  padding: var(--sheet-pack-pad);
+  border: var(--sheet-line) solid var(--sheet-oxblood);
+  border-radius: var(--sheet-pack-radius);
+}
+.sheet-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1.05 / 0.82;
+  border-inline-end: var(--sheet-dash) dashed var(--sheet-oxblood-light);
+  border-block-end: var(--sheet-dash) dashed var(--sheet-oxblood-light);
+}
+.sheet-cell:nth-child(5n) { border-inline-end: 0; }
+.sheet-cell:nth-last-child(-n+5) { border-block-end: 0; }
+.sheet-well {
+  inline-size: var(--sheet-well-width);
+  aspect-ratio: 0.86 / 0.56;
+  box-sizing: border-box;
+  border: var(--sheet-line) solid var(--sheet-oxblood);
+  border-radius: var(--radius-pill);
+}
+
+/* The alphabet as printed key shapes. */
+.sheet-keys {
+  container-type: inline-size;
+  inline-size: 100%;
+  margin-block-start: var(--sheet-keys-top);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sheet-key-gap);
+}
+.sheet-key-row { display: flex; justify-content: center; gap: var(--sheet-key-gap); }
+.sheet-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: min(var(--sheet-key-width), calc((100cqi - 9 * var(--sheet-key-gap)) / 10));
+  aspect-ratio: 52 / 60;
+  box-sizing: border-box;
+  border: var(--sheet-key-line) solid var(--sheet-oxblood);
+  border-radius: var(--sheet-key-radius);
+  font-size: var(--sheet-key-letter);
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+
+/* Page 2: how to play. */
+.sheet-heading { font-family: var(--font-display); font-weight: 500; font-size: var(--sheet-heading); line-height: 1.2; margin-block: calc(var(--sheet-keys-top) * 1.1) calc(var(--sheet-step-gap) * 1.7) !important; text-align: center; }
+.sheet-steps { align-self: center; box-sizing: border-box; inline-size: 100%; max-inline-size: var(--sheet-steps-width); margin: 0; padding-inline-start: 1.2em; list-style: decimal; font-size: var(--sheet-text); }
+.sheet-page-two .sheet-steps { flex: 1 0 auto; }
+.sheet-steps > li + li { margin-block-start: var(--sheet-step-gap); }
+.sheet-legend { list-style: none; margin: calc(var(--sheet-step-gap) * 1.1) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--sheet-key-gap) var(--sheet-legend-gap); font-size: var(--sheet-label); }
+.sheet-legend li { display: flex; align-items: center; gap: calc(var(--sheet-key-gap) * 0.3); }
+
+/* Three pen marks on a sample letter: a single line through it, an x that reaches past it, a ring around it. */
+.sheet-sample {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--sheet-sample);
+  aspect-ratio: 1;
+  font-size: 20pt;
+  font-weight: 700;
+  line-height: 1;
+}
+.sheet-mark-line::after {
+  content: "";
+  position: absolute;
+  inset-inline: 8%;
+  inset-block-start: 50%;
+  border-block-start: var(--sheet-mark-line) solid var(--sheet-oxblood);
+}
+.sheet-mark-cross::before, .sheet-mark-cross::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 50%;
+  inset-block: -4%;
+  border-inline-start: var(--sheet-mark-line) solid var(--sheet-oxblood);
+}
+.sheet-mark-cross::before { transform: rotate(45deg); }
+.sheet-mark-cross::after { transform: rotate(-45deg); }
+.sheet-mark-ring { box-sizing: border-box; border: var(--sheet-mark-line) solid var(--sheet-oxblood); border-radius: 50%; }
+
+/* The fold line: dashed, edge to edge, with its label in the middle. The answers go below it, so folding the page
+   along it hides them (shared by every game's sheet). */
+.sheet-fold {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: var(--sheet-key-gap);
+  margin-block: auto var(--sheet-key-gap);
+  margin-inline: calc(var(--sheet-margin-side) * -0.4) !important;
+  font-size: var(--sheet-foot);
+  color: var(--sheet-ink-soft) !important;
+  white-space: nowrap;
+}
+.sheet-fold::before, .sheet-fold::after { content: ""; flex: 1; border-block-start: var(--sheet-dash) dashed var(--sheet-oxblood-light); }
+.sheet-fold + .sheet-keeper { margin-block-start: 0 !important; }
+
+/* The word of the day, low on page 2 (it does not sit behind the board when printed back to back); only after today's game. */
+.sheet-keeper {
+  align-self: center;
+  margin-block: auto var(--sheet-key-gap) !important;
+  box-sizing: border-box;
+  padding: var(--sheet-box-pad-block) var(--sheet-box-pad-inline);
+  border: var(--sheet-line) solid var(--sheet-oxblood);
+  border-radius: var(--sheet-pack-radius);
+  text-align: center;
+}
+.sheet-word { font-size: var(--sheet-word); line-height: 1.2; letter-spacing: 0.18em; padding-inline-start: 0.18em; }
+.sheet-locked { font-size: var(--sheet-text); }
+.sheet-keeper[data-keeper="ready"] .sheet-locked { display: none; }
+.sheet-keeper:not([data-keeper="ready"]) .sheet-reveal { display: none; }
+
+@media print {
+  body:has(.sheet) > :not(main) { display: none !important; }
+  body:has(.sheet), body:has(.sheet) main { background: white !important; background-image: none !important; }
+  main:has(.sheet) { max-inline-size: none; padding: 0; margin: 0; }
+  .sheet { display: block; padding: 0; gap: 0; }
+  .sheet-page {
+    min-block-size: 100vh;
+    max-inline-size: none;
+    padding: var(--sheet-margin) var(--sheet-margin-side);
+    break-after: page;
+    break-inside: avoid;
+    border: 0;
+    border-radius: 0;
+  }
+  .sheet-page-one { padding-block-start: var(--sheet-top-one); }
+  .sheet-page:last-of-type { break-after: auto; }
+  .sheet-footer { position: absolute; inset-inline: 0; inset-block-end: var(--sheet-foot-bottom); margin: 0 !important; padding: 0; }
+  .sheet-fold { margin-inline: calc(var(--sheet-margin-side) * -1) !important; }
+  .sheet-keeper { margin-block-end: var(--sheet-box-bottom) !important; }
+  .sheet-legend { flex-wrap: nowrap; white-space: nowrap; gap: var(--sheet-legend-gap); }
+}
