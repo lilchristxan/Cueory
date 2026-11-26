@@ -8,7 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
  * on the page moves because of it, and where it would not fit without covering something it is not shown at all.
  */
 const printing = [
-  { path: '/play/vialo', id: 'vialo' },
+  { path: '/play/wordpill', id: 'vialo' },
   { path: '/play/sudoku', id: 'sudoku' },
   { path: '/play/crossword', id: 'crossword' },
   { path: '/play/piccline', id: 'suture' },
@@ -131,7 +131,7 @@ for (const path of notPrinting) {
 }
 
 test('x closes the bubble at once, and it does not come back', async ({ page }) => {
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   await page.getByTestId('print-hint-close').click();
   await expect(hint(page)).toHaveCount(0);
   await page.clock.runFor(30_000);
@@ -139,13 +139,13 @@ test('x closes the bubble at once, and it does not come back', async ({ page }) 
 });
 
 test('Escape closes the bubble at once', async ({ page }) => {
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   await page.keyboard.press('Escape');
   await expect(hint(page)).toHaveCount(0);
 });
 
 test('the bubble fades by itself after ten seconds', async ({ page }) => {
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   await page.clock.runFor(9500);
   await expect(hint(page)).toHaveAttribute('data-phase', 'shown');
   await page.clock.runFor(600);
@@ -155,7 +155,7 @@ test('the bubble fades by itself after ten seconds', async ({ page }) => {
 });
 
 test('hovering the bubble pauses the countdown, leaving it carries on', async ({ page }) => {
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   await page.clock.runFor(4000);
   await hint(page).hover();
   await page.clock.runFor(30_000);
@@ -168,7 +168,7 @@ test('hovering the bubble pauses the countdown, leaving it carries on', async ({
 });
 
 test('keyboard focus on the x pauses the countdown, so it does not vanish under someone tabbing to it', async ({ page }) => {
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   await page.clock.runFor(3000);
   await page.getByTestId('print-hint-close').focus();
   await page.clock.runFor(30_000);
@@ -179,7 +179,7 @@ test('keyboard focus on the x pauses the countdown, so it does not vanish under 
 });
 
 test('focus on the x outlasts hover: un-hovering does not let it vanish under the focused button', async ({ page }) => {
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   const close = page.getByTestId('print-hint-close');
   await page.clock.runFor(2000);
   await close.focus();
@@ -197,7 +197,7 @@ test('focus on the x outlasts hover: un-hovering does not let it vanish under th
 });
 
 test('closing with the x moves focus to the printer button, not the page', async ({ page }) => {
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   await page.getByTestId('print-hint-close').focus();
   await page.keyboard.press('Enter');
   await expect(hint(page)).toHaveCount(0);
@@ -206,7 +206,7 @@ test('closing with the x moves focus to the printer button, not the page', async
 
 test('reduced motion: the bubble just disappears, with no fade', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   // The site's reduced-motion rule makes every transition instant (a hair above zero).
   expect(await hint(page).evaluate((node) => parseFloat(getComputedStyle(node).transitionDuration))).toBeLessThan(0.001);
   await page.clock.runFor(10_100);
@@ -216,7 +216,7 @@ test('reduced motion: the bubble just disappears, with no fade', async ({ page }
 test('the bubble remembers nothing: no storage key is added, and it shows again on the next load', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await freezeClock(page);
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await expect(page.getByTestId('game-frame-print')).toBeVisible();
   const keys = () => page.evaluate(() => [Object.keys(localStorage).sort(), Object.keys(sessionStorage).sort()]);
   await awake(page);
@@ -268,7 +268,7 @@ for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
 test('no bubble if the player has already started playing, so nothing moves under their finger', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await freezeClock(page);
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await awake(page);
   await expect(page.getByTestId('print-hint-status')).toBeAttached();
   await page.mouse.click(300, 400);
@@ -342,14 +342,14 @@ test('/play/piccline: a printer press before the game has loaded is answered onc
   expect(await printed()).toBe(1);
 });
 
-test('/play/vialo: a printer press before the game has loaded is answered once it arrives (finished game prints once)', async ({ page }) => {
+test('/play/wordpill: a printer press before the game has loaded is answered once it arrives (finished game prints once)', async ({ page }) => {
   let release!: () => void;
   const held = new Promise<void>((resolve) => { release = resolve; });
   await page.route(/\/_astro\/VialoPrint\.[\w-]+\.js$/, async (route) => { await held; await route.continue(); });
   await page.addInitScript(() => {
     window.print = () => { (window as unknown as { printed: number }).printed = ((window as unknown as { printed?: number }).printed ?? 0) + 1; };
   });
-  await page.goto('/play/vialo', { waitUntil: 'domcontentloaded' });
+  await page.goto('/play/wordpill', { waitUntil: 'domcontentloaded' });
   await awake(page);
   await page.getByTestId('game-frame-print').click();
   expect(await page.evaluate(() => (window as unknown as { printed?: number }).printed ?? 0)).toBe(0);
@@ -363,7 +363,7 @@ test('/play/vialo: a printer press before the game has loaded is answered once i
 });
 
 test('narrowing the window to the phone layout while the bubble shows: it closes or stays clear, and nothing is added to the page for it', async ({ page }) => {
-  await openWithClock(page, '/play/vialo');
+  await openWithClock(page, '/play/wordpill');
   await page.setViewportSize({ width: 390, height: 844 });
   // The page's resize observer does the re-checking on its own; the clock only has to carry the bubble's close on.
   await expect.poll(async () => {
@@ -386,7 +386,7 @@ test('narrowing the window to the phone layout while the bubble shows: it closes
 test('where the bubble would have to cover something it is not shown at all, and the printer button stays', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await freezeClock(page);
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await expect(page.getByTestId('game-frame-print')).toBeVisible();
   await awake(page);
   // Something the bubble must never lie over, right where it would hang (fixed, so nothing else moves).

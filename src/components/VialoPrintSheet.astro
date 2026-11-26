@@ -7,6 +7,7 @@
  * Text: src/config/vialo-print.ts. Look: src/styles/print-sheet.css (shared by every game's sheet).
  */
 import PrintSheetPage from './PrintSheetPage.astro';
+import { imageLogo } from '../config/gamelogos';
 import { vialoSheet as t } from '../config/vialo-print';
 import { VIALO_KEY_ROWS } from '../islands/vialokeys';
 import { GUESSES, WORD_LENGTH } from '../islands/pulse';
@@ -14,12 +15,13 @@ import '../styles/print-sheet.css';
 
 const rows = Array.from({ length: GUESSES }, (_, row) => row);
 const columns = Array.from({ length: WORD_LENGTH }, (_, column) => column);
-// The current vialo artwork (the same files the /play hub shows).
-const wordmark = '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg';
-const icon = '/design/games-v2/assets/vialo-icon-silver-oxblood.svg';
+// The wordpill artwork (the same files the /play hub shows), from the one logo source.
+const { wordmark: art, icon: iconArt } = imageLogo('vialo');
+const wordmark = art.day;
+const icon = iconArt.day;
 ---
 <div class="sheet-print" data-print-sheet="vialo" data-testid="print-sheet">
-  <PrintSheetPage page={1} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={4326} wordmarkHeight={1620} label={t.copyGuesser} caption={t.caption} footer={t.footerOne} testid="sheet-page-1">
+  <PrintSheetPage page={1} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={art.width} wordmarkHeight={art.height} label={t.copyGuesser} caption={t.caption} footer={t.footerOne} testid="sheet-page-1">
     <div class="sheet-pack" role="img" aria-label={t.boardLabel} data-testid="sheet-board">
       {rows.map(() => columns.map(() => <span class="sheet-cell"><span class="sheet-well"></span></span>))}
     </div>
@@ -32,7 +34,7 @@ const icon = '/design/games-v2/assets/vialo-icon-silver-oxblood.svg';
     </div>
   </PrintSheetPage>
 
-  <PrintSheetPage page={2} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={4326} wordmarkHeight={1620} label={t.copyKeeper} caption={t.keeperLine} footer={t.footerTwo} testid="sheet-page-2">
+  <PrintSheetPage page={2} name={t.name} icon={icon} wordmark={wordmark} wordmarkWidth={art.width} wordmarkHeight={art.height} label={t.copyKeeper} caption={t.keeperLine} footer={t.footerTwo} testid="sheet-page-2">
     <h2 class="sheet-heading">{t.howHeading}</h2>
     <ol class="sheet-steps">
       {t.steps.map((step, index) => (

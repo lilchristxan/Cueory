@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 // The .tsx extension is explicit: on a case-insensitive disk a bare 'PlayStatus' would resolve to playstatus.ts first.
 import PlayStatus from '../../src/islands/PlayStatus.tsx';
 import PlayTotals from '../../src/islands/PlayTotals';
+import { statsCta } from '../../src/config/statscta';
 import { helloCardsGame } from '../../src/config/games';
 import { gamePages } from '../../src/config/game-pages';
 import { hubLines } from '../../src/config/homegames';
@@ -11,7 +12,7 @@ import { hubHeadline, hubTotals, playedLabel, statusWords } from '../../src/isla
 
 const line = (id: 'vialo' | 'cueword') => ({ vialo: hubLines.vialo, cueword: hubLines.crossword })[id];
 const games = (crosswordOpen: boolean) => [
-  { id: 'vialo' as const, testId: 'pulse', name: 'vialo', line: line('vialo'), href: gamePages.vialo, open: true, art: 'vialo' as const },
+  { id: 'vialo' as const, testId: 'pulse', name: 'wordpill', line: line('vialo'), href: gamePages.vialo, open: true, art: 'vialo' as const },
   { id: 'cueword' as const, testId: 'cueword', name: 'crossword', line: line('cueword'), href: gamePages.cueword, open: crosswordOpen },
   { id: 'hello-cards' as const, testId: 'hello-cards', name: helloCardsGame.name, line: helloCardsGame.line, href: helloCardsGame.href, open: false },
 ];
@@ -30,8 +31,8 @@ describe('the /play hub rows (option B)', () => {
   it('links an open game once, from its play button, and shows a dash until the browser has been read', () => {
     const html = render(true);
     expect(html).toContain('href="/play/crossword"');
-    expect(html.match(/href="\/play\/vialo"/g)).toHaveLength(1);
-    expect(html).toContain('aria-label="play vialo"');
+    expect(html.match(/href="\/play\/wordpill"/g)).toHaveLength(1);
+    expect(html).toContain('aria-label="play wordpill"');
     expect(html).toContain('<span aria-hidden="true">–</span>');
     expect(html).not.toContain('new today');
   });
@@ -42,17 +43,18 @@ describe('the /play hub rows (option B)', () => {
     expect(html).toContain(line('cueword').replace(/'/g, '&#x27;'));
   });
 
-  it('uses the wordmark artwork for vialo and a serif name for the others', () => {
+  it('uses the shared logo artwork (src/config/gamelogos.ts) for vialo and a serif name for the others', () => {
     const html = render(true);
-    expect(html).toContain('vialo-wordmark-oxblood-v3.svg');
-    expect(html).toContain('vialo-wordmark-dark.svg');
+    expect(html).toContain('src="/design/games-v2/assets/wordpill-wordmark-light.svg"');
+    expect(html).toContain('src="/design/games-v2/assets/wordpill-wordmark-dark.svg"');
+    expect(html).toContain('src="/design/games-v2/assets/wordpill-icon-l1.svg"');
+    expect(html).toContain('alt="wordpill"');
     expect(html).toMatch(/display[^>]*>crossword</);
   });
 
-  it('renders the totals as dashes on the server', () => {
-    const html = renderToStaticMarkup(createElement(PlayTotals));
-    expect(html.match(/aria-hidden="true">–</g)).toHaveLength(4);
-    expect(html).not.toMatch(/>0</);
+  it('draws nothing but an empty holder for the totals on the server, until the session check has resolved', () => {
+    const html = renderToStaticMarkup(createElement(PlayTotals, { cta: statsCta }));
+    expect(html).toBe('<div class="play-hub-account-slot"></div>');
   });
 });
 

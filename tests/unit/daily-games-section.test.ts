@@ -53,7 +53,7 @@ describe('home daily games stage', () => {
     const section = gamesSection();
     const links = [...section.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)].map((match) => match[1]);
     expect(links.filter((href) => href !== '/play')).toEqual([
-      '/play/vialo',
+      '/play/wordpill',
       '/play/tachyyy',
       '/play/piccline',
       '/play/crossword',

@@ -41,7 +41,7 @@ describe('home lower sections', () => {
     const games = section('daily-games');
     const signup = section('signup');
     expect(links(games)).toEqual([
-      '/play/vialo',
+      '/play/wordpill',
       '/play/tachyyy',
       '/play/piccline',
       '/play/crossword',

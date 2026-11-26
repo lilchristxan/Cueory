@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react';
 import { browserStorage } from '../scripts/storage';
 import { currentStatsStatus, GAME_STATS_CHANGED_EVENT, GAME_STATS_STATUS_EVENT, loadStats, localDay } from './gameresults';
 import { currentStreak, dailyStats, longestStreak, wordPathSummary, type GameId, type GameStats } from './gamestats';
-import { accountHref } from '../config/site';
 import { useStatsVisible } from './gamestatsgate';
 import { GUESSES } from './pulse';
 
+/** The signed-out bar's words and link, decided on the page's Astro side (config/statscta.ts `statsCta`) so they are page HTML, not island JavaScript. */
+export interface StatsCta {
+  href: string;
+  label: string;
+  note: string;
+}
+
 interface Props {
   game: string;
+  cta: StatsCta;
 }
 
 interface StatValues {
@@ -63,7 +70,7 @@ function computeStats(game: string, stats: GameStats, today: string): StatValues
   };
 }
 
-export default function GameFrameStats({ game }: Props) {
+export default function GameFrameStats({ game, cta }: Props) {
   // Hidden until a signed-in session is confirmed. Stats keep being recorded and tracked below either way.
   const visible = useStatsVisible();
   const [status, setStatus] = useState(currentStatsStatus);
@@ -97,8 +104,8 @@ export default function GameFrameStats({ game }: Props) {
   // the same bar the page was built with, so a signed-out page never changes after load. It is also the static HTML.
   if (!visible) {
     return <div className="game-frame-account-bar" data-testid="game-frame-account-bar">
-        <a href={accountHref} className="copper-button" aria-describedby="game-frame-account-note">create an account</a>
-        <p id="game-frame-account-note" className="game-frame-account-note">to save your daily game stats</p>
+        {cta.href ? <a href={cta.href} className="copper-button" aria-describedby="game-frame-account-note">{cta.label}</a> : <p className="game-frame-account-note" data-testid="game-frame-account-message">{cta.label}</p>}
+        {cta.href && <p id="game-frame-account-note" className="game-frame-account-note">{cta.note}</p>}
       </div>;
   }
 

@@ -1,5 +1,5 @@
 /**
- * The words on vialo's paper sheet (printed from /play/vialo), a two-person paper game (Christian, 2026-11-25): page 1 is the
+ * The words on vialo's paper sheet (printed from /play/wordpill), a two-person paper game (Christian, 2026-11-25): page 1 is the
  * guesser's board and alphabet, page 2 is the keeper's instructions and the word of the day. Edit the text here:
  * the page only lays it out. The three marks are the game's own (MARK_SYMBOL and MARK_WORDS in src/islands/pulse.ts).
  */

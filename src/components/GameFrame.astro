@@ -2,6 +2,7 @@
 import '../styles/gameframe.css';
 import GameFrameControls from '../islands/GameFrameControls';
 import GameFrameStats from '../islands/GameFrameStats';
+import { statsCta } from '../config/statscta';
 import GameDeck from './GameDeck.astro';
 import { formatGameDateLine } from '../scripts/gamedateline';
 
@@ -53,13 +54,13 @@ const configs: Record<string, GameConfig> = {
   pulse: {
     id: 'pulse',
     name: 'pillo',
-    brandName: 'vialo',
+    brandName: 'wordpill',
     defaultTagline: "Find today's word",
     iconType: 'img',
-    iconSrc: '/design/games-v2/assets/vialo-icon-silver-oxblood.svg',
+    iconSrc: '/design/games-v2/assets/wordpill-icon-l1.svg',
     wordmarkType: 'img',
-    wordmarkSrc: '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg',
-    wordmarkEveningSrc: '/brand/games/vialo-wordmark-dark.svg',
+    wordmarkSrc: '/design/games-v2/assets/wordpill-wordmark-light.svg',
+    wordmarkEveningSrc: '/design/games-v2/assets/wordpill-wordmark-dark.svg',
     defaultSteps: [
       'Type a five-letter word.',
       'Each pill shows if a letter is in place, elsewhere or not in the word.',
@@ -166,7 +167,7 @@ const key =
 const currentConfig: GameConfig = configs[key] ?? configs.pulse!;
 // The corner buttons are named for the page's own game, the name the game island uses for its dialogs: vialo's page is
 // "vialo" although it shares pillo's art, and word path's page is "piccline".
-const controlName = game === 'vialo' ? 'vialo' : key === 'suture' ? 'piccline' : currentConfig.name;
+const controlName = game === 'vialo' ? currentConfig.brandName : key === 'suture' ? 'piccline' : currentConfig.name;
 
 // The games that can print from their own page get the Frame's printer button (it announces cueory:print with this id).
 // Vialo and piccline print their own two-page sheets (their print islands answer); sudoku and crossword print what they printed before,
@@ -220,8 +221,8 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
           )}
           {currentConfig.iconType === 'tachyyy' && (
             <span class="logo game-frame-icon-img">
-              <img class="logo-day" src="/brand/games/tachyyy-light.svg" alt="" width="72" height="72" loading="lazy" decoding="async" />
-              <img class="logo-evening" src="/brand/games/tachyyy-dark.svg" alt="" width="72" height="72" loading="lazy" decoding="async" />
+              <img class="logo-day" src="/brand/games/tachyyy-light.svg" alt="" aria-hidden="true" width="72" height="72" loading="lazy" decoding="async" />
+              <img class="logo-evening" src="/brand/games/tachyyy-light.svg" alt="" aria-hidden="true" width="72" height="72" loading="lazy" decoding="async" />
             </span>
           )}
           {currentConfig.iconType === 'grid' && (
@@ -286,7 +287,7 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 
       <!-- The four stats are drawn by the island itself, and only for a signed-in visitor (nothing is rendered, and no gap
            kept, for anyone else). They are still recorded in this browser either way. -->
-      {(showStats ?? framed) && <GameFrameStats client:load game={currentConfig.id} />}
+      {(showStats ?? framed) && <GameFrameStats client:load game={currentConfig.id} cta={statsCta} />}
     </aside>
 
     <!-- Center area -->

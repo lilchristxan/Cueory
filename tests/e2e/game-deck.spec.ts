@@ -7,12 +7,12 @@ test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 // The fanned card deck at the right edge of every game page (Christian's two canvas comments, 23 Nov). Playwright's
 // build shows drafts, so all six games are open and the deck has five cards.
 const pages = [
-  { path: '/play/vialo', id: 'pulse', order: ['hello cards', 'sudoku', 'crossword', 'piccline', 'tachyyy'] },
-  { path: '/play/hello-cards', id: 'hello-cards', order: ['sudoku', 'crossword', 'piccline', 'tachyyy', 'vialo'] },
-  { path: '/play/sudoku', id: 'triage', order: ['crossword', 'piccline', 'tachyyy', 'vialo', 'hello cards'] },
-  { path: '/play/crossword', id: 'cueword', order: ['piccline', 'tachyyy', 'vialo', 'hello cards', 'sudoku'] },
-  { path: '/play/piccline', id: 'suture', order: ['tachyyy', 'vialo', 'hello cards', 'sudoku', 'crossword'] },
-  { path: '/play/tachyyy', id: 'stat', order: ['vialo', 'hello cards', 'sudoku', 'crossword', 'piccline'] },
+  { path: '/play/wordpill', id: 'pulse', order: ['hello cards', 'sudoku', 'crossword', 'piccline', 'tachyyy'] },
+  { path: '/play/hello-cards', id: 'hello-cards', order: ['sudoku', 'crossword', 'piccline', 'tachyyy', 'wordpill'] },
+  { path: '/play/sudoku', id: 'triage', order: ['crossword', 'piccline', 'tachyyy', 'wordpill', 'hello cards'] },
+  { path: '/play/crossword', id: 'cueword', order: ['piccline', 'tachyyy', 'wordpill', 'hello cards', 'sudoku'] },
+  { path: '/play/piccline', id: 'suture', order: ['tachyyy', 'wordpill', 'hello cards', 'sudoku', 'crossword'] },
+  { path: '/play/tachyyy', id: 'stat', order: ['wordpill', 'hello cards', 'sudoku', 'crossword', 'piccline'] },
 ];
 
 /** An item's untransformed box in the frame (offsetWidth/Height ignore the tilt) and its tilt in degrees. */
@@ -37,7 +37,7 @@ test.describe('card deck at 1440 x 900', () => {
   });
 
   test('five cards of 220 x 308, each one step further out, higher and less tilted than the one in front', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await expect(page.locator('.game-deck-item')).toHaveCount(5);
     // Index 0 is the front card (the next game). Each step back: 18 px further right, 42 px higher, 2.5 degrees less tilted.
     for (let depth = 0; depth < 5; depth++) {
@@ -61,7 +61,7 @@ test.describe('card deck at 1440 x 900', () => {
   });
 
   test('the cards are positioned from the page top and scroll with the page', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     const before = await page.locator('.game-deck-item').first().boundingBox();
     await page.evaluate(() => window.scrollTo(0, 120));
     const after = await page.locator('.game-deck-item').first().boundingBox();
@@ -80,7 +80,7 @@ test.describe('card deck at 1440 x 900', () => {
   });
 
   test('each card is one real link named for its game; "next game" is on the front card only, hidden from screen readers', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     const hrefs = ['/play/hello-cards', '/play/sudoku', '/play/crossword', '/play/piccline', '/play/tachyyy'];
     const names = ['hello cards', 'sudoku', 'crossword', 'piccline', 'tachyyy'];
     for (let i = 0; i < 5; i++) {
@@ -93,7 +93,7 @@ test.describe('card deck at 1440 x 900', () => {
   });
 
   test('"next game ›" sits inside the front card, centred between its side edges, 202 px down the card', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     const m = await page.locator('.game-deck-item').first().evaluate((el) => {
       // Measure in the card's own frame by undoing the tilt: the label's box corners against the card's padding box.
       const card = el.querySelector('.game-deck-card') as HTMLElement;
@@ -122,7 +122,7 @@ test.describe('card deck at 1440 x 900', () => {
   });
 
   test('hover moves the card face 170 px left and straightens it to -2 degrees; the hit area stays put', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     const item = page.locator('.game-deck-item').first();
     const card = item.locator('.game-deck-card');
     const itemBefore = await item.boundingBox();
@@ -149,7 +149,7 @@ test.describe('card deck at 1440 x 900', () => {
   });
 
   test('keyboard focus moves a card exactly as hover does, with a visible focus ring', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     const card = page.locator('.game-deck-card').first();
     const before = await card.boundingBox();
     await card.focus();
@@ -165,7 +165,7 @@ test.describe('card deck at 1440 x 900', () => {
 
   test('under reduced motion the card still moves, without animation', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     const card = page.locator('.game-deck-card').first();
     // The site's reduced-motion rule shortens every transition to one hundred-thousandth of a second.
     expect(parseFloat(await card.evaluate((el) => getComputedStyle(el).transitionDuration))).toBeLessThan(0.001);
@@ -276,7 +276,7 @@ test.describe('card deck at 1440 x 900', () => {
   for (const width of [1120, 1280, 1440]) {
     test(`at ${width} px the cards at rest cover no part of vialo, sudoku, piccline or word path and never scroll sideways`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline', '/play/word-path']) {
+      for (const path of ['/play/wordpill', '/play/sudoku', '/play/piccline', '/play/word-path']) {
         await page.goto(path);
         await expect(page.locator('.game-deck-item').first()).toBeVisible();
         expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), `${path} at ${width}`).toBeLessThanOrEqual(0);
@@ -289,7 +289,7 @@ test.describe('card deck at 1440 x 900', () => {
   for (const width of [1120, 1440]) {
     test(`at ${width} px the page cannot be scrolled sideways, at rest or with the front card hovered`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
-      for (const path of ['/play/vialo', '/play/sudoku', '/play/piccline']) {
+      for (const path of ['/play/wordpill', '/play/sudoku', '/play/piccline']) {
         await page.goto(path);
         await expect(page.locator('.game-deck-item').first()).toBeVisible();
         const check = async (when: string) => {
@@ -308,13 +308,13 @@ test.describe('card deck at 1440 x 900', () => {
   }
 
   test('no axe violations on the deck', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     const results = await new AxeBuilder({ page }).include('.game-deck').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(results.violations).toEqual([]);
   });
 
   test('the deck is hidden in print', async ({ page }) => {
-    await page.goto('/play/vialo');
+    await page.goto('/play/wordpill');
     await page.emulateMedia({ media: 'print' });
     await expect(page.locator('.game-frame-deck-slot')).toBeHidden();
   });
@@ -324,7 +324,7 @@ test.describe('below 70rem (1120 px) the other games are a plain row of cards, t
   for (const [width, height] of [[390, 844], [820, 1180], [1024, 900], [1056, 900], [1100, 900], [1119, 900]] as const) {
     test(`${width} px: one tidy row, plain cards, no label, no tilt`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      await page.goto('/play/vialo');
+      await page.goto('/play/wordpill');
       const cards = page.locator('.game-deck-card');
       await expect(cards).toHaveCount(5);
       await expect(page.locator('.game-deck-label')).toBeHidden();

@@ -10,7 +10,7 @@ import {
   type SharePayload,
 } from '../../src/islands/vialosharing';
 
-const payload: SharePayload = { title: 'vialo', text: 'vialo · sun 1 nov · 4/6 · cueory.app', url: 'https://cueory.app/play/vialo' };
+const payload: SharePayload = { title: 'vialo', text: 'vialo · sun 1 nov · 4/6 · cueory.app', url: 'https://cueory.app/play/wordpill' };
 const png = new File([new Uint8Array(8)], 'vialo-portrait-2026-11-01.png', { type: 'image/png' });
 
 describe('share', () => {

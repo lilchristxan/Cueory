@@ -96,7 +96,7 @@ describe('vialo stats migration and share format', () => {
         { word: 'crane', marks: ['here', 'here', 'here', 'here', 'here'] as any },
       ],
     };
-    expect(vialoShareText(solvedState, 'fri 20 nov')).toBe('vialo · fri 20 nov · 2/6 · cueory.app');
+    expect(vialoShareText(solvedState, 'fri 20 nov')).toBe('wordpill · fri 20 nov · 2/6 · cueory.app');
 
     const lostState = {
       ...startPulse('crane'),
@@ -106,7 +106,7 @@ describe('vialo stats migration and share format', () => {
         marks: ['absent', 'absent', 'here', 'absent', 'here'] as any,
       })),
     };
-    expect(vialoShareText(lostState, 'fri 20 nov')).toBe('vialo · fri 20 nov · x/6 · cueory.app');
+    expect(vialoShareText(lostState, 'fri 20 nov')).toBe('wordpill · fri 20 nov · x/6 · cueory.app');
   });
 
   it('forget removes vialo and all legacy aliases so stats are not recreated on next load', () => {

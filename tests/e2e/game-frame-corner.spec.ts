@@ -53,7 +53,7 @@ for (const [width, height] of sizes) {
     test(`vialo at ${width}x${height} (${scheme === 'light' ? 'light' : 'evening'}): board and keyboard on the play area's centre line, gear and ? paired in its top right corner`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.emulateMedia({ colorScheme: scheme });
-      await page.goto('/play/vialo');
+      await page.goto('/play/wordpill');
       await expect(page.getByTestId('vialo')).toBeVisible();
       await expect(page.getByTestId('game-frame-gear')).toBeVisible();
       const m = await measure(page);
@@ -103,8 +103,8 @@ for (const [width, height] of sizes) {
 }
 
 test('the gear is an outline: stroke only, no fill, and the "?" keeps its name', async ({ page }) => {
-  await page.goto('/play/vialo');
-  const gear = page.getByRole('button', { name: 'vialo settings' });
+  await page.goto('/play/wordpill');
+  const gear = page.getByRole('button', { name: 'wordpill settings' });
   await expect(gear).toBeVisible();
   const paint = await gear.locator('svg').evaluate((svg) => {
     const parts = [...svg.querySelectorAll('path, circle')].map((node) => getComputedStyle(node));
@@ -115,19 +115,19 @@ test('the gear is an outline: stroke only, no fill, and the "?" keeps its name',
     expect(part.fill).toBe('none');
     expect(part.stroke).not.toBe('none');
   }
-  await expect(page.getByRole('button', { name: 'how to play vialo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'how to play wordpill' })).toBeVisible();
 });
 
 test('the gear and the ? open their dialogs and give focus back, from the new corner', async ({ page }) => {
-  await page.goto('/play/vialo');
-  await page.getByRole('button', { name: 'vialo settings' }).click();
-  await expect(page.getByRole('dialog', { name: 'vialo settings' })).toBeVisible();
+  await page.goto('/play/wordpill');
+  await page.getByRole('button', { name: 'wordpill settings' }).click();
+  await expect(page.getByRole('dialog', { name: 'wordpill settings' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'vialo settings' })).toBeFocused();
-  await page.getByRole('button', { name: 'how to play vialo' }).click();
-  await expect(page.getByRole('dialog', { name: 'how to play vialo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'wordpill settings' })).toBeFocused();
+  await page.getByRole('button', { name: 'how to play wordpill' }).click();
+  await expect(page.getByRole('dialog', { name: 'how to play wordpill' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'how to play vialo' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'how to play wordpill' })).toBeFocused();
 });
 
 // Every other framed game route: the same corner pair at every size, in both palettes.

@@ -166,7 +166,7 @@ test.describe('games carousel dot pager', () => {
     await expect(dots.nth(0)).toHaveAttribute('aria-current', 'true');
 
     // The accessible names say the game and the place.
-    await expect(section.getByRole('button', { name: 'vialo, 1 of 6' })).toBeVisible();
+    await expect(section.getByRole('button', { name: 'wordpill, 1 of 6' })).toBeVisible();
 
     // A dot moves the carousel; the card and the pill follow.
     // A tap a little above the drawn dot (inside its 44 px hit area) still picks that dot.

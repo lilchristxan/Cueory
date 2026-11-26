@@ -43,7 +43,7 @@ for (const width of widths) {
         const cards = section.locator('[data-game-card]');
         await expect(cards).toHaveCount(6);
         const firstCard = cards.first();
-        await expect(firstCard).toHaveAttribute('href', '/play/vialo');
+        await expect(firstCard).toHaveAttribute('href', '/play/wordpill');
 
         const prevBtn = section.locator('[data-games-prev]');
         const nextBtn = section.locator('[data-games-next]');
@@ -87,10 +87,10 @@ for (const width of widths) {
         expect(visibleFocus).toBe(true);
 
         await page.keyboard.press('Enter');
-        await expect(page).toHaveURL(/\/play\/vialo\/?$/);
+        await expect(page).toHaveURL(/\/play\/wordpill\/?$/);
         await page.goBack();
         await firstCard.tap();
-        await expect(page).toHaveURL(/\/play\/vialo\/?$/);
+        await expect(page).toHaveURL(/\/play\/wordpill\/?$/);
       } finally {
         await context.close();
       }

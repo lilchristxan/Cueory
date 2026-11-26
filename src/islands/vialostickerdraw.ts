@@ -1,12 +1,13 @@
 /**
  * Draws a vialo share sticker with the canvas 2D API: transparent background, exact export size, no library and no
  * network beyond our own two files (the blister artwork and the wordmark). This module is loaded only after a game
- * ends (VialoShare.tsx imports it on demand), so /play/vialo's first load does not carry it.
+ * ends (VialoShare.tsx imports it on demand), so /play/wordpill's first load does not carry it.
  *
  * Layout is src/islands/vialosticker.ts. Every colour is a CSS token read with getComputedStyle (tokens.css, the
  * --vialo-sticker-* group), so there is no second source of truth. The dialog's preview is this same drawing, scaled
  * down by drawImage, so the preview and the exported file cannot differ.
  */
+import { imageLogo } from '../config/gamelogos';
 import {
   FOIL,
   stickerLayout,
@@ -20,7 +21,8 @@ import {
 import { canvasFile, drawDate, drawDividers, drawFooter, drawStats, drawWordmark, fontString, loadImage, loadWordmark, type PaintPalette } from './stickerpaint';
 
 const ARTWORK_URL = '/design/pillo-blister-board.webp';
-const WORDMARK_URL = '/design/games-v2/assets/vialo-wordmark-oxblood-v3.svg';
+const WORDMARK = imageLogo('vialo').wordmark;
+const WORDMARK_URL = WORDMARK.day;
 
 export interface StickerAssets {
   artwork: HTMLImageElement;
@@ -67,7 +69,7 @@ export function readStickerPalette(root: Element = document.documentElement): St
 }
 
 export async function loadStickerAssets(fetcher: typeof fetch = fetch): Promise<StickerAssets> {
-  const [artwork, wordmark] = await Promise.all([loadImage(ARTWORK_URL), loadWordmark(WORDMARK_URL, 4326, 1620, fetcher)]);
+  const [artwork, wordmark] = await Promise.all([loadImage(ARTWORK_URL), loadWordmark(WORDMARK_URL, WORDMARK.width, WORDMARK.height, fetcher)]);
   return { artwork, wordmark };
 }
 

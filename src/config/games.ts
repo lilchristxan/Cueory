@@ -25,8 +25,8 @@ export const forbiddenGameWords = ['wordle', 'connections', 'strands', 'spangram
 
 const baseDailyGames: readonly DailyGame[] = [
   {
-    id: 'vialo',
-    name: 'vialo',
+    id: 'vialo', // the id stays `vialo` (saved stats, storage keys and events use it); players see the name below
+    name: 'wordpill',
     subtitle: 'daily word',
     line: 'guess the five-letter word in six tries. each guess marks every letter: in place, elsewhere in the word, or not in it.',
     ready: true,
@@ -56,7 +56,7 @@ export const dailyGames: readonly DailyGame[] = baseDailyGames;
 
 /** The name visitors see for a game. */
 export function gameName(id: DailyGame['id'] | 'vialo' | 'pillo' | 'piccline' | 'tachyyy' | 'stat'): string {
-  if (id === 'vialo') return 'vialo';
+  if (id === 'vialo') return 'wordpill';
   if (id === 'pulse' || id === 'pillo') return 'pillo';
   if (id === 'piccline') return 'piccline';
   if (id === 'tachyyy' || id === 'stat') return 'tachyyy';

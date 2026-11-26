@@ -7,7 +7,7 @@ import { markPanelsSeen } from './clock';
 async function solve(page: import('@playwright/test').Page) {
   await page.clock.install({ time: new Date('2026-11-01T15:00:00') });
   await markPanelsSeen(page);
-  await page.goto('/play/vialo');
+  await page.goto('/play/wordpill');
   await expect(page.locator('astro-island[component-url*="VialoGame"]:not([ssr])')).toHaveCount(1); // hydrated: a guess typed earlier would be lost
   const field = page.getByLabel('your guess', { exact: true });
   await field.fill('grace');

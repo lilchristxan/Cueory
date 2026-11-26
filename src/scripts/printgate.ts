@@ -77,7 +77,7 @@ export function announceForfeit(game: PrintGame, day: string, extra: Record<stri
 export type PrintGame = 'vialo' | 'piccline' | 'triage';
 
 /** Where each game's print entry lives: its own game page, which opens the print step when it loads. No personal data in it. */
-export const PRINT_PAGES: Readonly<Record<PrintGame, string>> = { vialo: '/play/vialo#print', piccline: '/play/piccline#print', triage: '/play/sudoku#print' };
+export const PRINT_PAGES: Readonly<Record<PrintGame, string>> = { vialo: '/play/wordpill#print', piccline: '/play/piccline#print', triage: '/play/sudoku#print' };
 
 /** True when the game can print and this browser holds today's result for it (read it again at the moment of pressing). */
 export function canPrintToday(storage: KeyValueStorage | undefined, game: PrintGame, day: string): boolean {

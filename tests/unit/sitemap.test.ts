@@ -39,7 +39,7 @@ describe('sitemap', () => {
   });
 
   it('lists each public game page but not draft-only games', () => {
-    const published = ['/play/vialo', '/play/sudoku', '/play/piccline'] as const;
+    const published = ['/play/wordpill', '/play/sudoku', '/play/piccline'] as const;
     const xml = sitemapXml();
     for (const path of published) {
       expect(indexablePages).toContain(path);
@@ -59,12 +59,12 @@ describe('sitemap', () => {
   it('lists exactly the playable daily games, none of the coming-soon or account pages', () => {
     const listed = [...sitemapXml().matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1].replace('https://cueory.app', ''));
     // Playable games follow games.ts (ready) and the crossword switch; the legacy bookmark routes are the only other /play pages.
-    const expected = ['/play/vialo', '/play/sudoku', '/play/piccline', ...(crosswordOpen ? ['/play/crossword'] : [])];
+    const expected = ['/play/wordpill', '/play/sudoku', '/play/piccline', ...(crosswordOpen ? ['/play/crossword'] : [])];
     expect([...playableGamePages].sort()).toEqual([...expected].sort());
     expect(dailyGames.filter((game) => game.ready).length).toBeGreaterThanOrEqual(3);
     expect(listed.filter((path) => path.startsWith('/play/')).sort()).toEqual([...expected].sort());
     // Legacy bookmark routes: noindex, out of the sitemap, canonical to their replacements.
-    for (const [legacy, to] of [['/play/pillo', '/play/vialo'], ['/play/word-path', '/play/piccline']] as const) {
+    for (const [legacy, to] of [['/play/pillo', '/play/wordpill'], ['/play/word-path', '/play/piccline']] as const) {
       expect(listed).not.toContain(legacy);
       expect(routeDeclaresNoindex(legacy)).toBe(true);
       const html = readFileSync(resolve('dist', `${legacy.slice(1)}.html`), 'utf8');

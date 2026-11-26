@@ -1,8 +1,8 @@
 import type { DailyGame } from './games';
 
 export const gamePages: Readonly<Record<DailyGame['id'], string>> = Object.freeze({
-  vialo: '/play/vialo',
-  pulse: '/play/vialo',
+  vialo: '/play/wordpill',
+  pulse: '/play/wordpill',
   triage: '/play/sudoku',
   cueword: '/play/crossword',
   suture: '/play/piccline',

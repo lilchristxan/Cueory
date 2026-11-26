@@ -7,6 +7,10 @@ interface Props {
   name?: string;
 }
 
+import { imageLogo } from '../config/gamelogos';
+
+const art = imageLogo('tachyyy').wordmark;
+const boxWidth = Math.round((art.width / art.height) * 100);
 const { name = 'tachyyy' } = Astro.props;
 ---
 
@@ -15,20 +19,20 @@ const { name = 'tachyyy' } = Astro.props;
   <span class="logo flex items-center" aria-hidden="true">
     <img
       class="logo-day h-10 sm:h-12 w-auto"
-      src="/brand/games/tachyyy-wordmark-light.svg"
+      src={art.day}
       alt=""
       aria-hidden="true"
-      width="273"
+      width={boxWidth}
       height="100"
       loading="lazy"
       decoding="async"
     />
     <img
       class="logo-evening h-10 sm:h-12 w-auto"
-      src="/brand/games/tachyyy-wordmark-dark.svg"
+      src={art.evening}
       alt=""
       aria-hidden="true"
-      width="273"
+      width={boxWidth}
       height="100"
       loading="lazy"
       decoding="async"

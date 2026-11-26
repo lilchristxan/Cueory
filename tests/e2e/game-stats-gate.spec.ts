@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { build } from 'esbuild';
+import { build, type PluginBuild } from 'esbuild';
 import { readFileSync } from 'node:fs';
 
 // Game stats (played, % solved, streaks) are shown only to a signed-in player (Christian, 2026-11-25). The built
@@ -8,23 +8,31 @@ import { readFileSync } from 'node:fs';
 // (src/islands/supabaseclient.ts) is replaced by an in-page stand-in. Nothing is added to the app for tests.
 
 let fixtureCode: string;
+let pendingCode: string;
 let fixtureCss: string[];
 test.beforeAll(async () => {
-  const html = readFileSync('dist/play/vialo.html', 'utf8');
+  const html = readFileSync('dist/play/wordpill.html', 'utf8');
   fixtureCss = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+\.css)"/g)].map((m) => m[1]!);
   if (fixtureCss.length === 0) throw new Error('The production stylesheets were not found. Run npm run build.');
+  const bundle = async (pending: boolean) => {
   const result = await build({
     stdin: { contents: `
       import React from 'react';
       import { createRoot } from 'react-dom/client';
       import GameFrameStats from './src/islands/GameFrameStats.tsx';
+      import { statsCta } from './src/config/statscta';
       const params = new URLSearchParams(location.search);
-      createRoot(document.getElementById('fixture')).render(<GameFrameStats game={params.get('game') ?? 'vialo'} />);
+      createRoot(document.getElementById('fixture')).render(<GameFrameStats game={params.get('game') ?? 'vialo'} cta={statsCta} />);
     `, resolveDir: process.cwd(), loader: 'tsx' },
     bundle: true, write: false, format: 'iife', platform: 'browser', jsx: 'automatic',
     resolveExtensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     define: { 'process.env.NODE_ENV': '"production"' },
-    plugins: [{ name: 'fixture-session', setup(builder) {
+    plugins: [...(pending ? [{ name: 'launch-box-pending', setup(builder: PluginBuild) {
+      // The same site config with neither Kit's form nor its landing page: the launch box says only "sign ups open soon."
+      builder.onLoad({ filter: /src[\\/]config[\\/]site\.ts$/ }, (args: { path: string }) => ({
+        contents: readFileSync(args.path, 'utf8').replace(/formAction: '[^']*'/, "formAction: ''").replace(/landingUrl: '[^']*'/, "landingUrl: ''"), loader: 'ts',
+      }));
+    } }] : []), { name: 'fixture-session', setup(builder) {
       builder.onResolve({ filter: /\/supabaseclient(?:\.ts)?$/ }, () => ({ path: 'session', namespace: 'fixture' }));
       builder.onLoad({ filter: /.*/, namespace: 'fixture' }, () => ({ contents: `
         const params = new URLSearchParams(location.search);
@@ -45,12 +53,15 @@ test.beforeAll(async () => {
       `, loader: 'js' }));
     } }],
   });
-  fixtureCode = result.outputFiles[0]!.text;
+    return result.outputFiles[0]!.text;
+  };
+  fixtureCode = await bundle(false);
+  pendingCode = await bundle(true);
 });
 
 /** Opens the frame's sidebar with the stats island and this device's saved results (today and yesterday, both solved). */
-async function open(page: Page, query: string, seedGame = 'vialo') {
-  await page.route('**/__stats-fixture.js', (route) => route.fulfill({ contentType: 'application/javascript', body: fixtureCode }));
+async function open(page: Page, query: string, seedGame = 'vialo', pending = false) {
+  await page.route('**/__stats-fixture.js', (route) => route.fulfill({ contentType: 'application/javascript', body: pending ? pendingCode : fixtureCode }));
   await page.route('**/__stats-fixture?*', (route) => route.fulfill({ contentType: 'text/html', body: `<!doctype html>
     <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <title>stats gate test</title>${fixtureCss.map((href) => `<link rel="stylesheet" href="${href}">`).join('')}</head>
@@ -160,7 +171,7 @@ test.describe('game stats panel, not signed in', () => {
   for (const query of ['session=out', 'session=fail']) {
     test(`shows the copper create-an-account bar instead (${query}), and nothing moves when the check resolves`, async ({ page }) => {
       await open(page, `${query}&wait=400`);
-      const link = bar(page).getByRole('link', { name: 'create an account' });
+      const link = bar(page).getByRole('link', { name: 'join the launch list' });
       await expect(link).toBeVisible();
       const sidebar = page.locator('.game-frame-sidebar');
       const before = await sidebar.evaluate((node) => node.getBoundingClientRect().height);
@@ -170,10 +181,10 @@ test.describe('game stats panel, not signed in', () => {
       await expect(page.getByTestId('game-frame-stats-status')).toHaveCount(0);
       expect(await sidebar.evaluate((node) => node.getBoundingClientRect().height)).toBe(before);
       // Exact words, a real address, one accessible name with the line as its description, a 44 px target.
-      await expect(link).toHaveText('create an account');
+      await expect(link).toHaveText('join the launch list');
       await expect(link).toHaveAttribute('href', /^\/(#signup|signup)$/);
       await expect(link).toHaveAttribute('aria-describedby', 'game-frame-account-note');
-      await expect(page.locator('#game-frame-account-note')).toHaveText('to save your daily game stats');
+      await expect(page.locator('#game-frame-account-note')).toHaveText('accounts open soon');
       expect(await page.locator('#game-frame-account-note').evaluate((n) => getComputedStyle(n).fontStyle)).toBe('normal');
       const box = (await link.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
@@ -183,4 +194,17 @@ test.describe('game stats panel, not signed in', () => {
       expect(await noSideways(page)).toBe(true);
     });
   }
+});
+
+test.describe('game stats bar, accounts closed and neither Kit form nor landing page', () => {
+  test('is a plain readable message: no link, nothing to tab to', async ({ page }) => {
+    await open(page, 'session=out', 'vialo', true);
+    await expect(page.getByTestId('game-frame-account-message')).toHaveText('sign ups open soon.');
+    await expect(bar(page).getByRole('link')).toHaveCount(0);
+    await expect(bar(page).getByRole('button')).toHaveCount(0);
+    await expect(panel(page)).toHaveCount(0);
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.game-frame-sidebar :focus')).toHaveCount(0);
+    expect(await noSideways(page)).toBe(true);
+  });
 });

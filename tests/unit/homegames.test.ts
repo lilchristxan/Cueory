@@ -8,7 +8,7 @@ describe('home daily-games cards (copy deck, home rows "games line" to "game 5")
   it('ships the deck order, names and lines while the crossword is closed', () => {
     const cards = homeGameCards(false);
     expect(cards).toEqual([
-      { name: 'vialo', line: 'guess the five-letter word in six tries.', available: true },
+      { name: 'wordpill', line: 'guess the five-letter word in six tries.', available: true },
       { name: 'crossword', line: 'coming soon.', available: false },
       { name: 'sudoku', line: 'fill every row, column and box with the numbers one through nine.', available: true },
       { name: 'piccline', line: 'trace hidden words through the letters.', available: true },

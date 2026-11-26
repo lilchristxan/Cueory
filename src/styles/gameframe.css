@@ -230,6 +230,15 @@
   width: 100%;
 }
 
+/* One slim line (Christian, 2026-11-25): the label never wraps, so the bar stays a bar in the narrow desktop sidebar. */
+.game-frame-account-bar .copper-button {
+  white-space: nowrap;
+  padding-block: var(--game-frame-account-button-pad-y);
+  padding-inline: var(--game-frame-account-button-pad-x);
+  font-size: var(--game-frame-account-button-text);
+  line-height: 1.5;
+}
+
 .game-frame-account-note {
   margin: 0;
   color: var(--color-ink-soft);
@@ -879,6 +888,10 @@
   inline-size: auto;
   max-inline-size: none;
 }
+.game-deck-wordmark[src$="piccline-wordmark-light.svg"],
+.game-deck-wordmark[src$="piccline-wordmark-dark.svg"] {
+  scale: var(--piccline-wordmark-scale-deck);
+}
 .game-deck-wordmark-top {
   block-size: var(--game-deck-logo-top);
 }
@@ -1348,6 +1361,13 @@
   .game-frame-title img[aria-hidden="true"] {
     display: none;
   }
+}
+
+/* Piccline's wordmark is drawn larger than its box (global.css); in the sidebar it sits close under the game icon, so it
+   grows less here and its tall letters stay clear of the icon. */
+.game-frame-wordmark-img[src$="piccline-wordmark-light.svg"],
+.game-frame-wordmark-img[src$="piccline-wordmark-dark.svg"] {
+  scale: var(--piccline-wordmark-scale-sidebar);
 }
 
 /* Artwork that has a Daytime and an Evening file (the cueory logo and the game wordmarks) follows the site's chosen
