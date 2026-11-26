@@ -68,10 +68,28 @@ export default function PrintHint() {
     requestAnimationFrame(step);
   }, []);
 
+  /** A finger or key already on the game before the bubble is due means the player is playing: no bubble, so nothing moves under them. */
+  const touched = useRef(false);
+  /** True while a pointer is held down, so making room is put back only after the gesture ends. */
+  const pressed = useRef(false);
+
   useEffect(() => {
     reduced.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const show = setTimeout(() => setPhase('shown'), HINT_SHOW_AFTER_MS);
-    return () => clearTimeout(show);
+    const onDown = () => { touched.current = true; pressed.current = true; };
+    const onUp = () => { pressed.current = false; };
+    const onKeyDown = () => { touched.current = true; };
+    document.addEventListener('pointerdown', onDown, true);
+    document.addEventListener('pointerup', onUp, true);
+    document.addEventListener('pointercancel', onUp, true);
+    document.addEventListener('keydown', onKeyDown, true);
+    const show = setTimeout(() => setPhase(touched.current ? 'gone' : 'shown'), HINT_SHOW_AFTER_MS);
+    return () => {
+      clearTimeout(show);
+      document.removeEventListener('pointerdown', onDown, true);
+      document.removeEventListener('pointerup', onUp, true);
+      document.removeEventListener('pointercancel', onUp, true);
+      document.removeEventListener('keydown', onKeyDown, true);
+    };
   }, []);
 
   useEffect(() => {
@@ -101,7 +119,13 @@ export default function PrintHint() {
 
   useEffect(() => {
     if (phase !== 'gone') return;
-    document.querySelector<HTMLElement>('.game-frame-main')?.style.removeProperty('--game-frame-hint-room');
+    const release = () => document.querySelector<HTMLElement>('.game-frame-main')?.style.removeProperty('--game-frame-hint-room');
+    if (!pressed.current) { release(); return; }
+    // Mid-gesture (a drag across the board): put the room back when the finger lifts, not under it.
+    const later = () => { release(); document.removeEventListener('pointerup', later, true); document.removeEventListener('pointercancel', later, true); };
+    document.addEventListener('pointerup', later, true);
+    document.addEventListener('pointercancel', later, true);
+    return () => { document.removeEventListener('pointerup', later, true); document.removeEventListener('pointercancel', later, true); };
   }, [phase]);
 
   const visible = phase === 'shown' || phase === 'fading';

@@ -218,3 +218,13 @@ for (const [width, height] of [[390, 844], [820, 1180], [1440, 900]] as const) {
     }
   }
 }
+
+test('no bubble if the player has already started playing, so nothing moves under their finger', async ({ page }) => {
+  await freezeClock(page);
+  await page.goto('/play/vialo');
+  await awake(page);
+  await page.mouse.click(300, 400);
+  await page.clock.runFor(1500);
+  await expect(hint(page)).toHaveCount(0);
+  await expect(page.getByTestId('print-hint-status')).toHaveText('');
+});
