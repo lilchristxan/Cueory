@@ -121,11 +121,11 @@ describe('GameFrame (Scope 1)', () => {
     const helloCards = readFileSync(resolve(root, 'src/pages/play/hello-cards.astro'), 'utf-8');
     const header = readFileSync(resolve(root, 'src/islands/GameHeader.tsx'), 'utf-8');
     expect(frame).toContain('framed = true');
-    expect(frame).toContain('staticNoScoreStats = false');
-    expect(frame).toContain('{staticNoScoreStats ? <>');
-    expect(frame).toContain('questions asked');
+    // Stats are signed-in only (2026-11-25): no static zeros in the page markup, the island draws the panel itself.
+    expect(frame).not.toContain('staticNoScoreStats');
+    expect(frame).not.toContain('class="game-frame-stats"');
     expect(frame).toContain('<GameFrameStats client:load game={currentConfig.id} />');
-    expect(helloCards).toContain('<GameFrame game="hello-cards" staticNoScoreStats>');
+    expect(helloCards).toContain('<GameFrame game="hello-cards">');
     expect(page).toContain('framed = false');
     // The four stats sit in the frame's left panel on every game page, so no separate stats block follows the frame.
     expect(page).not.toContain('game-page-stats-container');

@@ -32,6 +32,7 @@ import { dayLabel } from './daily';
 import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './gameresults';
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
+import { useStatsVisible } from './gamestatsgate';
 import ResultBrandMark from './ResultBrandMark';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
@@ -127,6 +128,8 @@ function Pocket({ letter, mark, typed, next }: { letter?: string; mark?: Mark; t
 }
 
 export default function VialoGame({ puzzles }: Props) {
+  // The finish screen's played, win % and streak numbers are for signed-in players only; they are still recorded here.
+  const statsVisible = useStatsVisible();
   const today = useMemo(() => new Date(), []);
   const day = localDay(today);
   const puzzle = useMemo(() => puzzleForDay(playablePuzzles(puzzles), dayNumber(today)), [puzzles, today]);
@@ -451,7 +454,7 @@ export default function VialoGame({ puzzles }: Props) {
           </button>
           {copied && <p className="mt-2 text-sm text-ink-soft">{copied}</p>}
 
-          <section className="vialo-stats mt-6" aria-labelledby="vialo-stats-heading" data-testid="vialo-stats">
+          {statsVisible && <section className="vialo-stats mt-6" aria-labelledby="vialo-stats-heading" data-testid="vialo-stats">
             <h3 id="vialo-stats-heading" className="font-semibold">
               your {gameName('vialo')} stats
             </h3>
@@ -504,7 +507,7 @@ export default function VialoGame({ puzzles }: Props) {
                 and the guesses each game took can't be shown.
               </p>
             )}
-          </section>
+          </section>}
 
           <p className="mt-4 text-sm text-ink-soft">a new word comes tomorrow.</p>
           <p className="mt-1 text-sm text-ink-soft" data-testid="vialo-next">
