@@ -5,11 +5,9 @@ and no font file is added to the site. Run `python3 scripts/generate-wordpill-ar
 public/design/games-v2/assets/ (the generated files are committed). The hex values live in the artwork files only;
 components and CSS never use them.
 
-  wordpill-wordmark-light.svg  Daytime wordmark: a horizontal capsule, "word" in white on game green, "pill" in bold
-                               oxblood on ivory, with a 2-unit green outline.
-  wordpill-wordmark-dark.svg   Evening wordmark: the same artwork with a thin ivory rim round the capsule (E1, approved
-                               by Christian, 2026-11-26).
-  wordpill-icon-l1.svg         The icon: the capsule shortened to "wp", on its own (no tile), filling the frame.
+  wordpill-wordmark-light.svg  Daytime wordmark: the name on its own, "word" in deep game green and "pill" in bold oxblood.
+  wordpill-wordmark-dark.svg   Evening wordmark: the same letters, "word" in ivory and "pill" in a light oxblood.
+  wordpill-icon-l1.svg         The icon: "wp" in a glass capsule, on its own (no tile), filling the frame.
 
 Christian, 2026-11-26 (second pass): wordpill is one word, so the whole word is centred in the capsule by its ink, "word"
 and "pill" sit at a normal letter gap, and the colour line falls exactly on the left edge of the p (no ivory before it).
@@ -27,10 +25,11 @@ OUT = os.path.join(ROOT, "public/design/games-v2/assets")
 FONTS = "/usr/share/fonts/truetype/liberation"
 
 GREEN = "#0e5a3d"
-# The Daytime wordmark uses the brand's deep game green (--game-dark-green-deep): with the regular green the wordmark
-# measured 2.49 against the Daytime page in the contrast guard (needs 3); this measures about 3.1. Icon and Evening keep GREEN.
+# The brand's deep game green (--game-dark-green-deep): the rim of the ivory half in Daytime and on the icon.
 GREEN_DEEP = "#053321"
 IVORY = "#f9f5ef"
+# "pill" on the Evening page: a light step of the oxblood, which itself is too dark to read there.
+OXBLOOD_EVENING = "#e0958c"
 OXBLOOD = "#6e2019"
 WHITE = "#ffffff"
 
@@ -60,13 +59,52 @@ def text_path(face, text, size, centre_x, baseline):
     return " ".join(p for p in parts if p)
 
 
-def capsule(x, y, w, h, split, rim, tag, green=GREEN):
+def n(value):
+    return f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def capsule(x, y, w, h, split, rim, outline):
+    """The glass capsule (Christian, 2026-11-26, "H1"): the green half is thick dark glass (a shell, a near-black core, a long
+    shine along the top and a green glow along the bottom); the ivory half is a glossy pill with a hairline rim in `rim`; a
+    soft shadow lies under both, and a hairline in `outline` runs round the whole pill so it stands clear of a dark page
+    (Christian: "a very thin 1px outline for contrast"). Hairlines are one screen pixel at any size. Every shade here is a lighter or darker step of the game's own green and ivory.
+    """
     r = h / 2
+    t = h * 0.085  # the glass shell's thickness
+    ix, iy, iw, ih = x + t, y + t, w - 2 * t, h - 2 * t
+    rw = x + w - split
     return (
-        f'<defs><clipPath id="{tag}"><rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r:g}"/></clipPath></defs>'
-        f'<g clip-path="url(#{tag})"><rect x="{x}" y="{y}" width="{split - x:g}" height="{h}" fill="{green}"/>'
-        f'<rect x="{split}" y="{y}" width="{x + w - split:g}" height="{h}" fill="{IVORY}"/></g>'
-        f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r:g}" fill="none" stroke="{rim}" stroke-width="2"/>'
+        "<defs>"
+        f'<clipPath id="outer"><rect x="{n(x)}" y="{n(y)}" width="{n(w)}" height="{n(h)}" rx="{n(r)}"/></clipPath>'
+        f'<clipPath id="core"><rect x="{n(ix)}" y="{n(iy)}" width="{n(iw)}" height="{n(ih)}" rx="{n(ih / 2)}"/></clipPath>'
+        f'<clipPath id="left"><rect x="{n(x)}" y="{n(y)}" width="{n(split - x)}" height="{n(h)}"/></clipPath>'
+        f'<clipPath id="right"><rect x="{n(split)}" y="{n(y - 2)}" width="{n(rw + 4)}" height="{n(h + 4)}"/></clipPath>'
+        f'<clipPath id="gloss"><rect x="{n(x)}" y="{n(y + h * 0.06)}" width="{n(w - h * 0.16)}" height="{n(h * 0.36)}" rx="{n(h * 0.18)}"/></clipPath>'
+        '<linearGradient id="shell" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4c6257"/><stop offset=".5" stop-color="#22362c"/><stop offset="1" stop-color="#34493e"/></linearGradient>'
+        f'<linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a3a27"/><stop offset=".38" stop-color="#031a11"/><stop offset=".72" stop-color="#04261a"/><stop offset="1" stop-color="{GREEN}"/></linearGradient>'
+        '<linearGradient id="streak" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".08" stop-color="#fff" stop-opacity=".85"/><stop offset=".55" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>'
+        '<linearGradient id="shade" x1="0" y1="0" x2="0" y2="1"><stop offset=".45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient>'
+        '<linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity=".05"/></linearGradient>'
+        f'<filter id="soft" x="-10%" y="-80%" width="120%" height="260%"><feGaussianBlur stdDeviation="{n(h * 0.022)}"/></filter>'
+        f'<filter id="softer" x="-10%" y="-80%" width="120%" height="260%"><feGaussianBlur stdDeviation="{n(h * 0.05)}"/></filter>'
+        f'<filter id="shadow" x="-20%" y="-40%" width="140%" height="220%"><feGaussianBlur stdDeviation="{n(h * 0.035)}"/></filter>'
+        "</defs>"
+        f'<rect x="{n(x + h * 0.03)}" y="{n(y + h * 0.05)}" width="{n(w)}" height="{n(h)}" rx="{n(r)}" opacity=".32" filter="url(#shadow)"/>'
+        '<g clip-path="url(#outer)">'
+        f'<rect x="{n(x)}" y="{n(y)}" width="{n(w)}" height="{n(h)}" fill="url(#shell)"/>'
+        f'<rect x="{n(x + r)}" y="{n(y + h * 0.015)}" width="{n(w - h)}" height="{n(h * 0.03)}" fill="#fff" opacity=".45" filter="url(#soft)"/>'
+        f'<rect x="{n(split)}" y="{n(y)}" width="{n(rw)}" height="{n(h)}" fill="{IVORY}"/>'
+        f'<rect x="{n(split)}" y="{n(y)}" width="{n(rw)}" height="{n(h)}" fill="url(#shade)"/>'
+        f'<rect x="{n(split)}" y="{n(y + h * 0.06)}" width="{n(rw - h * 0.16)}" height="{n(h * 0.36)}" fill="url(#shine)" clip-path="url(#gloss)"/>'
+        "</g>"
+        '<g clip-path="url(#core)"><g clip-path="url(#left)">'
+        f'<rect x="{n(ix)}" y="{n(iy)}" width="{n(iw)}" height="{n(ih)}" fill="url(#glass)"/>'
+        f'<rect x="{n(ix + ih * 0.25)}" y="{n(iy + ih * 0.8)}" width="{n(split - ix - ih * 0.5)}" height="{n(ih * 0.12)}" rx="{n(ih * 0.06)}" fill="#17a05f" opacity=".55" filter="url(#softer)"/>'
+        f'<rect x="{n(ix + ih * 0.3)}" y="{n(iy + ih * 0.09)}" width="{n(iw - ih * 0.6)}" height="{n(ih * 0.17)}" rx="{n(ih * 0.085)}" fill="url(#streak)" opacity=".8" filter="url(#soft)"/>'
+        f'<ellipse cx="{n(ix + ih * 0.42)}" cy="{n(iy + ih * 0.2)}" rx="{n(ih * 0.16)}" ry="{n(ih * 0.07)}" fill="#fff" opacity=".8" filter="url(#soft)"/>'
+        "</g></g>"
+        f'<g clip-path="url(#right)"><rect x="{n(x + 0.5)}" y="{n(y + 0.5)}" width="{n(w - 1)}" height="{n(h - 1)}" rx="{n(r - 0.5)}" fill="none" stroke="{rim}" stroke-width="1" vector-effect="non-scaling-stroke"/></g>'
+        f'<rect x="{n(x - 0.5)}" y="{n(y - 0.5)}" width="{n(w + 1)}" height="{n(h + 1)}" rx="{n(r + 0.5)}" fill="none" stroke="{outline}" stroke-width="1" vector-effect="non-scaling-stroke"/>'
     )
 
 
@@ -104,31 +142,37 @@ def joined(first_face, first, second_face, second, size, centre, gap):
     return first_x + first_width / 2, second_x + second_width / 2, round(line, 2)
 
 
-def wordmark(rim, title, tag, green=GREEN):
-    word_centre, pill_centre, line = joined(REGULAR, "word", BOLD, "pill", 62, 150, 3)
-    word = text_path(REGULAR, "word", 62, word_centre, 69)
-    pill = text_path(BOLD, "pill", 62, pill_centre, 69)
+# The icon is drawn a little smaller than its frame, from the top centre, so the shadow under it fits inside the image.
+FIT_ICON = "translate(3 1) scale(.94)"
+WORD_SIZE = 80
+
+
+def wordmark(word_ink, pill_ink, title):
+    """The name on its own, no capsule round it (Christian, 2026-11-26, "W1"): one word, "word" regular and "pill" bold."""
+    word_centre, pill_centre, _ = joined(REGULAR, "word", BOLD, "pill", WORD_SIZE, 150, 3)
+    word = text_path(REGULAR, "word", WORD_SIZE, word_centre, 71)
+    pill = text_path(BOLD, "pill", WORD_SIZE, pill_centre, 71)
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" role="img" aria-label="{title}">'
-        f"{capsule(2, 2, 296, 96, line, rim, tag, green)}"
-        f'<path d="{word}" fill="{WHITE}"/><path d="{pill}" fill="{OXBLOOD}"/></svg>\n'
+        f'<path d="{word}" fill="{word_ink}"/><path d="{pill}" fill="{pill_ink}"/></svg>\n'
     )
 
 
 def icon():
-    w_centre, p_centre, line = joined(REGULAR, "w", BOLD, "p", 42, 50, 4.5)
-    w = text_path(REGULAR, "w", 42, w_centre, 64)
-    p = text_path(BOLD, "p", 42, p_centre, 62.5)
+    """"wp" in the glass capsule, filling its frame. One file for both palettes: the ivory hairline shows on a dark page."""
+    w_centre, p_centre, line = joined(REGULAR, "w", BOLD, "p", 45, 50, 4.8)
+    w = text_path(REGULAR, "w", 45, w_centre, 65)
+    p = text_path(BOLD, "p", 45, p_centre, 62.5)
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="wordpill">'
-        f"{capsule(3, 23, 94, 54, line, GREEN, 'wordpill-icon-clip')}"
-        f'<path d="{w}" fill="{WHITE}"/><path d="{p}" fill="{OXBLOOD}"/></svg>\n'
+        f'<g transform="{FIT_ICON}">{capsule(3, 17, 94, 66, line, GREEN_DEEP, IVORY)}'
+        f'<path d="{w}" fill="{WHITE}"/><path d="{p}" fill="{OXBLOOD}"/></g></svg>\n'
     )
 
 
 FILES = {
-    "wordpill-wordmark-light.svg": wordmark(GREEN_DEEP, "wordpill", "wordpill-clip-day", GREEN_DEEP),
-    "wordpill-wordmark-dark.svg": wordmark(IVORY, "wordpill", "wordpill-clip-evening"),
+    "wordpill-wordmark-light.svg": wordmark(GREEN_DEEP, OXBLOOD, "wordpill"),
+    "wordpill-wordmark-dark.svg": wordmark(IVORY, OXBLOOD_EVENING, "wordpill"),
     "wordpill-icon-l1.svg": icon(),
 }
 
