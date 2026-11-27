@@ -168,6 +168,7 @@
   --game-deck-step-up: 2.625rem;         /* 42px: each card behind sits this much higher... */
   --game-deck-step-out: 1.125rem;        /* 18px: ...this much further out past the edge... */
   --game-deck-step-tilt: 2.5deg;         /* ...and this much less tilted */
+  --game-deck-reach: 11.25rem;          /* 180px: how far the fanned cards reach in from the right edge; the play area keeps this clear so the board is midway between the side panel and the cards */
   --game-deck-reserve-end: 9.375rem;    /* 150px: at 1120 px the main area gives up this much on its right, so a full-width board stays left of the fanned cards... */
   --game-deck-reserve-start: 0px;          /* ...and keeps none on its left (the usual padding comes back as the screen widens) */
   --game-deck-reserve-until: 83.75rem;   /* 1340px: from here the usual padding is enough */

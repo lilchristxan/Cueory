@@ -941,10 +941,11 @@
    never sits under a card. The usual padding is back by --game-deck-reserve-until. */
 @variant deck {
   .game-frame-main {
-    --game-frame-main-pr: round(nearest, clamp(calc(var(--spacing) * 6), calc(calc(var(--spacing) * 6) + (var(--game-deck-reserve-until) - 100vw) * var(--game-deck-reserve-slope)), var(--game-deck-reserve-end)), var(--game-frame-grid-line));
-    /* The same room on the left, so the board and its keyboard sit on the middle of the play area at every width (the board
-       column simply gets a little narrower between 1120 and 1340 px). */
-    --game-frame-main-pl: var(--game-frame-main-pr);
+    /* Christian, 2026-11-27: the board sits midway between the side panel and the fanned cards, so the empty space on
+       its left equals the space between it and the cards. The play area gives up the cards' reach on its right at
+       every deck width and keeps the usual padding on its left; the backdrop's centre lines follow the content box. */
+    --game-frame-main-pr: calc(var(--spacing) * 6 + var(--game-deck-reach));
+    --game-frame-main-pl: calc(var(--spacing) * 6);
   }
   /* The wide crossword grid and the 720 px showcase boards must keep their full width (the plain row below 1120 px does), so
      they cannot take the symmetric reserve above. They keep the usual even padding: centred on the play area at full width.
