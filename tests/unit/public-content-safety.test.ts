@@ -82,6 +82,8 @@ const publicFiles: Record<string, PublicFile> = {
   'visuals/anatomy-skeleton-limbs.json': { kind: 'visual-source-metadata', sha256: '234f2f05c0a55575c77d1403390d5c3a79e7bdb3ac87bbd323a361a95965b401' },
   'visuals/anatomy-skin.json': { kind: 'visual-source-metadata', sha256: '73f20f878e9a85585efa9a710c455ef5c37bfc9ba8aaf738df741d7c3c2979e7' },
   'visuals/anatomy-vessels.json': { kind: 'visual-source-metadata', sha256: '32328b9f797275a5b8ef54db1f7c3937164b0e222af74a96ee40dce131fbe7cf' },
+  // Licence records for outside illustrations (Servier Medical Art, Christian 2026-11-26): titles, links and hashes only.
+  'images/servier-respiratory.json': { kind: 'visual-source-metadata', sha256: '3d60e473cfdbb5942e55b3bd2f1d2ef61991b827bb7e4491d9efc350bc0107cf' },
   'visuals/fluid-compartments.json': { kind: 'visual-source-metadata', sha256: '2eae0645afe44a8a615704280bea45d3936e9d2af0056e769de92df7ebf774be' },
   'visuals/osmosis-fluid-shifts.json': { kind: 'visual-source-metadata', sha256: '4f8d84befcfcd5eb49502f5924525402fc175d119587769b378073309d026aa2' },
   'visuals/sodium-potassium-pump.json': { kind: 'visual-source-metadata', sha256: 'fb11c2fbf2b72d9dfada6c14537eb478ee86fd12cb529283a6a99c7007915ec3' },
