@@ -1,6 +1,7 @@
 """Draws wordpill's wordmark and icon as plain SVG outlines (Christian's choice, 2026-11-27).
 
-The brand is two pieces. The wordmark is the name on its own, in script, with no capsule round it. The logo (the icon)
+The brand is two pieces. The wordmark is the name on its own, in script, with no capsule round it: it climbs to
+the right at a slight incline over a hand-drawn underline. The logo (the icon)
 is a single script "w" in a capsule filled with wordpill's pale sky (mint at the top, white in the middle, pink at the bottom).
 
 The letters are real outlines taken from Yellowtail (by Astigmatic, Apache License 2.0), so they look the same everywhere
@@ -82,10 +83,16 @@ def letters(d, line, fill=GREEN, rim=WHITE):
 
 
 def wordmark(face, fill, rim):
-    word = text_path(face, "wordpill", 84, 150, 66)
+    # The name climbs to the right at a slight incline over a hand-drawn underline (Christian, 2026-11-27).
+    word = text_path(face, "wordpill", 70, 150, 60)
+    swash = "M38 87 C 104 76, 196 73, 264 78"
+    line = (
+        f'<path d="{swash}" fill="none" stroke="{rim}" stroke-width="6" stroke-linecap="round"/>'
+        f'<path d="{swash}" fill="none" stroke="{fill}" stroke-width="3" stroke-linecap="round"/>'
+    )
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" role="img" aria-label="wordpill">'
-        f'{letters(word, 1.5, fill, rim)}</svg>\n'
+        f'<g transform="rotate(-4 150 50)">{letters(word, 1.5, fill, rim)}</g>{line}</svg>\n'
     )
 
 

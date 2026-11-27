@@ -150,8 +150,11 @@ describe("wordpill's artwork (the game formerly called vialo; Christian's script
   it('is drawn in outlines only: no live text, so it looks the same everywhere', () => {
     for (const svg of [day, evening, icon]) {
       expect(svg).not.toMatch(/<text|font-family|<image/);
-      expect(svg.match(/<path /g)).toHaveLength(1);
     }
+    // The logo is one outline; the name is its letters plus the two strokes of its underline.
+    expect(icon.match(/<path /g)).toHaveLength(1);
+    expect(day.match(/<path /g)).toHaveLength(3);
+    expect(evening.match(/<path /g)).toHaveLength(3);
   });
 
   it('writes the name on its own, with no capsule: green with a thin white outline in Light, white with a thin green outline in Evening', () => {
@@ -162,6 +165,8 @@ describe("wordpill's artwork (the game formerly called vialo; Christian's script
     expect(day).toContain('fill="#0e5a3d" stroke="#ffffff"');
     expect(evening).toContain('fill="#ffffff" stroke="#0e5a3d"');
     expect(day).toContain('paint-order="stroke"');
+    // The name climbs to the right at a slight incline over an underline (Christian, 2026-11-27).
+    for (const svg of [day, evening]) expect(svg).toContain('<g transform="rotate(-4 150 50)">');
   });
 
   it('keeps the capsule for the logo: a white w with a thin bronze outline on the pale sky, inside a thin bronze rim', () => {
