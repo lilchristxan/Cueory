@@ -18,11 +18,7 @@ for (const theme of ['light', 'dark'] as const) {
       const exam = page.getByLabel('exam date (optional)');
       const start = page.getByRole('button', { name: 'start sample session' });
       await exam.focus();
-      // Engines may expose each date segment as a separate tab stop.
-      for (let tab = 0; tab < 6; tab++) {
-        await page.keyboard.press(nextControl);
-        if (await start.evaluate(button => button === document.activeElement)) break;
-      }
+      await page.keyboard.press(nextControl);
       await expect(start).toBeFocused();
       await page.keyboard.press('Enter');
 
@@ -63,6 +59,21 @@ for (const theme of ['light', 'dark'] as const) {
   });
 }
 
+
+test('the optional exam date accepts a calendar day and rejects an impossible date', async ({ page }) => {
+  await markPanelsSeen(page);
+  await page.goto('/preview/adaptive-learning');
+  const exam = page.getByLabel('exam date (optional)');
+  const start = page.getByRole('button', { name: 'start sample session' });
+  await exam.fill('2027-02-29');
+  await start.click();
+  await expect(exam).toBeFocused();
+  await expect(exam).toHaveJSProperty('validationMessage', 'Enter a valid date as YYYY-MM-DD.');
+  await expect(start).toBeVisible();
+  await exam.fill('2028-02-29');
+  await start.click();
+  await expect(page.getByRole('button', { name: 'show answer' })).toBeVisible();
+});
 
 test('a backwards device clock keeps the sample session on the last accepted day', async ({ page }) => {
   await page.clock.setFixedTime(new Date(2028, 1, 28, 12));

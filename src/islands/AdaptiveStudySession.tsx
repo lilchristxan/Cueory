@@ -107,8 +107,21 @@ export default function AdaptiveStudySession({
     return (
       <form className="space-y-4" onSubmit={event => { event.preventDefault(); start(); }}>
         <label className="block" htmlFor="adaptive-preview-exam">exam date (optional)</label>
-        <input id="adaptive-preview-exam" type="date" value={examDay} min="0001-01-01" max="9999-12-31"
-          onChange={event => setExamDay(event.currentTarget.value)}
+        <p id="adaptive-preview-exam-format" className="text-sm text-ink-soft">enter a date as YYYY-MM-DD.</p>
+        <input id="adaptive-preview-exam" type="text" value={examDay}
+          aria-describedby="adaptive-preview-exam-format"
+          onChange={event => {
+            const input = event.currentTarget;
+            input.setCustomValidity('');
+            if (input.value) {
+              try {
+                dayNumber(input.value);
+              } catch {
+                input.setCustomValidity('Enter a valid date as YYYY-MM-DD.');
+              }
+            }
+            setExamDay(input.value);
+          }}
           className="block min-h-(--tap-min) max-w-full rounded-lg border border-control bg-page px-3 text-ink" />
         <button ref={startButton} type="submit" className={primary}>start sample session</button>
       </form>

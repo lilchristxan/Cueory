@@ -84,7 +84,7 @@ const initialJsBudget = {
   'play/vialo.html': 84678, // the old address: a small page that sends visitors to /play/wordpill; measured from a local build
   'play/word-path.html': 120824,
   'play/piccline.html': 120824, // Canonical Piccline keeps Word Path's same game bundle baseline.
-  'preview/adaptive-learning.html': 94473,
+  'preview/adaptive-learning.html': 94539,
   'preview/admin-flags.html': 92161,
   'preview/anatomy-text.html': 89104,
   'preview/anatomy-lab.html': 89027,
