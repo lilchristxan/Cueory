@@ -14,6 +14,9 @@ const covers = (page: import('@playwright/test').Page) => page.getByTestId('labe
 test('the editor opens with the page\'s covers and their words, and cancel changes nothing', async ({ page }) => {
   await open(page);
   await expect(covers(page)).toHaveCount(4);
+  // One field shows the selected cover's words; nothing is selected at first.
+  await expect(page.getByRole('textbox')).toHaveCount(0);
+  await covers(page).first().focus();
   await expect(page.getByRole('textbox', { name: 'words under cover 1' })).toHaveValue('roof');
   await page.getByRole('button', { name: 'cancel' }).click();
   await expect(page.getByTestId('label-editor')).toHaveCount(0);

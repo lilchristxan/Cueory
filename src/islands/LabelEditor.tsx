@@ -25,8 +25,6 @@ const iconProps = {
   strokeLinejoin: 'round',
 } as const;
 const toolButton = 'press inline-flex size-(--tap-min) shrink-0 items-center justify-center rounded-pill border border-line bg-page text-ink disabled:opacity-40';
-const primaryButton = 'press inline-flex min-h-(--tap-min) w-full items-center justify-center rounded-pill bg-button px-6 py-3 text-on-button hover:bg-button-hover disabled:opacity-50';
-const secondaryButton = 'press inline-flex min-h-(--tap-min) w-full items-center justify-center rounded-pill border border-control px-6 py-3 text-ink';
 
 type Drag =
   | { kind: 'draw'; ax: number; ay: number; box: Box }
@@ -149,145 +147,157 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
   const place = (box: Box) => ({ left: `${box.x}%`, top: `${box.y}%`, width: `${Math.max(box.w, 0)}%`, height: `${Math.max(box.h, 0)}%` });
   const ownPicture = isOwnPicture(state.set.image.src);
 
+  const selectedIndex = labels.findIndex((label) => label.id === state.selected);
+  const selectedLabel = selectedIndex >= 0 ? labels[selectedIndex]! : null;
+
+  // A minimal screen (Christian, 2026-11-26: "too much going on in the screen. minimalise it"): one row of icons, the
+  // picture, and one field for the selected cover's words. The how-to and the less-used actions are behind "help".
   return (
-    <div className="grid gap-4 lg:grid-cols-3" data-testid="label-editor">
-      <div className="rounded-2xl border border-line bg-page p-4 shadow-card lg:col-span-2">
-        <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="cover tools">
-          <button ref={addButton} type="button" className={toolButton} aria-label="add a cover" title="add a cover" disabled={labels.length >= MAX_LABELS} onClick={() => setState((s) => addLabel(s))}>
-            <svg {...iconProps}><path d="M12 5v14M5 12h14" /></svg>
-          </button>
-          <button type="button" className={toolButton} aria-label="undo" title="undo" disabled={state.past.length === 0} onClick={() => {
-            if (state.past.length <= 1) addButton.current?.focus();
-            setState(undo);
-          }}>
-            <svg {...iconProps}><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
-          </button>
-          <button type="button" className={toolButton} aria-label="redo" title="redo" disabled={state.future.length === 0} onClick={() => {
-            if (state.future.length <= 1) addButton.current?.focus();
-            setState(redo);
-          }}>
-            <svg {...iconProps}><path d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" /></svg>
-          </button>
-          <button
-            type="button"
-            className={toolButton}
-            aria-label="delete the selected cover"
-            title="delete the selected cover"
-            disabled={!state.selected}
-            onClick={() => {
-              setState((s) => (s.selected ? deleteLabel(s, s.selected) : s));
-              addButton.current?.focus();
-            }}
-          >
-            <svg {...iconProps}><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
-          </button>
-        </div>
-
-        <div
-          ref={picture}
-          className="relative mt-3 touch-none overflow-hidden rounded-xl bg-surface select-none"
-          onPointerDown={onPictureDown}
-          onPointerMove={onMove}
-          onPointerUp={onUp}
-          onPointerCancel={() => setDrag(null)}
-          data-testid="label-editor-picture"
-        >
-          <img
-            src={state.set.image.src}
-            alt={state.set.image.alt}
-            width={state.set.image.width}
-            height={state.set.image.height}
-            draggable={false}
-            className="pointer-events-none block h-auto w-full"
-          />
-          {labels.map((label, i) => {
-            const selected = state.selected === label.id;
-            return (
-              <button
-                key={label.id}
-                type="button"
-                aria-label={`cover ${i + 1}${label.text ? `: ${label.text}` : ', no words yet'}`}
-                aria-pressed={selected}
-                aria-describedby={`${listId}-help`}
-                style={place(shown(label.id, label))}
-                onPointerDown={(e) => onCoverDown(e, label.id, false)}
-                onKeyDown={(e) => onCoverKey(e, label.id)}
-                onFocus={() => setState((s) => select(s, label.id))}
-                data-testid="label-editor-cover"
-                className={`absolute flex items-center justify-center rounded-md text-sm font-bold text-on-button ${selected ? 'bg-highlight outline-2 outline-offset-2 outline-ink outline-dashed' : 'bg-button'}`}
-              >
-                {i + 1}
-                {selected && (
-                  <span
-                    aria-hidden="true"
-                    onPointerDown={(e) => onCoverDown(e as unknown as ReactPointerEvent<HTMLButtonElement>, label.id, true)}
-                    className="absolute -end-2 -bottom-2 size-5 cursor-nwse-resize rounded-pill border-2 border-ink bg-page"
-                    data-testid="label-editor-resize"
-                  />
-                )}
-              </button>
-            );
-          })}
-          {drag?.kind === 'draw' && <span aria-hidden="true" style={place(drag.box)} className="pointer-events-none absolute rounded-md border-2 border-dashed border-ink" />}
-        </div>
-        <p id={`${listId}-help`} className="mt-3 text-sm text-ink-soft">
-          drag on the picture to cover a label, or use “add a cover”. tap a cover to move it or pull its corner to resize it. with
-          a keyboard: arrow keys move the selected cover, shift with the arrows resizes it, delete removes it.
-        </p>
-        <p className="mt-1 text-sm text-ink-soft">{state.set.image.credit}</p>
-      </div>
-
-      <div className="rounded-2xl border border-line bg-page p-4 shadow-card">
-        <h2 className="text-sm font-bold text-ink-soft">covered labels ({labels.length})</h2>
-        {labels.length === 0 && <p className="mt-3 text-sm text-ink-soft">no covers yet.</p>}
-        <ol className="mt-3 space-y-2">
-          {labels.map((label, i) => (
-            <li key={label.id} className="flex items-center gap-2">
-              <span aria-hidden="true" className="inline-flex size-7 shrink-0 items-center justify-center rounded-pill bg-surface text-sm font-bold">{i + 1}</span>
-              <input
-                type="text"
-                value={label.text}
-                aria-label={`words under cover ${i + 1}`}
-                placeholder="what is under it?"
-                onChange={(e) => {
-                  // Read the field now: the event is gone by the time the state update runs.
-                  const text = e.currentTarget.value;
-                  setState((s) => renameLabel(s, label.id, text));
-                }}
-                onFocus={() => setState((s) => select(s, label.id))}
-                autoComplete="off"
-                className={`min-h-(--tap-min) min-w-0 flex-1 rounded-xl border bg-page px-3 text-ink ${state.selected === label.id ? 'border-ink' : 'border-line'}`}
-              />
-            </li>
-          ))}
-        </ol>
-
-        <p role="alert" className="mt-3 text-sm text-ink" data-testid="label-editor-problem">
-          {problem && <><span className="font-bold">problem:</span> {problem}</>}
-        </p>
-        <button type="button" className={`mt-2 ${primaryButton}`} disabled={blocked !== null} aria-describedby={`${listId}-blocked`} onClick={() => onDone(state.set)}>
-          start studying
+    <div className="rounded-2xl border border-line bg-page p-4 shadow-card" data-testid="label-editor">
+      <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="cover tools">
+        <button ref={addButton} type="button" className={toolButton} aria-label="add a cover" title="add a cover" disabled={labels.length >= MAX_LABELS} onClick={() => setState((s) => addLabel(s))}>
+          <svg {...iconProps}><path d="M12 5v14M5 12h14" /></svg>
         </button>
-        <p id={`${listId}-blocked`} className="mt-2 text-sm text-ink-soft">{blocked ?? 'your covers stay until you leave this page.'}</p>
-
+        <button type="button" className={toolButton} aria-label="undo" title="undo" disabled={state.past.length === 0} onClick={() => {
+          if (state.past.length <= 1) addButton.current?.focus();
+          setState(undo);
+        }}>
+          <svg {...iconProps}><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
+        </button>
+        <button type="button" className={toolButton} aria-label="redo" title="redo" disabled={state.future.length === 0} onClick={() => {
+          if (state.future.length <= 1) addButton.current?.focus();
+          setState(redo);
+        }}>
+          <svg {...iconProps}><path d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3" /></svg>
+        </button>
+        <button
+          type="button"
+          className={toolButton}
+          aria-label="delete the selected cover"
+          title="delete the selected cover"
+          disabled={!state.selected}
+          onClick={() => {
+            setState((s) => (s.selected ? deleteLabel(s, s.selected) : s));
+            addButton.current?.focus();
+          }}
+        >
+          <svg {...iconProps}><path d="M5 7h14M9 7V4h6v3M7 7l1 13h8l1-13" /></svg>
+        </button>
         <input
           ref={fileInput}
           type="file"
           accept="image/jpeg,image/png,image/webp"
           className="sr-only"
           aria-label="choose your own picture"
+          tabIndex={-1}
           onChange={(e) => {
             void choosePicture(e.currentTarget.files?.[0]);
             e.currentTarget.value = '';
           }}
         />
-        <button type="button" className={`mt-3 ${secondaryButton}`} onClick={() => fileInput.current?.click()}>
-          use my own picture
+        <button type="button" className={toolButton} aria-label="use my own picture" title="use my own picture" onClick={() => fileInput.current?.click()}>
+          <svg {...iconProps}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 16 5-5 4 4 3-3 6 6" /><circle cx="15.500" cy="9.500" r="1.500" /></svg>
         </button>
+        <span className="flex-1" />
+        <button type="button" className="inline-flex min-h-(--tap-min) items-center px-2 text-sm text-ink-soft underline" onClick={onCancel}>
+          cancel
+        </button>
+        <button
+          type="button"
+          className="press inline-flex min-h-(--tap-min) items-center justify-center rounded-pill bg-button px-5 text-on-button hover:bg-button-hover disabled:opacity-50"
+          disabled={blocked !== null}
+          aria-describedby={`${listId}-blocked`}
+          onClick={() => onDone(state.set)}
+        >
+          start studying
+        </button>
+      </div>
+
+      <div
+        ref={picture}
+        className="relative mt-3 touch-none overflow-hidden rounded-xl bg-surface select-none"
+        onPointerDown={onPictureDown}
+        onPointerMove={onMove}
+        onPointerUp={onUp}
+        onPointerCancel={() => setDrag(null)}
+        data-testid="label-editor-picture"
+      >
+        <img
+          src={state.set.image.src}
+          alt={state.set.image.alt}
+          width={state.set.image.width}
+          height={state.set.image.height}
+          draggable={false}
+          className="pointer-events-none block h-auto w-full"
+        />
+        {labels.map((label, i) => {
+          const selected = state.selected === label.id;
+          return (
+            <button
+              key={label.id}
+              type="button"
+              aria-label={`cover ${i + 1}${label.text ? `: ${label.text}` : ', no words yet'}`}
+              aria-pressed={selected}
+              style={place(shown(label.id, label))}
+              onPointerDown={(e) => onCoverDown(e, label.id, false)}
+              onKeyDown={(e) => onCoverKey(e, label.id)}
+              onFocus={() => setState((s) => select(s, label.id))}
+              data-testid="label-editor-cover"
+              className={`absolute flex items-center justify-center rounded-md text-sm font-bold text-on-button ${selected ? 'bg-highlight outline-2 outline-offset-2 outline-ink outline-dashed' : 'bg-button'}`}
+            >
+              {i + 1}
+              {selected && (
+                <span
+                  aria-hidden="true"
+                  onPointerDown={(e) => onCoverDown(e as unknown as ReactPointerEvent<HTMLButtonElement>, label.id, true)}
+                  className="absolute -end-2 -bottom-2 size-5 cursor-nwse-resize rounded-pill border-2 border-ink bg-page"
+                  data-testid="label-editor-resize"
+                />
+              )}
+            </button>
+          );
+        })}
+        {drag?.kind === 'draw' && <span aria-hidden="true" style={place(drag.box)} className="pointer-events-none absolute rounded-md border-2 border-dashed border-ink" />}
+      </div>
+
+      {/* One field: the words under the selected cover. */}
+      {selectedLabel && (
+        <div className="mt-3 flex items-center gap-2">
+          <span aria-hidden="true" className="inline-flex size-8 shrink-0 items-center justify-center rounded-pill bg-surface text-sm font-bold">{selectedIndex + 1}</span>
+          <input
+            type="text"
+            value={selectedLabel.text}
+            aria-label={`words under cover ${selectedIndex + 1}`}
+            placeholder="what is under it?"
+            onChange={(e) => {
+              // Read the field now: the event is gone by the time the state update runs.
+              const text = e.currentTarget.value;
+              const id = selectedLabel.id;
+              setState((s) => renameLabel(s, id, text));
+            }}
+            autoComplete="off"
+            className="min-h-(--tap-min) min-w-0 flex-1 rounded-xl border border-ink bg-page px-3 text-ink"
+          />
+        </div>
+      )}
+
+      <p role="alert" className="mt-2 text-sm text-ink" data-testid="label-editor-problem">
+        {problem && <><span className="font-bold">problem:</span> {problem}</>}
+      </p>
+      <p id={`${listId}-blocked`} className="text-sm text-ink-soft">{blocked ?? ''}</p>
+
+      <details className="mt-1 text-sm text-ink-soft" data-testid="label-editor-help">
+        <summary className="inline-flex min-h-(--tap-min) cursor-pointer items-center underline">help</summary>
+        <p>
+          drag on the picture to cover a label, or use “add a cover”. tap a cover to name it, drag it to move it, or pull its
+          corner to resize it. with a keyboard: arrow keys move the selected cover, shift with the arrows resizes it, delete
+          removes it.
+        </p>
+        <p className="mt-2">your covers stay until you leave this page. your own picture is never uploaded. use only pictures you are allowed to use.</p>
         {(ownPicture || state.set !== original) && (
           <button
             type="button"
-            className={`mt-3 ${secondaryButton}`}
+            className="mt-2 inline-flex min-h-(--tap-min) items-center underline"
             onClick={() => {
               setState((s) => ({ ...startEdit(original), past: [...s.past, s.set] }));
               addButton.current?.focus();
@@ -296,11 +306,8 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
             back to cueory's drawing
           </button>
         )}
-        <button type="button" className="mt-3 inline-flex min-h-(--tap-min) w-full items-center justify-center text-sm text-ink-soft underline" onClick={onCancel}>
-          cancel
-        </button>
-        <p className="mt-2 text-sm text-ink-soft">your own picture is never uploaded. use only pictures you are allowed to use.</p>
-      </div>
+      </details>
+      <p className="text-sm text-ink-soft">{state.set.image.credit}</p>
     </div>
   );
 }
