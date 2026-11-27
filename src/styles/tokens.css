@@ -930,7 +930,7 @@
     --game-demo-vialo-font-size: 0.8125rem;
     --game-demo-vialo-ring: 1px;              /* the light ring inside a red pill, scaled down from the board's 2 px */
     --game-demo-vialo-ring-gap: 2px;
-    --game-demo-vialo-ring-color: rgb(255 255 255 / 0.6);
+    --game-demo-vialo-ring-color: transparent; /* no ring on a pink pill, as on the live board */
     /* The card stays light in Evening, so the board's Daytime foil and pill colours (the --game-oxblood, --game-dark-green,
        --vialo-absent-* and --color-pillo-foil values by day) stay fixed here. */
     --game-demo-vialo-foil: color-mix(in srgb, #6b5243 16%, #f9f5ef);
@@ -938,12 +938,14 @@
     --game-demo-vialo-hatch-clear: rgb(from #3e2c23 r g b / 0);
     --game-demo-vialo-gloss: color-mix(in srgb, #f9f5ef 70%, transparent);
     --game-demo-vialo-gloss-clear: rgb(from #f9f5ef r g b / 0);
-    --game-demo-vialo-green: #0e5a3d;
-    --game-demo-vialo-green-light: #3f8a68;
-    --game-demo-vialo-green-deep: #053321;
-    --game-demo-vialo-red: #6e2019;
-    --game-demo-vialo-red-light: #a0413a;
-    --game-demo-vialo-red-deep: #4a100d;
+    --game-demo-vialo-green: #a8d5ba;        /* wordpill's light green, as on the live board (Christian, 2026-11-27) */
+    --game-demo-vialo-green-light: #dff1e6;
+    --game-demo-vialo-green-deep: #8fae8b;
+    --game-demo-vialo-on-green: #053321;     /* the letter on a light green pill */
+    --game-demo-vialo-red: #f4a6c0;          /* wordpill's pink (the token keeps its old name) */
+    --game-demo-vialo-red-light: #f7c6d4;
+    --game-demo-vialo-red-deep: #ec8fb0;
+    --game-demo-vialo-on-red: #3e2c23;       /* the letter on a pink pill */
     --game-demo-vialo-absent-face: #ffffff;
     --game-demo-vialo-absent-ink: #6b5243;
     --game-demo-tachyyy-width: 10.625rem;
