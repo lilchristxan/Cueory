@@ -362,7 +362,7 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
   // "On" is a filled button plus a dot under the icon, so the state never depends on colour alone.
   const onDot = <span aria-hidden="true" className="absolute bottom-1.5 hidden size-1.5 rounded-pill bg-ink peer-checked:block" />;
   const shuffleToggle = (
-    <label className={bareButton} title="shuffle">
+    <label className={bareButton}>
       <input type="checkbox" checked={shuffle} onChange={(e) => changeShuffle(e.currentTarget.checked)} className={`peer ${optionInput}`} />
       <ShuffleIcon />
       {onDot}
@@ -370,7 +370,7 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
     </label>
   );
   const starredToggle = (
-    <label className={bareButton} title="only starred cards">
+    <label className={bareButton}>
       <input
         type="checkbox"
         checked={starredOnly && starred.size > 0}
@@ -529,7 +529,6 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
           type="button"
           aria-pressed={isStarred}
           aria-label="Star"
-          title="star this card"
           onClick={() => changeStar(card.id)}
           className="press absolute start-3 top-3 inline-flex size-(--tap-min) items-center justify-center rounded-pill text-ink"
         >
@@ -557,19 +556,19 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
       <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4" role="group" aria-label="Study options">
         {shuffleToggle}
         {state.flipped ? (
-          <button type="button" onClick={() => sort('learning')} aria-label="Still learning" title="still learning" className={roundButton}>
+          <button type="button" onClick={() => sort('learning')} aria-label="Still learning" className={roundButton}>
             <RepeatIcon />
           </button>
         ) : (
-          <button type="button" onClick={goBack} disabled={state.pos === 0} aria-label="Back" title="back" className={roundButton}>
+          <button type="button" onClick={goBack} disabled={state.pos === 0} aria-label="Back" className={roundButton}>
             <PrevIcon />
           </button>
         )}
-        <button type="button" onClick={turn} aria-label={state.flipped ? 'Show question' : 'Show answer'} title="flip" className={flipButton}>
+        <button type="button" onClick={turn} aria-label={state.flipped ? 'Show question' : 'Show answer'} className={flipButton}>
           <FlipIcon />
         </button>
         {state.flipped ? (
-          <button type="button" onClick={() => sort('know')} aria-label="Know it" title="know it" className={roundButton}>
+          <button type="button" onClick={() => sort('know')} aria-label="Know it" className={roundButton}>
             <CheckIcon />
           </button>
         ) : (
@@ -580,7 +579,6 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
               sort('learning');
             }}
             aria-label="Next card"
-            title="next"
             className={roundButton}
           >
             <NextIcon />
