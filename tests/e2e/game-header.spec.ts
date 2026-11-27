@@ -42,10 +42,18 @@ for (const game of games) {
           expect(corner.width).toBeGreaterThanOrEqual(44);
           expect(corner.height).toBeGreaterThanOrEqual(44);
         }
-        // Same row, gear just left of the "?", the pair at the right edge of the play area.
+        // Same row, gear just left of the "?".
         expect(Math.abs(g.y - h.y)).toBeLessThanOrEqual(1);
         expect(g.x + g.width).toBeLessThanOrEqual(h.x);
-        expect(area.x + area.width - (h.x + h.width)).toBeLessThanOrEqual(24);
+        // On a phone held upright the row is centred across the screen (Christian, 2026-11-27); a game with its own
+        // control on that row (the sudoku difficulty menu) and wider screens keep it at the right edge.
+        const centred = await page.evaluate(() => getComputedStyle(document.querySelector('.game-frame-corner')!).translate !== 'none');
+        if (width < 480 && centred) {
+          const row = (await page.locator('.game-frame-corner').boundingBox())!;
+          expect(Math.abs(row.x + row.width / 2 - (area.x + area.width / 2))).toBeLessThanOrEqual(1);
+        } else {
+          expect(area.x + area.width - (h.x + h.width)).toBeLessThanOrEqual(24);
+        }
         // The gear is drawn, not an emoji or text.
         await expect(gear.locator('svg')).toHaveCount(1);
         await expect(gear).toHaveText('');
