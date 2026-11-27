@@ -1,7 +1,7 @@
 """Draws wordpill's wordmark and icon as plain SVG outlines (Christian's choice, 2026-11-27).
 
 The brand is two pieces. The wordmark is the name on its own, in script, with no capsule round it. The logo (the icon)
-is "wp" in a capsule filled with wordpill's pale sky (mint at the top, white in the middle, pink at the bottom).
+is a single script "w" in a capsule filled with wordpill's pale sky (mint at the top, white in the middle, pink at the bottom).
 
 The letters are real outlines taken from Yellowtail (by Astigmatic, Apache License 2.0), so they look the same everywhere
 and no font file is added to the site. The font is not in this repository: download the npm package
@@ -14,7 +14,8 @@ the artwork files only; components and CSS never use them.
 
   wordpill-wordmark-light.svg  Daytime wordmark: game-green letters with a thin white outline.
   wordpill-wordmark-dark.svg   Evening wordmark: the same letters in white with a thin game-green outline.
-  wordpill-icon-l1.svg         The logo: "wp" in green with a thin white outline, in the sky capsule with a thin green rim.
+  wordpill-icon-l1.svg         The logo (Christian's "V1", 2026-11-27): a white "w" with a thin bronze outline, in the sky
+                               capsule with a thin bronze rim. Bronze is the letter colour on the game's white pill.
 """
 import os
 import sys
@@ -29,6 +30,7 @@ OUT = os.path.join(ROOT, "public/design/games-v2/assets")
 
 GREEN = "#0e5a3d"
 WHITE = "#ffffff"
+BRONZE = "#6b5243"  # the letter colour on the game's white pill
 # The sky inside the capsule, top to bottom: mint, pale mint, pink white, rose, pink.
 SKY = (("0", "#a8d5ba"), ("0.3", "#dff1e6"), ("0.55", "#fff5f7"), ("0.8", "#f7c6d4"), ("1", "#f4a6c0"))
 
@@ -66,11 +68,11 @@ def text_path(face, text, size, centre_x, baseline):
     return " ".join(p for p in parts if p)
 
 
-def capsule(x, y, w, h, tag, line):
+def capsule(x, y, w, h, tag, line, rim=GREEN):
     stops = "".join(f'<stop offset="{o}" stop-color="{c}"/>' for o, c in SKY)
     return (
         f'<defs><linearGradient id="{tag}" x1="0" y1="0" x2="0" y2="1">{stops}</linearGradient></defs>'
-        f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{h / 2:g}" fill="url(#{tag})" stroke="{GREEN}" stroke-width="{line}"/>'
+        f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{h / 2:g}" fill="url(#{tag})" stroke="{rim}" stroke-width="{line}"/>'
     )
 
 
@@ -88,10 +90,10 @@ def wordmark(face, fill, rim):
 
 
 def icon(face):
-    wp = text_path(face, "wp", 44, 50, 61)
+    w = text_path(face, "w", 72, 50, 64)
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="wordpill">'
-        f'{capsule(3, 23, 94, 54, "wordpill-icon-sky", 2)}{letters(wp, 2)}</svg>\n'
+        f'{capsule(3, 23, 94, 54, "wordpill-icon-sky", 1.5, BRONZE)}{letters(w, 1.2, WHITE, BRONZE)}</svg>\n'
     )
 
 

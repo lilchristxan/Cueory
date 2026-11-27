@@ -164,11 +164,11 @@ describe("wordpill's artwork (the game formerly called vialo; Christian's script
     expect(day).toContain('paint-order="stroke"');
   });
 
-  it('keeps the capsule for the logo: wp in green on the pale sky, inside a thin green rim', () => {
+  it('keeps the capsule for the logo: a white w with a thin bronze outline on the pale sky, inside a thin bronze rim', () => {
     expect(icon.match(/<rect /g)).toHaveLength(1);
     expect(icon).toContain('<linearGradient id="wordpill-icon-sky"');
-    expect(icon).toContain('stroke="#0e5a3d" stroke-width="2"');
-    expect(icon).toContain('fill="#0e5a3d" stroke="#ffffff"');
+    expect(icon).toContain('stroke="#6b5243" stroke-width="1.5"');
+    expect(icon).toContain('fill="#ffffff" stroke="#6b5243"');
   });
 
   it('is the wordmark and icon on every surface: Evening art on the hub and game page, Daytime on the cream carousel', () => {
