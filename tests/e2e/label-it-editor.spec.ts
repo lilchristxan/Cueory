@@ -107,3 +107,31 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 }
+
+test('a selected cover can be moved and resized by tapping, with no drag and no keyboard', async ({ page }) => {
+  await page.goto('/learn/study-skills/label-it');
+  await page.getByTestId('label-it-edit').click();
+  const cover = page.getByTestId('label-editor-cover').first();
+  await cover.focus();
+  const before = await cover.boundingBox();
+  await page.getByTestId('label-editor-nudge').locator('summary').click();
+  await page.getByRole('button', { name: 'move right' }).click();
+  await page.getByRole('button', { name: 'make taller' }).click();
+  const after = await cover.boundingBox();
+  expect(after!.x).toBeGreaterThan(before!.x);
+  expect(after!.height).toBeGreaterThan(before!.height);
+});
+
+test('an edited set never touches the saved place of cueory\'s own drawing', async ({ page }) => {
+  await page.goto('/learn/study-skills/label-it');
+  await page.getByTestId('label-it-edit').click();
+  await page.getByRole('button', { name: 'add a cover' }).click();
+  await page.getByRole('textbox').fill('my own words');
+  await page.getByRole('button', { name: 'start studying' }).click();
+  const session = page.getByTestId('labelit-session');
+  await session.getByRole('button', { name: 'uncover label 1', exact: true }).click();
+  await session.getByRole('group', { name: 'mark label 1', exact: true }).getByRole('button', { name: 'know it', exact: true }).click();
+  await expect(session.getByRole('group', { name: 'mark label 1', exact: true }).getByRole('button', { name: 'know it', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  // Marking the original drawing saves a place; marking an edited set must leave storage empty.
+  expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain('label-it');
+});

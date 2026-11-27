@@ -26,6 +26,8 @@ import {
 
 interface Props {
   set: LabelSet;
+  /** An edited set kept in memory only: it never reads or writes the saved place. */
+  memoryOnly?: boolean;
 }
 
 const primaryButton = 'min-h-11 rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover';
@@ -110,13 +112,13 @@ function coverPlace(label: Label) {
   return { left: x.offset, top: y.offset, width: x.size, height: y.size };
 }
 
-function Board({ set }: Props) {
+function Board({ set, memoryOnly = false }: Props) {
   const ordered = readingOrder(set.labels);
   const numberOf = new Map(ordered.map((l, i) => [l.id, i + 1]));
   const [state, setState] = useState<LabelItState>(() => start(set));
-  const [resumePending, setResumePending] = useState(() => readResume(browserStorage())?.page === LABEL_PAGE);
+  const [resumePending, setResumePending] = useState(() => !memoryOnly && readResume(browserStorage())?.page === LABEL_PAGE);
   const latestDraft = useRef<ResumeDraft | null>(null);
-  useEffect(() => attachResumeLifecycle(browserStorage(), () => latestDraft.current), []);
+  useEffect(() => (memoryOnly ? undefined : attachResumeLifecycle(browserStorage(), () => latestDraft.current)), [memoryOnly]);
   const [said, setSaid] = useState('');
   const [focusRequest, setFocusRequest] = useState(0);
   const statusRef = useRef<HTMLDivElement>(null);
@@ -138,9 +140,12 @@ function Board({ set }: Props) {
   const inRound = (id: string) => state.round.includes(id);
 
   const saveState = (next: LabelItState) => {
-    const draft = labelDraft(next, set);
-    latestDraft.current = draft;
-    saveResume(browserStorage(), draft);
+    // An edited set lives in memory only, so it never reads or writes the saved place of cueory's own drawing.
+    if (!memoryOnly) {
+      const draft = labelDraft(next, set);
+      latestDraft.current = draft;
+      saveResume(browserStorage(), draft);
+    }
     setState(next);
   };
 
@@ -170,7 +175,7 @@ function Board({ set }: Props) {
 
   const restart = () => {
     latestDraft.current = null;
-    clearResume(browserStorage());
+    if (!memoryOnly) clearResume(browserStorage());
     setResumePending(false);
     setState(start(set));
     setSaid('every label covered. starting over.');
@@ -191,7 +196,7 @@ function Board({ set }: Props) {
 
   return (
     <div data-testid="labelit">
-      <ResumePrompt page={LABEL_PAGE} onContinue={continueSaved} onStartOver={restart} />
+      {!memoryOnly && <ResumePrompt page={LABEL_PAGE} onContinue={continueSaved} onStartOver={restart} />}
       <div inert={resumePending} data-testid="labelit-session">
       <div ref={statusRef} tabIndex={-1}>
         <p className="text-sm text-ink-soft" data-testid="labelit-status">
@@ -382,14 +387,14 @@ const setKey = (set: LabelSet) => JSON.stringify(set);
  * Pages should use LabelItFromUrl below rather than passing `set` as an Astro prop: Astro writes island props into the
  * page's HTML, and `set` holds every label's text.
  */
-export default function LabelItBoard({ set }: Props) {
+export default function LabelItBoard({ set, memoryOnly = false }: Props) {
   let parsed: LabelSet;
   try {
     parsed = parseSet(set);
   } catch {
     return <p role="alert">this diagram could not be loaded. please try again later.</p>;
   }
-  return <Board key={setKey(parsed)} set={parsed} />;
+  return <Board key={setKey(parsed)} set={parsed} memoryOnly={memoryOnly} />;
 }
 
 /** Only our own site's paths, so a page can't point the board at another site. */
@@ -506,7 +511,7 @@ export function LabelItStudio({ src }: { src: string }) {
           </button>
         )}
       </div>
-      <LabelItBoard set={current} />
+      <LabelItBoard set={current} memoryOnly={own !== null} />
     </div>
   );
 }

@@ -90,6 +90,17 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
     setDrag(null);
   };
 
+  // Tap alternatives to dragging: name, resize?, dx, dy, icon path.
+  const nudges: [string, boolean, number, number, string][] = [
+    ['move left', false, -2, 0, 'M15 5l-7 7 7 7'],
+    ['move right', false, 2, 0, 'M9 5l7 7-7 7'],
+    ['move up', false, 0, -2, 'M5 15l7-7 7 7'],
+    ['move down', false, 0, 2, 'M5 9l7 7 7-7'],
+    ['make wider', true, 2, 0, 'M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4'],
+    ['make narrower', true, -2, 0, 'M4 12h6M14 12h6M7 9l3 3-3 3M17 9l-3 3 3 3'],
+    ['make taller', true, 0, 2, 'M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4'],
+    ['make shorter', true, 0, -2, 'M12 4v6M12 14v6M9 7l3 3 3-3M9 17l3-3 3 3'],
+  ];
   const onCoverKey = (e: ReactKeyboardEvent, id: string) => {
     const step = 1;
     const arrows: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
@@ -118,7 +129,11 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
       const canvas = document.createElement('canvas');
       canvas.width = size.width;
       canvas.height = size.height;
-      canvas.getContext('2d')!.drawImage(bitmap, 0, 0, size.width, size.height);
+      const ctx = canvas.getContext('2d')!;
+      // JPEG has no transparency: a see-through PNG or WebP goes onto white, not onto the canvas's black.
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size.width, size.height);
+      ctx.drawImage(bitmap, 0, 0, size.width, size.height);
       bitmap.close();
       const src = canvas.toDataURL('image/jpeg', 0.85);
       if (!isOwnPicture(src)) {
@@ -269,7 +284,7 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
               onKeyDown={(e) => onCoverKey(e, label.id)}
               onFocus={() => setState((s) => select(s, label.id))}
               data-testid="label-editor-cover"
-              className={`absolute flex items-center justify-center rounded-md text-sm font-bold text-on-button ${selected ? 'bg-highlight outline-2 outline-offset-2 outline-ink outline-dashed' : 'bg-button'}`}
+              className={`absolute flex items-center justify-center rounded-md text-sm font-bold text-on-button bg-button ${selected ? 'outline-2 outline-offset-2 outline-ink outline-dashed' : ''}`}
             >
               {i + 1}
               {selected && (
@@ -305,6 +320,27 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
             className="min-h-(--tap-min) min-w-0 flex-1 rounded-xl border border-ink bg-page px-3 text-ink"
           />
         </div>
+      )}
+      {selectedLabel && (
+        <details className="mt-1 text-sm text-ink-soft" data-testid="label-editor-nudge">
+          <summary className="inline-flex min-h-(--tap-min) cursor-pointer items-center underline">move or resize by tapping</summary>
+          <div role="group" aria-label={`move or resize cover ${selectedIndex + 1}`} className="flex flex-wrap gap-2">
+            {nudges.map(([name, resize, dx, dy, path]) => (
+              <button
+                key={name}
+                type="button"
+                className={toolButton}
+                aria-label={name}
+                onClick={() => {
+                  const id = selectedLabel.id;
+                  setState((s) => (resize ? resizeLabel(s, id, dx, dy) : moveLabel(s, id, dx, dy)));
+                }}
+              >
+                <svg {...iconProps}><path d={path} /></svg>
+              </button>
+            ))}
+          </div>
+        </details>
       )}
 
       <p role="alert" className="mt-2 text-sm text-ink" data-testid="label-editor-problem">
