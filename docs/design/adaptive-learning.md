@@ -20,7 +20,9 @@ If a future exam is set, bring long intervals forward to at most the day before 
 
 ## Which item comes next
 
-Take first the oldest due review. Then consider the least secure studied concepts, with a recent miss ahead of ties, then new material. At the requested difficulty, prefer untried items and use the existing easier-first tie rule when a level is absent. Starting with success and failure counts for concept ranking is inspired by [Pavlik, Cen and Koedinger's Performance Factors Analysis](https://pact.cs.cmu.edu/koedinger/pubs/AIED%202009%20final%20Pavlik%20Cen%20Keodinger%20corrected.pdf). Cueory uses those counts in a transparent ordering, with no fitted coefficients. The ordering and a 20-item session cap are unverified defaults.
+Take first the oldest due review, then studied concepts whose smoothed success rate is below 80%, with a recent miss ahead of ties. Introduce unseen concepts before offering unused cards in concepts at or above the threshold. At the requested difficulty, prefer untried items and use the existing easier-first tie rule when a level is absent. Starting with success and failure counts for concept ranking is inspired by [Pavlik, Cen and Koedinger's Performance Factors Analysis](https://pact.cs.cmu.edu/koedinger/pubs/AIED%202009%20final%20Pavlik%20Cen%20Keodinger%20corrected.pdf). Cueory uses those counts in a transparent ordering, with no fitted coefficients. The ordering and a 20-item session cap are unverified defaults.
+
+The browser session keeps its last accepted instant and local day if the device clock or time zone goes backward. Answers still count in that session. The rollback does not earn credit for an extra day of practice.
 
 Pass in today's calendar day and an explicit clock reading. The caller also supplies randomness for genuine ties. Exclude the previous item before ranking, and end with a short explanation if no eligible item remains. An item can reappear after another item. Cap the number of selections, including revisits. Keep the queue local to the current session and avoid pulling in future reviews just to fill it.
 
@@ -47,7 +49,7 @@ In spaced practice, call a card mastered only after two correct reviews on separ
 
 | Scheduler | Modeled recall at the 7-day follow-up | Answers per day | Days to first whole-deck mastery, among those who reached it | Never observed at whole-deck mastery by day 45 |
 | --- | ---: | ---: | ---: | ---: |
-| Adaptive | 90.14% | 5.70 | 24.15 | 26.00% |
+| Adaptive | 90.11% | 5.70 | 24.13 | 27.90% |
 | Existing ladder | 83.11% | 4.63 | No observations | 100.00% |
 
 Both groups use the same Cueory mastery rule for this measurement. Requiring all cards to meet the 80% recall threshold at once favors schedules that review more frequently. The table illustrates that trade-off and cannot establish better learning or predict an exam result. These runs use no exam date; the calendar and exam rules have separate tests.
