@@ -91,3 +91,19 @@ for (const path of ['/play/wordpill', '/play/pillo', '/play/piccline', '/play/cr
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   });
 }
+
+// With the row centred, the "how to play" popover must still open fully on the screen (the games that use the popover).
+for (const path of ['/play/tachyyy', '/play/hello-cards']) {
+  for (const width of [320, 390]) {
+    test(`${path} at ${width} px: the how-to-play popover opens inside the screen`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(path);
+      await page.getByTestId('game-frame-help-button').click();
+      const popover = page.locator('.game-frame-popover');
+      await expect(popover).toBeVisible();
+      const box = (await popover.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+    });
+  }
+}
