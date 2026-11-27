@@ -247,6 +247,7 @@
   --color-board-given: color-mix(in srgb, #eadccf 50%, #f9f5ef); /* Linen + Ivory — sudoku given numbers, lighter than the tint */
   --color-board-match: #6b5243;    /* Bronze   — sudoku squares holding the selected number */
   --color-on-board-match: #f9f5ef; /* Ivory    — numbers on those squares */
+  --picture-paper: #ffffff;     /* what a student's see-through picture is laid on before it is kept as a JPEG (label it editor); white in both themes, not a brand colour */
   /* How opaque a faded structure is (Task 178 study tools): see-through enough to look past, solid enough to tap. */
   --anatomy-faded-opacity: 0.35;
   --color-board-cell: #f9f5ef;     /* Ivory    — an empty square */

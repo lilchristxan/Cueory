@@ -131,8 +131,11 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
       canvas.height = size.height;
       const ctx = canvas.getContext('2d')!;
       // JPEG has no transparency: a see-through PNG or WebP goes onto white, not onto the canvas's black.
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, size.width, size.height);
+      const paper = getComputedStyle(document.documentElement).getPropertyValue('--picture-paper').trim();
+      if (paper) {
+        ctx.fillStyle = paper;
+        ctx.fillRect(0, 0, size.width, size.height);
+      }
       ctx.drawImage(bitmap, 0, 0, size.width, size.height);
       bitmap.close();
       const src = canvas.toDataURL('image/jpeg', 0.85);
