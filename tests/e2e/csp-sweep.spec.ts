@@ -1,8 +1,9 @@
-import { expect, test, type Page, type Request } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { withoutWebkitSelectReports } from './csp-allow';
 import { markGameRulesSeen } from './clock';
+import { trackDocumentRequests } from './document-requests';
 
 test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
@@ -46,31 +47,20 @@ async function watchCsp(page: Page): Promise<string[]> {
 
 /**
  * Waits for the page to be done fetching, without 'networkidle' (WebKit on a loaded runner never reached it on a few
- * routes: a 90 s timeout though the page was finished). Every request the page makes is counted from 'request' until
- * 'requestfinished' or 'requestfailed'; settled() waits until none is pending and none has started for a settle
- * period, so a slow fetch whose answer later causes a policy violation is still waited for. Long-lived connections
- * would never finish: list one by exact URL in `longLived`, and nothing else is excluded. A hard cap, far below the
- * test's own timeout, fails with the URLs still pending rather than hanging or passing too early.
+ * routes: a 90 s timeout though the page was finished). Wait until the current document has no pending requests
+ * and none has started for a settle period, so a slow fetch that later causes a policy violation still counts.
+ * A hard cap fails with the URLs still pending rather than hanging or passing too early.
  */
-function trackRequests(page: Page, longLived: string[] = []) {
-  const pending = new Set<Request>();
-  let lastActivity = Date.now();
-  page.on('request', request => {
-    if (longLived.includes(request.url())) return;
-    pending.add(request);
-    lastActivity = Date.now();
-  });
-  const done = (request: Request) => { pending.delete(request); lastActivity = Date.now(); };
-  page.on('requestfinished', done);
-  page.on('requestfailed', done);
+function trackRequests(page: Page) {
+  const network = trackDocumentRequests(page);
   return {
     async settled({ quietMs = 500, capMs = 20_000 } = {}) {
       await page.waitForLoadState('load');
       await page.evaluate(() => document.fonts.ready.then(() => undefined));
       const started = Date.now();
-      while (pending.size > 0 || Date.now() - lastActivity < quietMs) {
+      while (network.open.size > 0 || Date.now() - network.lastActivity < quietMs) {
         if (Date.now() - started > capMs) {
-          throw new Error(`requests still pending after ${capMs} ms: ${[...pending].map(request => request.url()).join(', ') || 'none (still starting new ones)'}`);
+          throw new Error(`requests still pending after ${capMs} ms: ${[...network.open.keys()].map(request => request.url()).join(', ') || 'none (still starting new ones)'}`);
         }
         await page.waitForTimeout(100);
       }
