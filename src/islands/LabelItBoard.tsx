@@ -120,6 +120,7 @@ function Board({ set, memoryOnly = false }: Props) {
   const latestDraft = useRef<ResumeDraft | null>(null);
   useEffect(() => (memoryOnly ? undefined : attachResumeLifecycle(browserStorage(), () => latestDraft.current)), [memoryOnly]);
   const [said, setSaid] = useState('');
+  const [picked, setPicked] = useState<string | undefined>(undefined);
   const [focusRequest, setFocusRequest] = useState(0);
   const statusRef = useRef<HTMLDivElement>(null);
   const knowButtons = useRef(new Map<string, HTMLButtonElement>());
@@ -194,178 +195,167 @@ function Board({ set, memoryOnly = false }: Props) {
   const done = isDone(state);
   const round = state.roundNumber > 1 ? `round ${state.roundNumber} · ` : '';
 
+  // One label at a time (Christian's approved draft, 2026-11-26): the "current" label is the one a student picked by
+  // tapping its cover, or else the first label of this round that has no mark yet, in reading order.
+  const firstUnmarked = ordered.find((l) => inRound(l.id) && !markOf(state, l.id));
+  const current = (picked && ordered.find((l) => l.id === picked)) || firstUnmarked;
+  const currentNumber = current ? numberOf.get(current.id)! : 0;
+  const currentOpen = current ? uncovered(current.id) : false;
+  const currentMark = current ? markOf(state, current.id) : undefined;
+  const roundSize = state.round.length;
+  const marked = tally.know + tally.learning;
+  const pieces = Math.min(roundSize, 8);
+  const filled = roundSize ? Math.round((marked / roundSize) * pieces) : 0;
+  const bubble = 'inline-flex size-9 shrink-0 items-center justify-center rounded-pill text-sm font-bold';
+
+  const pick = (label: Label) => {
+    setPicked(label.id);
+    if (isCovered(state, label.id)) doReveal(label);
+    else setSaid(`${coverWords(numberOf.get(label.id)!, label, true)}.`);
+  };
+  const markCurrent = (label: Label, value: Mark) => {
+    setPicked(undefined);
+    doMark(label, value);
+  };
+
   return (
     <div data-testid="labelit">
       {!memoryOnly && <ResumePrompt page={LABEL_PAGE} onContinue={continueSaved} onStartOver={restart} />}
       <div inert={resumePending} data-testid="labelit-session">
       <div ref={statusRef} tabIndex={-1}>
-        <p className="text-sm text-ink-soft" data-testid="labelit-status">
+        <p className="sr-only" data-testid="labelit-status">
           {round}
           {tally.covered} covered · know it: {tally.know + tally.knownBefore} · still learning: {tally.learning}
         </p>
+        <div className="flex items-center gap-1.5" aria-hidden="true" data-testid="labelit-progress">
+          {Array.from({ length: pieces }, (_, i) => [
+            i === filled ? <span key="count" className={`${bubble} bg-button text-on-button`}>{marked}</span> : null,
+            <span key={i} className={`h-3 min-w-0 flex-1 rounded-pill ${i < filled ? 'bg-button' : 'bg-surface'}`} />,
+          ])}
+          {filled >= pieces && <span className={`${bubble} bg-button text-on-button`}>{marked}</span>}
+          <span className={`${bubble} bg-surface text-ink`}>{roundSize}</span>
+        </div>
       </div>
 
-      <div className="mt-stack grid gap-stack md:grid-cols-2 md:items-start">
+      <div className="mt-5 rounded-2xl border border-line bg-(--study-page) p-3 shadow-card sm:p-4">
         <figure>
-          <div className="relative">
+          <div className="relative overflow-hidden rounded-xl">
             <img
               src={set.image.src}
               alt={set.image.alt}
               width={set.image.width}
               height={set.image.height}
-              className="block h-auto w-full rounded-md"
+              loading="lazy"
+              decoding="async"
+              className="block h-auto w-full"
             />
             <ul aria-label="labels on the image">
               {ordered.map((label) => {
                 const number = numberOf.get(label.id)!;
                 const open = uncovered(label.id);
+                const isCurrent = current?.id === label.id;
                 return (
                   <li key={label.id}>
                     <button
                       type="button"
                       style={coverPlace(label)}
-                      onClick={() => doReveal(label)}
-                      // aria-disabled rather than disabled: an uncovered cover keeps keyboard focus.
-                      aria-disabled={open || undefined}
+                      onClick={() => pick(label)}
+                      aria-current={isCurrent || undefined}
                       aria-label={coverWords(number, label, open)}
                       data-testid={`cover-${number}`}
-                      // Uncovered: a dashed frame with a page-colored ring around it, so it shows on light and dark
-                      // diagrams alike, and the number moves outside the frame so it never hides the label.
-                      className={`absolute rounded-sm text-sm ${
+                      // Covered: a solid box. The current one: an open box with a question mark. Uncovered: a dashed
+                      // frame with a page-colored ring, so it shows on light and dark diagrams alike.
+                      className={`absolute flex items-center justify-center rounded-md text-sm font-bold ${
                         open
-                          ? 'border-2 border-dashed border-ink bg-transparent ring-2 ring-page'
-                          : 'flex items-center justify-center border border-control bg-surface font-medium text-ink'
+                          ? `border-2 border-dashed border-ink bg-transparent ring-2 ring-page ${isCurrent ? 'outline-2 outline-offset-2 outline-ink' : ''}`
+                          : isCurrent
+                            ? 'border-2 border-ink bg-page text-ink'
+                            : 'bg-button text-on-button'
                       }`}
                     >
-                      <span
-                        aria-hidden="true"
-                        className={
-                          open ? 'absolute -left-3 -top-3 rounded-pill bg-button px-1.5 text-on-button' : undefined
-                        }
-                      >
-                        {number}
-                      </span>
+                      <span aria-hidden="true">{!open && isCurrent ? '?' : ''}</span>
                     </button>
                   </li>
                 );
               })}
             </ul>
           </div>
-          <figcaption className="mt-2 text-sm text-ink-soft">{set.image.credit}</figcaption>
         </figure>
 
-        <section aria-labelledby="labelit-list-heading">
-          <h2 id="labelit-list-heading" className="text-sm text-ink-soft">
-            labels
-          </h2>
-          <ol className="mt-2 space-y-3" data-testid="labelit-list">
-            {ordered.map((label) => {
-              const number = numberOf.get(label.id)!;
-              const open = uncovered(label.id);
-              const current = markOf(state, label.id);
-              const knownBefore = state.known.includes(label.id);
-              return (
-                <li key={label.id} className="rounded-md border border-line px-4 py-3">
-                  <p className="flex flex-wrap items-center gap-x-2">
-                    <span>{open ? `${number}. ${label.text}` : `${number}. covered`}</span>
-                    {(knownBefore || current) && (
-                      <span className="flex items-center gap-1 text-sm text-ink-soft">
-                        {(knownBefore || current === 'know') && <TickIcon />}
-                        {knownBefore ? 'know it' : markWords[current!]}
-                      </span>
-                    )}
-                  </p>
-                  {!open && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3" data-testid="labelit-answer">
+          {current && !roundOver && (
+            <>
+              <p className="min-w-0 text-ink">
+                {currentOpen ? (
+                  <span className="text-lg font-bold" data-testid="labelit-word">{current.text}</span>
+                ) : (
+                  <span className="text-sm font-bold text-ink-soft">what is under the open box?</span>
+                )}
+              </p>
+              {!currentOpen ? (
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => markCurrent(current, 'learning')} aria-label={`still learning label ${currentNumber}`} className={secondaryButton}>
+                    still learning
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      focusKnow.current = current.id;
+                      pick(current);
+                    }}
+                    aria-label={`uncover label ${currentNumber}`}
+                    className={primaryButton}
+                  >
+                    reveal
+                  </button>
+                </div>
+              ) : inRound(current.id) ? (
+                <div className="flex flex-wrap gap-2" role="group" aria-label={`mark label ${currentNumber}`}>
+                  {(['learning', 'know'] as const).map((value) => (
                     <button
-                      type="button"
-                      onClick={() => {
-                        focusKnow.current = label.id;
-                        doReveal(label);
+                      key={value}
+                      ref={(element) => {
+                        if (value !== 'know') return;
+                        if (element) knowButtons.current.set(current.id, element);
+                        else knowButtons.current.delete(current.id);
                       }}
-                      aria-label={`uncover label ${number}`}
-                      className={`${secondaryButton} mt-2`}
+                      type="button"
+                      aria-pressed={currentMark === value}
+                      onClick={() => markCurrent(current, value)}
+                      className={`${value === 'know' ? primaryButton : secondaryButton} ${currentMark === value ? 'outline-2 outline-offset-2 outline-ink' : ''}`}
                     >
-                      uncover
+                      {currentMark === value && <TickIcon />}
+                      {markWords[value]}
                     </button>
-                  )}
-                  {open && inRound(label.id) && (
-                    <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label={`mark label ${number}`}>
-                      {(['know', 'learning'] as const).map((value) => (
-                        <button
-                          key={value}
-                          ref={(element) => {
-                            if (value !== 'know') return;
-                            if (element) knowButtons.current.set(label.id, element);
-                            else knowButtons.current.delete(label.id);
-                          }}
-                          type="button"
-                          aria-pressed={current === value}
-                          onClick={() => doMark(label, value)}
-                          className={`${secondaryButton} ${current === value ? 'border-ink bg-surface font-medium' : ''}`}
-                        >
-                          {markWords[value]}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </section>
+                  ))}
+                </div>
+              ) : (
+                <p className="flex items-center gap-1 text-sm text-ink-soft"><TickIcon />know it</p>
+              )}
+            </>
+          )}
+          {roundOver && (
+            <>
+              <p className="min-w-0 text-ink">{done ? "that's every label for now." : `${tally.learning} still learning.`}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={restart} className={done ? primaryButton : secondaryButton}>
+                  start over
+                </button>
+                {!done && (
+                  <button
+                    type="button"
+                    onClick={() => newRound(nextRound(state), `round ${state.roundNumber + 1}: ${tally.learning} covered again.`)}
+                    className={primaryButton}
+                  >
+                    study the {tally.learning} still learning
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-
-      <div className="mt-stack flex flex-wrap gap-3">
-        {!roundOver && (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                setState(revealAll(state));
-                setSaid('every label uncovered.');
-              }}
-              disabled={tally.covered === 0}
-              className={`${secondaryButton} disabled:opacity-50`}
-            >
-              reveal all
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const next = coverAll(state);
-                // A cover-all after marking must replace the old save, or those marks would reappear.
-                if (latestDraft.current) saveState(next);
-                else setState(next);
-                setSaid('every label covered again.');
-              }}
-              disabled={tally.covered === tally.total}
-              className={`${secondaryButton} disabled:opacity-50`}
-            >
-              cover all
-            </button>
-          </>
-        )}
-        {roundOver && !done && (
-          <button
-            type="button"
-            onClick={() => newRound(nextRound(state), `round ${state.roundNumber + 1}: ${tally.learning} covered again.`)}
-            className={primaryButton}
-          >
-            study the {tally.learning} still learning
-          </button>
-        )}
-        {roundOver && (
-          <button
-            type="button"
-            onClick={restart}
-            className={done ? primaryButton : secondaryButton}
-          >
-            start over
-          </button>
-        )}
-      </div>
-
-      {done && <p className="mt-stack text-lg">that's every label for now.</p>}
+      <p className="mt-2 text-sm text-ink-soft">{set.image.credit}</p>
 
       <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="labelit-live">
         {said}
@@ -489,13 +479,14 @@ export function LabelItStudio({ src }: { src: string }) {
         />
       )}
     <div hidden={editing}>
-      <div className="mb-stack flex flex-wrap items-center gap-3">
+      <LabelItBoard set={current} memoryOnly={own !== null} />
+      <div className="mt-1 flex flex-wrap items-center gap-x-4">
         <button
           type="button"
           ref={editButton}
           onClick={() => setEditing(true)}
           data-testid="label-it-edit"
-          className="press inline-flex min-h-(--tap-min) items-center justify-center rounded-pill border border-control px-5 py-2.5 text-ink"
+          className="inline-flex min-h-(--tap-min) items-center text-sm text-ink-soft underline"
         >
           edit the covers or use my own picture
         </button>
@@ -512,7 +503,6 @@ export function LabelItStudio({ src }: { src: string }) {
           </button>
         )}
       </div>
-      <LabelItBoard set={current} memoryOnly={own !== null} />
     </div>
     </>
   );
