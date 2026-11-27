@@ -25,6 +25,7 @@ This table includes every folder directly inside `content/` and every subfolder 
 | `content/games/triage/` | Older sorting-game sample files. | Not the current Sudoku game. Kept for older tests. | Labeled samples only. |
 | `content/gloves/` | The handwritten messages on the message-glove photos (`public/gloves/messages/`). | The glove-note pop-up, every 30 minutes of a visit (not on games) | Christian's own approved public text only. No private content. |
 | `content/label-it/` | Sample images and labels for identifying pictured parts. | `/learn/study-skills/label-it` | Labeled samples with an image credit. Real images need documented rights. |
+| `content/images/` | Licence records for outside illustrations (Servier Medical Art): each hosted file's title, source page, licence, download date and changes. | Credits under pictures and the credits page | Draft or approved public records. Titles, links and hashes only: no labels, answers or lesson text. |
 | `content/lessons/` | The text and order of each lesson. | `/learn` and `/learn/[lesson]` | Labeled samples or placeholders, or approved public lessons. Never unreleased drafts. |
 | `content/organizer/` | Sample activities for placing items into groups. | `/learn/[lesson]/organizer` | Labeled samples only. |
 | `content/questions/` | Sample question files used to test the study page. | `/learn/study-skills/questions` | Labeled samples only. Real question banks and keys stay private. |
