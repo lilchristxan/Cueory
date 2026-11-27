@@ -1405,3 +1405,18 @@
     display: none !important;
   }
 }
+
+/* The copper "join the launch list" bar sits at the middle of the screen's height in the desktop side panel
+   (Christian, 2026-11-27), whatever the height of the badge above it: the button's own centre is on the midline and its
+   one line of text hangs under it. On a short window it would run into the tagline, so there it keeps its place in the
+   flow, as it does on tablets and phones. */
+@media (width >= 64rem) and (height >= 44rem) {
+  .game-frame-sidebar .game-frame-account-bar {
+    position: absolute;
+    inset-inline: 0;
+    top: 50vh;
+    translate: 0 calc(var(--game-frame-btn-size) / -2);
+    padding-inline: calc(var(--spacing) * 6);
+    box-sizing: border-box;
+  }
+}

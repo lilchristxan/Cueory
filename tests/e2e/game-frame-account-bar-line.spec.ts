@@ -45,3 +45,23 @@ for (const scheme of ['light', 'dark'] as const) {
     expect(height).toBeLessThanOrEqual(oneLine + 1);
   });
 }
+
+// Christian, 2026-11-27: on every game page the copper bar's own centre sits on the middle of the screen's height in
+// the desktop side panel, and the tagline under the game's name is lower case.
+for (const path of ['/play/wordpill', '/play/pillo', '/play/piccline', '/play/crossword', '/play/sudoku', '/play/tachyyy', '/play/hello-cards']) {
+  test(`${path}: the copper bar is on the screen's midline and the tagline is lower case`, async ({ page }) => {
+    for (const height of [900, 1100]) {
+      await page.setViewportSize({ width: 1440, height });
+      await page.goto(path);
+      const link = page.getByTestId('game-frame-account-bar').getByRole('link');
+      await expect(link).toBeVisible();
+      const box = (await link.boundingBox())!;
+      expect(Math.abs(box.y + box.height / 2 - height / 2)).toBeLessThanOrEqual(1);
+      const tagline = page.locator('.game-frame-tagline');
+      const tag = (await tagline.boundingBox())!;
+      expect(tag.y + tag.height, 'the tagline ends above the copper bar').toBeLessThanOrEqual(box.y);
+      const text = (await tagline.textContent())!.trim();
+      expect(text).toBe(text.toLowerCase());
+    }
+  });
+}

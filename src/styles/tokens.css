@@ -125,7 +125,7 @@
   --game-frame-emblem-hi-size: 2.0625rem;/* 33px */
   --game-frame-wordmark-height: 3.75rem; /* 60px */
   --game-frame-title-size: 2.5rem;       /* 40px */
-  --game-frame-tagline-size: 1.5rem;     /* 24px */
+  --game-frame-tagline-size: 1.125rem;   /* 18px (Christian, 2026-11-27: smaller, and every tagline in lower case) */
   --game-frame-stat-value-size: 1.75rem; /* 28px */
   --game-frame-stat-label-size: 0.8125rem; /* 13px */
   --game-frame-dateline-size: 0.875rem;  /* 14px */
