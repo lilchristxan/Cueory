@@ -82,10 +82,67 @@ def letters(d, line, fill=GREEN, rim=WHITE):
     return f'<path d="{d}" fill="{fill}" stroke="{rim}" stroke-width="{line * 2}" stroke-linejoin="round" paint-order="stroke"/>'
 
 
+def cubic_point(c, t):
+    (x0, y0), (x1, y1), (x2, y2), (x3, y3) = c
+    u = 1 - t
+    return (u**3 * x0 + 3 * u * u * t * x1 + 3 * u * t * t * x2 + t**3 * x3, u**3 * y0 + 3 * u * u * t * y1 + 3 * u * t * t * y2 + t**3 * y3)
+
+
+def cubic_part(c, t0, t1):
+    """The piece of cubic `c` between t0 and t1, as its own four control points (de Casteljau)."""
+    def split(q, t):
+        ab, bc, cd = [tuple(a + (b - a) * t for a, b in zip(q[i], q[i + 1])) for i in range(3)]
+        abc, bcd = [tuple(a + (b - a) * t for a, b in zip(m, n)) for m, n in ((ab, bc), (bc, cd))]
+        mid = tuple(a + (b - a) * t for a, b in zip(abc, bcd))
+        return (q[0], ab, abc, mid), (mid, bcd, cd, q[3])
+    _, right = split(c, t0)
+    left, _ = split(right, (t1 - t0) / (1 - t0))
+    return left
+
+
+def descender_span(face, text, letter, size, centre_x, baseline, turn, about, curve):
+    """Where `letter`'s tail crosses `curve`, as the pair of t values just clear of it on each side."""
+    import math
+    from fontTools.pens.recordingPen import DecomposingRecordingPen
+    font, glyphs, cmap, upem = face
+    scale = size / upem
+    names = [cmap[ord(ch)] for ch in text]
+    x, left, right = 0.0, None, None
+    for n in names:
+        pen = BoundsPen(glyphs)
+        glyphs[n].draw(pen)
+        if pen.bounds:
+            lo, hi = x + pen.bounds[0] * scale, x + pen.bounds[2] * scale
+            left = lo if left is None else min(left, lo)
+            right = hi if right is None else max(right, hi)
+        x += font["hmtx"][n][0] * scale
+    x = centre_x - (left + right) / 2
+    for n, ch in zip(names, text):
+        if ch == letter:
+            break
+        x += font["hmtx"][n][0] * scale
+    rec = DecomposingRecordingPen(glyphs)
+    glyphs[cmap[ord(letter)]].draw(rec)
+    cos, sin = math.cos(math.radians(turn)), math.sin(math.radians(turn))
+    hits = []
+    for _, points in rec.value:
+        for px, py in points:
+            gx, gy = x + px * scale - about[0], baseline - py * scale - about[1]
+            hits.append((about[0] + gx * cos - gy * sin, about[1] + gx * sin + gy * cos))
+    steps = [i / 400 for i in range(401)]
+    near = [t for t in steps if any(abs(cubic_point(curve, t)[0] - hx) < 3 and hy > cubic_point(curve, t)[1] - 6 for hx, hy in hits)]
+    return (min(near), max(near)) if near else None
+
+
 def wordmark(face, fill, rim):
-    # The name climbs to the right at a slight incline over a hand-drawn underline (Christian, 2026-11-27).
+    # The name climbs to the right at a slight incline over a hand-drawn underline (Christian, 2026-11-27). The
+    # underline breaks where the tail of the p comes down, so the two never cross.
     word = text_path(face, "wordpill", 70, 150, 60)
-    swash = "M38 87 C 104 76, 196 73, 264 78"
+    curve = ((38, 87), (104, 76), (196, 73), (264, 78))
+    span = descender_span(face, "wordpill", "p", 70, 150, 60, -4, (150, 50), curve)
+    pieces = [curve] if span is None else [cubic_part(curve, 0.0001, max(span[0] - 0.02, 0.001)), cubic_part(curve, min(span[1] + 0.02, 0.998), 0.9999)]
+    num = lambda v: f"{v:.2f}".rstrip("0").rstrip(".")
+    swash = " ".join(f"M{num(c[0][0])} {num(c[0][1])} C {num(c[1][0])} {num(c[1][1])}, {num(c[2][0])} {num(c[2][1])}, {num(c[3][0])} {num(c[3][1])}" for c in pieces)
     line = (
         f'<path d="{swash}" fill="none" stroke="{rim}" stroke-width="6" stroke-linecap="round"/>'
         f'<path d="{swash}" fill="none" stroke="{fill}" stroke-width="3" stroke-linecap="round"/>'
