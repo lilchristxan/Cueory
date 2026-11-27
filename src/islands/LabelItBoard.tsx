@@ -1,3 +1,4 @@
+import LabelEditor from './LabelEditor';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { attachResumeLifecycle, clearResume, readResume, saveResume, type ResumeDraft, type ResumeSnapshot } from '../scripts/resume';
 import { browserStorage } from '../scripts/storage';
@@ -425,4 +426,87 @@ export function LabelItFromUrl({ src }: { src: string }) {
   if (loaded === 'failed') return <p role="alert">this diagram could not be loaded. please try again later.</p>;
   if (!loaded || loaded.src !== src) return <p className="text-sm text-ink-soft">loading the diagram…</p>;
   return <LabelItBoard set={loaded.set} />;
+}
+
+/**
+ * Label it with its editor (Christian, 2026-11-26: "make it editable for users"): the page's own set loads as before,
+ * and "edit the covers" opens LabelEditor, where the student can move, add, rename and delete covers or use a picture of
+ * their own. The edited set replaces the page's set until the student leaves; nothing is saved or uploaded.
+ */
+export function LabelItStudio({ src }: { src: string }) {
+  const [original, setOriginal] = useState<LabelSet | 'failed' | undefined>(undefined);
+  const [own, setOwn] = useState<LabelSet | null>(null);
+  const [editing, setEditing] = useState(false);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const wasEditing = useRef(false);
+  // Leaving the editor (or going back to the drawing) puts the keyboard focus on the edit button, never on the page body.
+  useEffect(() => {
+    if (wasEditing.current && !editing) editButton.current?.focus();
+    wasEditing.current = editing;
+  }, [editing]);
+
+  useEffect(() => {
+    if (!isOwnPath(src)) {
+      setOriginal('failed');
+      return;
+    }
+    let cancelled = false;
+    fetch(src, { credentials: 'same-origin' })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+      .then((data: unknown) => {
+        if (!cancelled) setOriginal(parseSet(data));
+      })
+      .catch(() => {
+        if (!cancelled) setOriginal('failed');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [src]);
+
+  if (original === 'failed') return <p role="alert">this diagram could not be loaded. please try again later.</p>;
+  if (!original) return <p className="text-sm text-ink-soft">loading the diagram…</p>;
+  const current = own ?? original;
+
+  if (editing) {
+    return (
+      <LabelEditor
+        set={current}
+        original={original}
+        onDone={(next) => {
+          setOwn(next === original ? null : next);
+          setEditing(false);
+        }}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
+  return (
+    <div>
+      <div className="mb-stack flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          ref={editButton}
+          onClick={() => setEditing(true)}
+          data-testid="label-it-edit"
+          className="press inline-flex min-h-(--tap-min) items-center justify-center rounded-pill border border-control px-5 py-2.5 text-ink"
+        >
+          edit the covers or use my own picture
+        </button>
+        {own && (
+          <button
+            type="button"
+            onClick={() => {
+              setOwn(null);
+              editButton.current?.focus();
+            }}
+            className="inline-flex min-h-(--tap-min) items-center text-sm text-ink-soft underline"
+          >
+            back to cueory's drawing
+          </button>
+        )}
+      </div>
+      <LabelItBoard set={current} />
+    </div>
+  );
 }

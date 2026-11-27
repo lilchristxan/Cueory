@@ -4,13 +4,13 @@ import LessonComingSoon from '../../../components/LessonComingSoon.astro';
 import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
-import { LabelItFromUrl } from '../../../islands/LabelItBoard';
+import { LabelItStudio } from '../../../islands/LabelItBoard';
 const hold = await lessonIsHeldBack('study-skills-01');
 ---
 
 {hold ? <LessonComingSoon /> : (
 <Layout title="label it: lesson 1" description="uncover a diagram's labels for lesson 1 of how to study for nursing school." variant="study">
-  <div class="mx-auto max-w-prose pt-8">
+  <div class="mx-auto max-w-3xl pt-8">
     <p class="text-sm text-ink-soft">how to study for nursing school · lesson 1</p>
     <div class="mt-2 flex flex-wrap items-center gap-x-1">
       <h1 class="text-2xl">label it</h1>
@@ -26,7 +26,7 @@ const hold = await lessonIsHeldBack('study-skills-01');
 
     <div class="mt-10">
       {/* client:only, and only the file's address as a prop: the labels load after the page, never in its HTML. */}
-      <LabelItFromUrl client:only="react" src="/learn/study-skills/label-it/study-skills-01.json" />
+      <LabelItStudio client:only="react" src="/learn/study-skills/label-it/study-skills-01.json" />
       <noscript>
         <p>label it needs JavaScript. you can still read the lesson on the <a href="/learn/study-skills">lesson page</a>.</p>
       </noscript>
