@@ -50,7 +50,7 @@ for (const scheme of ['light', 'dark'] as const) {
 // the desktop side panel, and the tagline under the game's name is lower case.
 for (const path of ['/play/wordpill', '/play/pillo', '/play/piccline', '/play/crossword', '/play/sudoku', '/play/tachyyy', '/play/hello-cards']) {
   test(`${path}: the copper bar is on the screen's midline and the tagline is lower case`, async ({ page }) => {
-    for (const height of [900, 1100]) {
+    for (const height of [800, 900, 1100]) {
       await page.setViewportSize({ width: 1440, height });
       await page.goto(path);
       const link = page.getByTestId('game-frame-account-bar').getByRole('link');
@@ -65,3 +65,16 @@ for (const path of ['/play/wordpill', '/play/pillo', '/play/piccline', '/play/cr
     }
   });
 }
+
+// On a desktop window too short for the bar to clear the tagline it stays in the flow, under the tagline.
+test('on a short desktop window the copper bar stays under the tagline', async ({ page }) => {
+  for (const height of [704, 760, 799]) {
+    await page.setViewportSize({ width: 1440, height });
+    await page.goto('/play/wordpill');
+    const link = page.getByTestId('game-frame-account-bar').getByRole('link');
+    await expect(link).toBeVisible();
+    const box = (await link.boundingBox())!;
+    const tag = (await page.locator('.game-frame-tagline').boundingBox())!;
+    expect(tag.y + tag.height).toBeLessThanOrEqual(box.y);
+  }
+});
