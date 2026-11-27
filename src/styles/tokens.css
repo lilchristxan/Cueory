@@ -1913,3 +1913,15 @@
   --color-model-alt: var(--lab-model-alt);
   --color-model-selected: var(--lab-model-selected);
 }
+
+/* The game side panel's copper bar on the screen's midline (Christian, 2026-11-27). Only on a desktop window at least
+   50rem (800 px) tall: the badge above the bar ends near 343 px, and on a shorter window the bar (which starts 22 px
+   above the midline) would run into the tagline, so there it stays in the flow. */
+@media (width >= 64rem) and (height >= 50rem) {
+  :root {
+    --game-frame-account-position: absolute;
+    --game-frame-account-top: 50vh;
+    --game-frame-account-shift: calc(var(--game-frame-btn-size) / -2);
+    --game-frame-account-pad: calc(var(--spacing) * 6);
+  }
+}

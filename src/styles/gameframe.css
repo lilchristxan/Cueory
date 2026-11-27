@@ -1433,3 +1433,26 @@
 :root[data-theme="dark"] .game-frame[data-game-look="wordpill"] .game-frame-sidebar {
   background-color: var(--game-frame-sidebar-bg);
 }
+
+/* The copper "join the launch list" bar sits at the middle of the screen's height in the desktop side panel
+   (Christian, 2026-11-27), whatever the height of the badge above it: the button's own centre is on the midline and its
+   one line of text hangs under it. tokens.css switches these values on only for a desktop window tall enough for the bar
+   to clear the tagline; everywhere else the fallbacks keep the bar in the flow, as on tablets and phones. */
+.game-frame-sidebar .game-frame-account-bar {
+  position: var(--game-frame-account-position, static);
+  inset-inline: 0;
+  top: var(--game-frame-account-top, auto);
+  translate: 0 var(--game-frame-account-shift, 0);
+  padding-inline: var(--game-frame-account-pad, 0);
+  box-sizing: border-box;
+}
+
+/* Phone portrait (Christian, 2026-11-27): the round buttons (gear, printer, "?") sit in the middle of the screen's
+   width, not at its right edge. A game with its own control on that row (the sudoku difficulty menu) keeps them on the
+   right, because the menu takes the left of the row. */
+@media (width < 30rem) {
+  .game-frame-main:not(:has(.game-frame-controls-middle:not(:empty))) .game-frame-corner {
+    inset-inline-end: 50%;
+    translate: 50% 0;
+  }
+}
