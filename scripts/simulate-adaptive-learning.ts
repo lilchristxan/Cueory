@@ -6,6 +6,7 @@ import {
 import { reviewDue } from '../src/islands/adaptive-learning/scheduler';
 import { selectPractice, SESSION_LIMIT, type PracticeItem } from '../src/islands/adaptive-learning/selector';
 import { nextReview, type Review } from '../src/islands/review';
+import { syntheticRecallOn } from './adaptive-simulation-recall';
 
 const STUDENTS = 2_000;
 const DAYS = 45;
@@ -41,10 +42,6 @@ function clock(day: number) {
   return { day: calendarDay(calendar), now: (calendar + 0.5) * DAY_MS };
 }
 
-function recallOn(card: SyntheticCard, day: number): number {
-  return card.lastDay === undefined ? 0.55 : 2 ** (-(day - card.lastDay) / card.trueHalfLife);
-}
-
 function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Totals): void {
   const initialStrength = 1.75 + 4.5 * draw(student, -1, 0);
   const deck: SyntheticCard[] = Array.from({ length: CARDS }, (_, index) => ({
@@ -76,7 +73,7 @@ function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Tota
       const index = Number(next.id);
       const card = deck[index]!;
       const delay = day - (card.lastDay ?? day);
-      const correct = draw(student, day, index) < recallOn(card, day);
+      const correct = draw(student, day, index) < syntheticRecallOn(card, day);
       card.memory = recordAnswer(card.memory, correct, today);
       card.history.push({ day: today.day, result: correct ? 'knew' : 'missed' });
       evidence.set(card.item.concept, recordConceptAnswer(evidence.get(card.item.concept), correct, today));
@@ -93,7 +90,7 @@ function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Tota
       dayMastered = day + 1;
     }
   }
-  for (const card of deck) totals.probeRecall += recallOn(card, FOLLOW_UP_DAY);
+  for (const card of deck) totals.probeRecall += syntheticRecallOn(card, FOLLOW_UP_DAY);
   if (dayMastered !== undefined) {
     totals.masteryDays += dayMastered;
     totals.mastered++;
