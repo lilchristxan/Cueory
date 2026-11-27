@@ -18,4 +18,19 @@ describe('anatomy island data', () => {
     expect(encoded.systemId).toBe(fixture.key);
     expect(decodeAnatomySystem(JSON.parse(JSON.stringify(encoded)))).toEqual(fixture);
   });
+
+  it('preserves model metadata and the absent fixture flag on a regular system', () => {
+    const system: AnatomySystem = {
+      key: 'example',
+      title: 'example shapes',
+      status: 'approved',
+      hierarchyTree: 'partof',
+      model: { file: '/example.glb', release: 'sample', layerFiles: { skin: ['/layer.glb'] } },
+      structures: [{ id: 'example', text: 'example shape', parents: ['group'] }],
+    };
+
+    const restored = decodeAnatomySystem(encodeAnatomySystem(system));
+    expect(restored).toEqual(system);
+    expect(restored).not.toHaveProperty('fixture');
+  });
 });
