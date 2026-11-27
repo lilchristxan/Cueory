@@ -1134,6 +1134,7 @@
   --picc-sticker-ring-bead: 3px;        /* the same inside a 54 px bead */
   --picc-sticker-ring-bead-gap: 5px;
   --vialo-sticker-ring-scale: 2;        /* the board's "elsewhere" ring, scaled up to the sticker's bigger pills */
+  --vialo-sticker-ring-color: rgb(255 255 255 / 0.6); /* the light ring inside the sticker's "elsewhere" pill: the sticker keeps its own ring (its pills are still oxblood), whatever the live board uses */
   --vialo-sticker-pill-gloss: rgba(249, 245, 239, 0.9);
   --vialo-sticker-here-light: rgb(63, 138, 104);
   --vialo-sticker-here-mid: rgb(14, 90, 61);

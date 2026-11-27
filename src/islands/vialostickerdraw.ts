@@ -58,7 +58,7 @@ export function readStickerPalette(root: Element = document.documentElement): St
     pillLift: get('--vialo-sticker-pill-lift'),
     pillGloss: get('--vialo-sticker-pill-gloss'),
     ring: {
-      color: get('--vialo-pill-ring-color'),
+      color: get('--vialo-sticker-ring-color'),
       width: (Number.parseFloat(get('--vialo-pill-ring')) || 0) * (Number.parseFloat(get('--vialo-sticker-ring-scale')) || 1),
       gap: (Number.parseFloat(get('--vialo-pill-ring-gap')) || 0) * (Number.parseFloat(get('--vialo-sticker-ring-scale')) || 1),
     },
