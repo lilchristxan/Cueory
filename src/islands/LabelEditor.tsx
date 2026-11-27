@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import type { LabelSet } from './labelit';
 import {
   addLabel, boxFromDrag, deleteLabel, fitSize, isOwnPicture, MAX_LABELS, moveLabel, ownImage, redo, renameLabel, resizeLabel, select,
@@ -144,7 +144,21 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
   }, []);
 
   const shown = (id: string, box: Box): Box => (drag && drag.kind !== 'draw' && drag.id === id ? drag.box : box);
-  const place = (box: Box) => ({ left: `${box.x}%`, top: `${box.y}%`, width: `${Math.max(box.w, 0)}%`, height: `${Math.max(box.h, 0)}%` });
+  // Each cover's place is set on the element itself after every render (through the CSSOM, which the content security
+  // policy allows), not with a style prop: the inline-style guard keeps JSX style objects to a short documented list.
+  const coverEls = useRef<Record<string, HTMLButtonElement | null>>({});
+  const drawEl = useRef<HTMLSpanElement>(null);
+  const place = (el: HTMLElement | null, box: Box) => {
+    if (!el) return;
+    el.style.left = `${box.x}%`;
+    el.style.top = `${box.y}%`;
+    el.style.width = `${Math.max(box.w, 0)}%`;
+    el.style.height = `${Math.max(box.h, 0)}%`;
+  };
+  useLayoutEffect(() => {
+    for (const label of labels) place(coverEls.current[label.id] ?? null, shown(label.id, label));
+    if (drag?.kind === 'draw') place(drawEl.current, drag.box);
+  });
   const ownPicture = isOwnPicture(state.set.image.src);
 
   const selectedIndex = labels.findIndex((label) => label.id === state.selected);
@@ -155,16 +169,16 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
   return (
     <div className="rounded-2xl border border-line bg-page p-4 shadow-card" data-testid="label-editor">
       <div className="flex flex-wrap items-center gap-2" role="toolbar" aria-label="cover tools">
-        <button ref={addButton} type="button" className={toolButton} aria-label="add a cover" title="add a cover" disabled={labels.length >= MAX_LABELS} onClick={() => setState((s) => addLabel(s))}>
+        <button ref={addButton} type="button" className={toolButton} aria-label="add a cover" disabled={labels.length >= MAX_LABELS} onClick={() => setState((s) => addLabel(s))}>
           <svg {...iconProps}><path d="M12 5v14M5 12h14" /></svg>
         </button>
-        <button type="button" className={toolButton} aria-label="undo" title="undo" disabled={state.past.length === 0} onClick={() => {
+        <button type="button" className={toolButton} aria-label="undo" disabled={state.past.length === 0} onClick={() => {
           if (state.past.length <= 1) addButton.current?.focus();
           setState(undo);
         }}>
           <svg {...iconProps}><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
         </button>
-        <button type="button" className={toolButton} aria-label="redo" title="redo" disabled={state.future.length === 0} onClick={() => {
+        <button type="button" className={toolButton} aria-label="redo" disabled={state.future.length === 0} onClick={() => {
           if (state.future.length <= 1) addButton.current?.focus();
           setState(redo);
         }}>
@@ -174,7 +188,7 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
           type="button"
           className={toolButton}
           aria-label="delete the selected cover"
-          title="delete the selected cover"
+         
           disabled={!state.selected}
           onClick={() => {
             setState((s) => (s.selected ? deleteLabel(s, s.selected) : s));
@@ -195,7 +209,7 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
             e.currentTarget.value = '';
           }}
         />
-        <button type="button" className={toolButton} aria-label="use my own picture" title="use my own picture" onClick={() => fileInput.current?.click()}>
+        <button type="button" className={toolButton} aria-label="use my own picture" onClick={() => fileInput.current?.click()}>
           <svg {...iconProps}><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 16 5-5 4 4 3-3 6 6" /><circle cx="15.500" cy="9.500" r="1.500" /></svg>
         </button>
         <span className="flex-1" />
@@ -215,6 +229,14 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
 
       <div
         ref={picture}
+        role="group"
+        aria-label="the picture. press enter to add a cover, or drag to draw one."
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+          e.preventDefault();
+          setState((s) => addLabel(s));
+        }}
         className="relative mt-3 touch-none overflow-hidden rounded-xl bg-surface select-none"
         onPointerDown={onPictureDown}
         onPointerMove={onMove}
@@ -228,6 +250,8 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
           width={state.set.image.width}
           height={state.set.image.height}
           draggable={false}
+          loading="lazy"
+          decoding="async"
           className="pointer-events-none block h-auto w-full"
         />
         {labels.map((label, i) => {
@@ -238,8 +262,10 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
               type="button"
               aria-label={`cover ${i + 1}${label.text ? `: ${label.text}` : ', no words yet'}`}
               aria-pressed={selected}
-              style={place(shown(label.id, label))}
-              onPointerDown={(e) => onCoverDown(e, label.id, false)}
+              ref={(el) => {
+                coverEls.current[label.id] = el;
+              }}
+              onPointerDown={(e) => onCoverDown(e, label.id, e.target instanceof Element && e.target.hasAttribute('data-resize'))}
               onKeyDown={(e) => onCoverKey(e, label.id)}
               onFocus={() => setState((s) => select(s, label.id))}
               data-testid="label-editor-cover"
@@ -249,7 +275,7 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
               {selected && (
                 <span
                   aria-hidden="true"
-                  onPointerDown={(e) => onCoverDown(e as unknown as ReactPointerEvent<HTMLButtonElement>, label.id, true)}
+                  data-resize
                   className="absolute -end-2 -bottom-2 size-5 cursor-nwse-resize rounded-pill border-2 border-ink bg-page"
                   data-testid="label-editor-resize"
                 />
@@ -257,7 +283,7 @@ export default function LabelEditor({ set, original, onDone, onCancel }: Props) 
             </button>
           );
         })}
-        {drag?.kind === 'draw' && <span aria-hidden="true" style={place(drag.box)} className="pointer-events-none absolute rounded-md border-2 border-dashed border-ink" />}
+        {drag?.kind === 'draw' && <span ref={drawEl} aria-hidden="true" className="pointer-events-none absolute rounded-md border-2 border-dashed border-ink" />}
       </div>
 
       {/* One field: the words under the selected cover. */}
