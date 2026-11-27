@@ -956,7 +956,7 @@
   .game-frame-main:has(.game-frame-board.is-wide, .game-frame-board.is-showcase) {
     --game-frame-wide-board: var(--game-frame-max-board-showcase);
     --game-frame-main-pl: calc(var(--spacing) * 6);
-    --game-frame-main-pr: calc(var(--spacing) * 6 + clamp(0px, 100vw - var(--game-frame-sidebar-width) - var(--game-frame-wide-board) - var(--spacing) * 16, var(--game-deck-reach)));
+    --game-frame-main-pr: calc(var(--spacing) * 6 + clamp(var(--game-deck-reserve-start), 100vw - var(--game-frame-sidebar-width) - var(--game-frame-wide-board) - var(--spacing) * 16, var(--game-deck-reach)));
   }
   .game-frame-main:has(.game-frame-board.is-wide) {
     --game-frame-wide-board: var(--game-frame-max-board-wide);
