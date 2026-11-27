@@ -1,7 +1,8 @@
-import { expect, test, type Page, type Request } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { markGameRulesSeen } from './clock';
+import { trackDocumentRequests } from './document-requests';
 
 test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
 
@@ -26,19 +27,7 @@ function builtPages(folder = dist): string[] {
 
 const pages = [...new Set(builtPages())].sort();
 
-/** Requests the page has started and not yet finished or failed (with their start time), and the last network event. */
-type OpenRequests = { open: Map<Request, number>; lastActivity: number };
-
-function trackOpenRequests(page: Page): OpenRequests {
-  const tracker: OpenRequests = { open: new Map(), lastActivity: Date.now() };
-  const settle = (request: Request) => { tracker.open.delete(request); tracker.lastActivity = Date.now(); };
-  page.on('request', (request) => { tracker.open.set(request, Date.now()); tracker.lastActivity = Date.now(); });
-  page.on('requestfinished', settle);
-  page.on('requestfailed', settle);
-  return tracker;
-}
-
-async function waitForIslands(page: Page, route: string, network: OpenRequests): Promise<void> {
+async function waitForIslands(page: Page, route: string, network: ReturnType<typeof trackDocumentRequests>): Promise<void> {
   await page.waitForFunction(() => document.querySelectorAll('astro-island[ssr]').length === 0, undefined, {
     timeout: 10_000,
   }).catch(() => {
@@ -113,7 +102,7 @@ test.describe('Task 222: reduced motion route sweep', () => {
       await page.addInitScript(() => {
         try { localStorage.setItem('cueory-promo-seen', String(Date.now())); localStorage.setItem('cueory-signup-popup-seen', String(Date.now())); } catch { /* storage unavailable */ }
       });
-      const network = trackOpenRequests(page);
+      const network = trackDocumentRequests(page);
       await page.goto(route);
       await waitForIslands(page, route, network);
       await expect.poll(() => motionFindings(page), { timeout: 2_000 }).toEqual([]);
