@@ -68,6 +68,7 @@ const publicFiles: Record<string, PublicFile> = {
   'questions/study-skills-01.json': { kind: 'sample', sha256: 'cdb586ab4efc4fc1ef2b6e69f2c3e92b09e7f8aad797c3ae6361260d2f7618d0' },
   // Lane 5 sheet templates: made-up everyday sample rows (the crossword and word path rows reuse public samples).
   'samples/templates/crossword.csv': { kind: 'sample', sha256: '21800bb12de51474d1470bcdf0782f4462cc5e57028400ba38a4908f3a3f78a3' },
+  'samples/templates/lesson-board.json': { kind: 'sample', sha256: 'a14c936fc5523e201a68b82c3d9e66c92c20244023dcfb3aa4d60a815bd21818' },
   'samples/templates/pillo.csv': { kind: 'sample', sha256: '9dc222f7565cab3fe61db7e2641e246d2aed26d4d10b3b215c9058b9b436d832' },
   'samples/templates/word-path.csv': { kind: 'sample', sha256: '96223e4c791d5267b85a4d24820d83bd39eb8393aa573299d484c40c6d5055d8' },
   'videos/study-skills-01.json': { kind: 'empty-video-placeholder', sha256: '81ea27e6b2ef303ee616d2f5a59ed78a71bc8b09c9b93599628bc659ee2a4893' },
