@@ -1,0 +1,93 @@
+{
+  "id": "servier-respiratory",
+  "status": "draft",
+  "source": "Servier Medical Art",
+  "sourceUrl": "https://smart.servier.com/",
+  "licence": "CC BY 4.0",
+  "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "credit": "Image provided by Servier Medical Art (https://smart.servier.com/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).",
+  "creditAdapted": "Image adapted from Servier Medical Art (https://smart.servier.com/), licensed under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/).",
+  "folder": "/images/servier/respiratory/",
+  "files": [
+    {
+      "file": "nasal-cavity.png",
+      "title": "Nasal cavity",
+      "sourcePage": "https://smart.servier.com/smart_image/nasal-cavity/",
+      "downloadUrl": "https://smart.servier.com/wp-content/uploads/2016/10/Cavite_nasale.png",
+      "downloadDate": "2026-11-26",
+      "bytes": 178346,
+      "sha256": "c191959a7892b3ce29112ff419c1fe22ea28bbc71d1f9fd7a905d38c25a93df7",
+      "changes": "none"
+    },
+    {
+      "file": "larynx-front-view.png",
+      "title": "Larynx front view",
+      "sourcePage": "https://smart.servier.com/smart_image/larynx-front-view/",
+      "downloadUrl": "https://smart.servier.com/wp-content/uploads/2016/10/Larynx.png",
+      "downloadDate": "2026-11-26",
+      "bytes": 156064,
+      "sha256": "96cfd1ee1c7cc80dadc1e06a33e7eece3275fb6c277b0553ace26a7a8d0ef27a",
+      "changes": "none"
+    },
+    {
+      "file": "trachea-and-bronchi.png",
+      "title": "Trachea and bronchi",
+      "sourcePage": "https://smart.servier.com/smart_image/lungs/",
+      "downloadUrl": "https://smart.servier.com/wp-content/uploads/2016/10/poumon_01.png",
+      "downloadDate": "2026-11-26",
+      "bytes": 109177,
+      "sha256": "c168caf58aa2028d49eb2e0f6b51c630aa2b8a5bde2861b5c4e0543d3e28149c",
+      "changes": "none"
+    },
+    {
+      "file": "lungs.png",
+      "title": "Lungs",
+      "sourcePage": "https://smart.servier.com/smart_image/lungs-11/",
+      "downloadUrl": "https://smart.servier.com/wp-content/uploads/2016/10/poumons_01.png",
+      "downloadDate": "2026-11-26",
+      "bytes": 56621,
+      "sha256": "f990937abb5d6b53103ff708842e607b0b1e5ced599a07dcd2b2a6b42136f2c6",
+      "changes": "none"
+    },
+    {
+      "file": "intrapulmonary-airways-1.png",
+      "title": "Intrapulmonary airways",
+      "sourcePage": "https://smart.servier.com/smart_image/intrapulmonary-airways/",
+      "downloadUrl": "https://smart.servier.com/wp-content/uploads/2016/10/poumon_07.png",
+      "downloadDate": "2026-11-26",
+      "bytes": 126917,
+      "sha256": "902308c5e88cc2bd05700bbbd5fd3abeacfe023261c7316ea0e90c2546317416",
+      "changes": "none"
+    },
+    {
+      "file": "intrapulmonary-airways-2.png",
+      "title": "Intrapulmonary airways",
+      "sourcePage": "https://smart.servier.com/smart_image/intrapulmonary-airways-lungs/",
+      "downloadUrl": "https://smart.servier.com/wp-content/uploads/2016/10/poumon_10.png",
+      "downloadDate": "2026-11-26",
+      "bytes": 146140,
+      "sha256": "f762d720cbd0b2762419d5bdf8deef99b644d22399d9a4c512a7401ef5a47c07",
+      "changes": "none"
+    },
+    {
+      "file": "gas-exchanges.png",
+      "title": "Gas exchanges",
+      "sourcePage": "https://smart.servier.com/smart_image/pulmonary-circulation-ov/",
+      "downloadUrl": "https://smart.servier.com/wp-content/uploads/2016/10/echanges_pulmonary_circulation.png",
+      "downloadDate": "2026-11-26",
+      "bytes": 154798,
+      "sha256": "e4f376ca9b62054f0470b87a64cfeec2d689b05a644e6a346d4e3c3b5790957b",
+      "changes": "none"
+    },
+    {
+      "file": "conducting-zone.png",
+      "title": "Conducting Zone",
+      "sourcePage": "https://smart.servier.com/smart_image/conducting-zone/",
+      "downloadUrl": "https://smart.servier.com/wp-content/uploads/2024/01/Conducting-Zone.png",
+      "downloadDate": "2026-11-26",
+      "bytes": 49628,
+      "sha256": "1d7fdc14543bb88632c814bdae4a643e9bacd4be06adce53d983bd734c14a519",
+      "changes": "none"
+    }
+  ]
+}

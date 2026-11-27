@@ -1,0 +1,1 @@
+status: the first Servier Medical Art set (respiratory, eight unchanged originals) is self-hosted with a per-file record and a test that ties every file to its record; not shown on any page yet. needs christian: approve one new entry in the JavaScript budget table for a /credits page, and supply reviewed label names for the respiratory pictures.
