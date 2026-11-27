@@ -473,21 +473,21 @@ export function LabelItStudio({ src }: { src: string }) {
   if (!original) return <p className="text-sm text-ink-soft">loading the diagram…</p>;
   const current = own ?? original;
 
-  if (editing) {
-    return (
-      <LabelEditor
-        set={current}
-        original={original}
-        onDone={(next) => {
-          setOwn(next === original ? null : next);
-          setEditing(false);
-        }}
-        onCancel={() => setEditing(false)}
-      />
-    );
-  }
+  // The study board stays mounted (hidden) while the editor is open, so cancelling returns to the same marks and round.
   return (
-    <div>
+    <>
+      {editing && (
+        <LabelEditor
+          set={current}
+          original={original}
+          onDone={(next) => {
+            setOwn(next === original ? null : next);
+            setEditing(false);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      )}
+    <div hidden={editing}>
       <div className="mb-stack flex flex-wrap items-center gap-3">
         <button
           type="button"
@@ -513,5 +513,6 @@ export function LabelItStudio({ src }: { src: string }) {
       </div>
       <LabelItBoard set={current} memoryOnly={own !== null} />
     </div>
+    </>
   );
 }
