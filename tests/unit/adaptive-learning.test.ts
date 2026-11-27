@@ -90,6 +90,17 @@ describe('adaptive selection', () => {
     expect(choose([items[4]])).toBeUndefined();
   });
 
+  it('offers an unseen concept before more cards from a strong concept', () => {
+    const strong = { right: 9, wrong: 0, lastCorrect: true, lastDay: clock(0).day };
+    const session = { selections: 0, evidence: new Map([['a', strong]]), preferredLevels };
+    const sameConcept = { id: 'more', concept: 'a', level: 2 } as const;
+    const unseen = { id: 'unseen', concept: 'b', level: 3 } as const;
+    expect(selectPractice([sameConcept, unseen], session, clock(1), () => 0))
+      .toEqual({ id: 'unseen', reason: 'new material' });
+    expect(selectPractice([sameConcept], session, clock(1), () => 0))
+      .toEqual({ id: 'more', reason: 'new material' });
+  });
+
   it('terminates across many deck sizes and excludes the last item even in a one-card deck', () => {
     for (let size = 0; size < 60; size++) {
       const deck = Array.from({ length: size }, (_, index) => ({ ...items[0], id: String(index) }));

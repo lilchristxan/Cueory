@@ -1,5 +1,5 @@
 import { dayNumber, type StudyClock } from './calendar';
-import type { ConceptEvidence } from './memory';
+import { RECALL_TARGET, type ConceptEvidence } from './memory';
 
 export const SESSION_LIMIT = 20;
 
@@ -49,12 +49,14 @@ export function selectPractice(
     const evidence = session.evidence.get(item.concept);
     // A prior of one right and one wrong keeps small samples from ranking as certainties.
     const success = evidence && (evidence.right + 1) / (evidence.right + evidence.wrong + 2);
+    const weak = success !== undefined && success < RECALL_TARGET;
     const preferred = session.preferredLevels.get(item.concept) ?? 2;
-    const reason = due !== undefined ? 'due review' : evidence ? 'weak concept' : 'new material';
+    const reason = due !== undefined ? 'due review' : weak ? 'weak concept' : 'new material';
     const rank = [
-      due !== undefined ? 0 : evidence ? 1 : 2,
-      due ?? success ?? 0,
-      evidence?.lastCorrect === false ? -dayNumber(evidence.lastDay) : 0,
+      due !== undefined ? 0 : weak ? 1 : 2,
+      // Introduce an unseen concept before adding more cards to an already strong one.
+      due ?? (weak ? success : Number(evidence !== undefined)),
+      (due !== undefined || weak) && evidence?.lastCorrect === false ? -dayNumber(evidence.lastDay) : 0,
       Math.abs(item.level - preferred),
       item.level,
       Number(item.tried === true),
