@@ -394,7 +394,8 @@ export default function LabelItBoard({ set, memoryOnly = false }: Props) {
   } catch {
     return <p role="alert">this diagram could not be loaded. please try again later.</p>;
   }
-  return <Board key={setKey(parsed)} set={parsed} memoryOnly={memoryOnly} />;
+  // The key includes the persistence mode: switching to a memory-only set always starts a fresh board.
+  return <Board key={`${memoryOnly ? 'memory' : 'saved'}:${setKey(parsed)}`} set={parsed} memoryOnly={memoryOnly} />;
 }
 
 /** Only our own site's paths, so a page can't point the board at another site. */
