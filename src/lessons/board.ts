@@ -77,8 +77,10 @@ export function boardProblems(raw: unknown): string[] {
       if (!isRecord(label) || !isText(label.id) || !isText(label.text)) { problems.push(`${where}: a label on "${picture.id}" needs an id and its word`); continue; }
       if (labelIds.has(label.id)) problems.push(`${where}: label "${label.id}" appears twice`);
       labelIds.add(label.id);
-      if (![label.x, label.y, label.w, label.h].every(inRange) || (label.x as number) + (label.w as number) > 100 || (label.y as number) + (label.h as number) > 100) {
-        problems.push(`${where}: label "${label.id}" must sit inside the picture (percent values from 0 to 100)`);
+      // The box needs a real width and height (the label-it page rejects an empty box); x and y may be 0.
+      const sized = (label.w as number) > 0 && (label.h as number) > 0;
+      if (![label.x, label.y, label.w, label.h].every(inRange) || !sized || (label.x as number) + (label.w as number) > 100 || (label.y as number) + (label.h as number) > 100) {
+        problems.push(`${where}: label "${label.id}" must be a real box inside the picture (percent values from 0 to 100, width and height above 0)`);
       }
     }
   }
@@ -89,9 +91,13 @@ export function boardProblems(raw: unknown): string[] {
     if (!isRecord(clause) || !isText(clause.id) || !isText(clause.said)) { problems.push(`${where}: every clause needs an id and what is said`); continue; }
     if (clauseIds.has(clause.id)) problems.push(`${where}: clause "${clause.id}" appears twice`);
     clauseIds.add(clause.id);
-    const hasQuestion = isText(clause.question);
-    const hasAnswer = isText(clause.answer);
-    if (hasQuestion !== hasAnswer) problems.push(`${where}: clause "${clause.id}" needs both a question and an answer, or neither`);
+    // Absent is fine (the clause teaches no single fact); present must be real text, so a number or an empty string
+    // is a mistake in the file, never a silent "no question".
+    const present = (value: unknown) => value !== undefined;
+    for (const key of ['question', 'answer'] as const) {
+      if (present(clause[key]) && !isText(clause[key])) problems.push(`${where}: clause "${clause.id}" ${key} must be text`);
+    }
+    if (present(clause.question) !== present(clause.answer)) problems.push(`${where}: clause "${clause.id}" needs both a question and an answer, or neither`);
     if (clause.label !== undefined) {
       if (!isText(clause.label) || !labelIds.has(clause.label)) problems.push(`${where}: clause "${clause.id}" writes a label that is on no picture`);
       else written.add(clause.label);

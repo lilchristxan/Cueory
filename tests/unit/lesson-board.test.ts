@@ -56,9 +56,21 @@ describe('lesson board: one file from a teaching video becomes every way to stud
     board.clauses[1] = { id: 'c2', said: 'Smoke leaves.', question: 'Where?' };
     const problems = boardProblems(board);
     expect(problems).toContain('board "sample-house" needs a status of sample, draft or approved');
-    expect(problems).toContain('board "sample-house": label "roof" must sit inside the picture (percent values from 0 to 100)');
+    expect(problems).toContain('board "sample-house": label "roof" must be a real box inside the picture (percent values from 0 to 100, width and height above 0)');
     expect(problems).toContain('board "sample-house": clause "c2" needs both a question and an answer, or neither');
     expect(problems).toContain('board "sample-house": label "chimney" is never written by a clause');
     expect(() => parseBoard(board)).toThrow();
+  });
+
+  it('rejects an empty label box and a question or answer that is present but not text', () => {
+    const board = sample() as unknown as { pictures: { labels: { w: number }[] }[]; clauses: Record<string, unknown>[] };
+    board.pictures[0]!.labels[1]!.w = 0;
+    board.clauses[2] = { id: 'c3', said: 'Light comes in.', question: 42, answer: 43, label: 'window' };
+    board.clauses[3] = { id: 'c4', said: 'You walk in.', question: '  ', answer: 'door', label: 'door' };
+    const problems = boardProblems(board);
+    expect(problems).toContain('board "sample-house": label "chimney" must be a real box inside the picture (percent values from 0 to 100, width and height above 0)');
+    expect(problems).toContain('board "sample-house": clause "c3" question must be text');
+    expect(problems).toContain('board "sample-house": clause "c3" answer must be text');
+    expect(problems).toContain('board "sample-house": clause "c4" question must be text');
   });
 });
