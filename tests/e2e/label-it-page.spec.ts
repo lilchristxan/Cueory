@@ -12,7 +12,7 @@ test.describe('label it page', () => {
     await expect(page).toHaveTitle('label it: lesson 1 · cueory');
     await expect(page.locator('main h1')).toHaveText('label it');
     await expect(page.locator('main')).toContainText(
-      'the labels on the drawing are covered. uncover them one at a time, or all at once, and mark each one.',
+      'the labels on the drawing are covered. uncover them one at a time and mark each one.',
     );
     await expect(page.getByTestId('label-it-sample-note')).toHaveText(
       "this is a sample with an everyday drawing. the lesson's own diagrams come later.",
@@ -42,16 +42,23 @@ test.describe('label it page', () => {
     await expect(page.getByTestId('cover-1')).toHaveAccessibleName('label 1: roof');
     await expect(live).toHaveText('label 1: roof.');
 
+    // One label at a time: marking the open one moves on to the next covered label.
+    await board.getByRole('group', { name: 'mark label 1' }).getByRole('button', { name: 'know it' }).click();
+    await expect(live).toHaveText('roof: know it. 3 left to mark.');
+    await expect(page.getByTestId('cover-2')).toHaveAttribute('aria-current', 'true');
     await board.getByRole('button', { name: 'uncover label 2' }).click();
     await expect(board.getByRole('group', { name: 'mark label 2' }).getByRole('button', { name: 'know it' })).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(live).toHaveText('chimney: know it. 3 left to mark.');
-    await expect(status).toHaveText('2 covered · know it: 1 · still learning: 0');
+    await expect(live).toHaveText('chimney: know it. 2 left to mark.');
+    await expect(status).toHaveText('2 covered · know it: 2 · still learning: 0');
 
-    await board.getByRole('button', { name: 'reveal all' }).click();
-    await expect(status).toHaveText('0 covered · know it: 1 · still learning: 0');
-    await expect(board.getByRole('button', { name: 'still learning' }).first()).toBeVisible();
-    expect(await board.getByRole('button', { name: 'know it' }).count()).toBe(4);
+    // "still learning" without revealing first uncovers the label and marks it.
+    await board.getByRole('button', { name: 'still learning label 3' }).click();
+    await expect(page.getByTestId('cover-3')).toHaveAccessibleName('label 3: window');
+    await expect(status).toHaveText('1 covered · know it: 2 · still learning: 1');
+    // Tapping an uncovered label brings its marks back, so a mark can be changed.
+    await page.getByTestId('cover-1').click();
+    await expect(board.getByRole('group', { name: 'mark label 1' }).getByRole('button', { name: 'know it' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
 

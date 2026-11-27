@@ -131,6 +131,7 @@ test('an edited set never touches the saved place of cueory\'s own drawing', asy
   const session = page.getByTestId('labelit-session');
   await session.getByRole('button', { name: 'uncover label 1', exact: true }).click();
   await session.getByRole('group', { name: 'mark label 1', exact: true }).getByRole('button', { name: 'know it', exact: true }).click();
+  await page.getByTestId('cover-1').click();
   await expect(session.getByRole('group', { name: 'mark label 1', exact: true }).getByRole('button', { name: 'know it', exact: true })).toHaveAttribute('aria-pressed', 'true');
   // Marking the original drawing saves a place; marking an edited set must leave storage empty.
   expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain('label-it');
@@ -146,5 +147,7 @@ test('cancelling the editor keeps the marks already made on the board', async ({
   await expect(page.getByTestId('label-editor')).toBeVisible();
   await expect(session).toBeHidden();
   await page.getByRole('button', { name: 'cancel' }).click();
+  // One label shows its marks at a time: tap the uncovered label to see its mark again.
+  await page.getByTestId('cover-1').click();
   await expect(know).toHaveAttribute('aria-pressed', 'true');
 });

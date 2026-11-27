@@ -20,7 +20,7 @@ const otherModes = (lesson?.modes ?? [])
 {hold ? <LessonComingSoon /> : (
 <Layout title="label it: lesson 1" description="uncover a diagram's labels for lesson 1 of how to study for nursing school." variant="study" bareHeader>
   {/* A focused screen, as in Christian's approved draft (2026-11-26): the mode's menu on the left, the logo in the middle, close on the right. */}
-  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-gutter pt-4 sm:pt-5" data-testid="label-it-bar">
+  <header class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-gutter pt-4 sm:pt-5" data-testid="label-it-bar" data-study-focus="label-it">
     <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
       <h1 class="min-w-0 text-lg font-bold">label it</h1>
       <details class="relative" data-testid="label-it-switch">
@@ -47,7 +47,7 @@ const otherModes = (lesson?.modes ?? [])
         </svg>
       </a>
     </div>
-  </div>
+  </header>
 
   <div class="mx-auto max-w-3xl px-gutter pb-section">
     <div class="mt-4">

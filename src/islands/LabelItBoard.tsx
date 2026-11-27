@@ -4,7 +4,6 @@ import { attachResumeLifecycle, clearResume, readResume, saveResume, type Resume
 import { browserStorage } from '../scripts/storage';
 import ResumePrompt from './ResumePrompt';
 import {
-  coverAll,
   coverWords,
   isCovered,
   isDone,
@@ -15,7 +14,6 @@ import {
   parseSet,
   readingOrder,
   reveal,
-  revealAll,
   start,
   summary,
   type Label,
@@ -158,7 +156,8 @@ function Board({ set, memoryOnly = false }: Props) {
   };
 
   const doMark = (label: Label, value: Mark) => {
-    const next = mark(state, label.id, value);
+    // "still learning" on a covered label uncovers it too, so the student sees what it was.
+    const next = mark(isCovered(state, label.id) ? reveal(state, label.id) : state, label.id, value);
     saveState(next);
     const tally = summary(next);
     setSaid(
@@ -245,8 +244,6 @@ function Board({ set, memoryOnly = false }: Props) {
               alt={set.image.alt}
               width={set.image.width}
               height={set.image.height}
-              loading="lazy"
-              decoding="async"
               className="block h-auto w-full"
             />
             <ul aria-label="labels on the image">

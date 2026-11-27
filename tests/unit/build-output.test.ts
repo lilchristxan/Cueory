@@ -352,7 +352,9 @@ describe.skipIf(!existsSync(dist))('built site', () => {
 
   // Game pages (the Games v2 frame, Christian 2026-11-23) have no building strip and no site menu bar; every other page keeps the strip.
   const isGamePage = (page: string) => readFileSync(join(dist, page), 'utf8').includes('data-game-page=');
-  it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]).filter(([p]) => !isGamePage(p!)))(
+  // Focused study screens (Christian's approved drafts, 2026-11-26) have only their own bar: no strip, no site menu bar.
+  const isFocusedStudy = (page: string) => readFileSync(join(dist, page), 'utf8').includes('data-study-focus=');
+  it.runIf(site.showBuildingNotice).each(pages.map((p) => [p.replace(dist, '')]).filter(([p]) => !isGamePage(p!) && !isFocusedStudy(p!)))(
     '%s shows the building notice',
     (page) => {
       const html = readFileSync(join(dist, page), 'utf8');
