@@ -184,8 +184,10 @@
     inline-size: var(--vialo-pill-dot);
     block-size: var(--vialo-pill-dot);
     translate: -50% 0;
+    /* Drawn as a border, not a background, so it survives forced colours (Windows High Contrast). */
+    box-sizing: border-box;
+    border: calc(var(--vialo-pill-dot) / 2) solid var(--wordpill-on-elsewhere);
     border-radius: 50%;
-    background-color: var(--wordpill-on-elsewhere);
     pointer-events: none;
   }
 
@@ -376,8 +378,10 @@
     inline-size: var(--vialo-pill-dot);
     block-size: var(--vialo-pill-dot);
     translate: -50% 0;
+    /* Drawn as a border, not a background, so it survives forced colours (Windows High Contrast). */
+    box-sizing: border-box;
+    border: calc(var(--vialo-pill-dot) / 2) solid var(--wordpill-on-elsewhere);
     border-radius: 50%;
-    background-color: var(--wordpill-on-elsewhere);
     pointer-events: none;
   }
 

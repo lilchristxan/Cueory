@@ -40,7 +40,7 @@ describe('the home vialo card preview', () => {
     expect(demoStyle).not.toMatch(/::after/);
     expect(demoStyle).not.toContain('\\25CF');
     // Only the pink pill carries the small dot under its letter, the sign besides colour.
-    expect(demoStyle).toMatch(/\.gc\.gc-elsewhere::before \{[^}]*border-radius: 50%;[^}]*background-color: var\(--game-demo-vialo-on-red\)/);
+    expect(demoStyle).toMatch(/\.gc\.gc-elsewhere::before \{[^}]*solid var\(--game-demo-vialo-on-red\);[^}]*border-radius: 50%/);
     expect(demoStyle.match(/::before/g)).toHaveLength(1);
     expect(card.match(/class="gc gc-here/g)!.length).toBeGreaterThan(0);
     expect(card.match(/class="gc gc-elsewhere/g)!.length).toBeGreaterThan(0);

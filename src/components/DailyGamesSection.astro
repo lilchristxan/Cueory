@@ -972,8 +972,9 @@ const helloCardsAvailable = helloCardsPage(
     inline-size: var(--game-demo-vialo-ring-gap);
     block-size: var(--game-demo-vialo-ring-gap);
     translate: -50% 0;
+    box-sizing: border-box;
+    border: calc(var(--game-demo-vialo-ring-gap) / 2) solid var(--game-demo-vialo-on-red);
     border-radius: 50%;
-    background-color: var(--game-demo-vialo-on-red);
     pointer-events: none;
   }
 
