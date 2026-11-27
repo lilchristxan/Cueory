@@ -162,7 +162,7 @@ describe("wordpill's artwork (the game formerly called vialo; Christian's script
     expect(letters(evening)).toBe(letters(day));
     expect(day).not.toContain('<rect');
     expect(evening).not.toContain('<rect');
-    expect(day).toContain('fill="#0e5a3d" stroke="#ffffff"');
+    expect(day).toContain('fill="#053321" stroke="#ffffff"');
     expect(evening).toContain('fill="#ffffff" stroke="#0e5a3d"');
     expect(day).toContain('paint-order="stroke"');
     // The name climbs to the right at a slight incline over an underline (Christian, 2026-11-27).

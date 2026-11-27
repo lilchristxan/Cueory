@@ -175,11 +175,17 @@
     "not in the word" the plain white pill. The row's spoken label already names each result.
   */
   .vialo-pill.vialo-elsewhere::after {
+    /* A small dot under the letter (Christian's pink has no ring, 2026-11-27): the sign, besides colour, that this
+       letter is in the word but somewhere else. */
     content: "";
     position: absolute;
-    inset: var(--vialo-pill-ring-gap);
-    border: var(--vialo-pill-ring) solid var(--vialo-pill-ring-color);
-    border-radius: inherit;
+    inset-block-end: var(--vialo-pill-ring-gap);
+    inset-inline-start: 50%;
+    inline-size: var(--vialo-pill-dot);
+    block-size: var(--vialo-pill-dot);
+    translate: -50% 0;
+    border-radius: 50%;
+    background-color: var(--wordpill-on-elsewhere);
     pointer-events: none;
   }
 
@@ -361,13 +367,17 @@
     color: var(--vialo-key-on-elsewhere);
   }
 
-  /* Elsewhere in the word: a light ring inside the key's edge, so it differs from "in place" by more than colour. */
+  /* Elsewhere in the word: a small dot under the key's letter, so it differs from "in place" by more than colour. */
   .vialo-key.vialo-elsewhere::after {
     content: "";
     position: absolute;
-    inset: var(--vialo-key-ring-gap);
-    border: var(--vialo-key-ring) solid var(--vialo-key-ring-color);
-    border-radius: calc(var(--vialo-key-radius) - var(--vialo-key-ring-gap));
+    inset-block-end: var(--vialo-key-ring-gap);
+    inset-inline-start: 50%;
+    inline-size: var(--vialo-pill-dot);
+    block-size: var(--vialo-pill-dot);
+    translate: -50% 0;
+    border-radius: 50%;
+    background-color: var(--wordpill-on-elsewhere);
     pointer-events: none;
   }
 

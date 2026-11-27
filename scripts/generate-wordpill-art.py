@@ -13,7 +13,7 @@ and no font file is added to the site. The font is not in this repository: downl
 to rebuild the three files in public/design/games-v2/assets/ (the generated files are committed). The hex values live in
 the artwork files only; components and CSS never use them.
 
-  wordpill-wordmark-light.svg  Daytime wordmark: game-green letters with a thin white outline.
+  wordpill-wordmark-light.svg  Daytime wordmark: deep game-green letters with a thin white outline.
   wordpill-wordmark-dark.svg   Evening wordmark: the same letters in white with a thin game-green outline.
   wordpill-icon-l1.svg         The logo (Christian's "V1", 2026-11-27): a white "w" with a thin bronze outline, in the sky
                                capsule with a thin bronze rim. Bronze is the letter colour on the game's white pill.
@@ -30,6 +30,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "public/design/games-v2/assets")
 
 GREEN = "#0e5a3d"
+# The Daytime name uses the brand's deep game green: with the regular green it measured 2.84 against the linen side
+# panel in the contrast guard (needs 3).
+GREEN_DEEP = "#053321"
 WHITE = "#ffffff"
 BRONZE = "#6b5243"  # the letter colour on the game's white pill
 # The sky inside the capsule, top to bottom: mint, pale mint, pink white, rose, pink.
@@ -164,7 +167,7 @@ def icon(face):
 if __name__ == "__main__":
     face = load()
     files = {
-        "wordpill-wordmark-light.svg": wordmark(face, GREEN, WHITE),
+        "wordpill-wordmark-light.svg": wordmark(face, GREEN_DEEP, WHITE),
         "wordpill-wordmark-dark.svg": wordmark(face, WHITE, GREEN),
         "wordpill-icon-l1.svg": icon(face),
     }

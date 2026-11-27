@@ -1445,3 +1445,10 @@
     translate: 50% 0;
   }
 }
+
+/* wordpill's logo is a capsule with its own outline, so its deck card shows it with no tile behind it
+   (Christian, 2026-11-27). */
+.game-deck-item[data-game="pulse"] .game-deck-tile {
+  background: none;
+  border-color: transparent;
+}

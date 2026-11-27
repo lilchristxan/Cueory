@@ -50,7 +50,7 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
     play: [
       `guess the ${WORD_LENGTH}-letter word in ${GUESSES} guesses. there's one word a day.`,
       'type a word and press enter, or tap the letters below the board.',
-      'after each guess every letter is shown on its pill. in the standard look, light green is in its place, pink is in the word but somewhere else, and plain white is not in the word. the letter keys show the same colours.',
+      'after each guess every letter is shown on its pill. in the standard look, light green is in its place, pink with a small dot under the letter is in the word but somewhere else, and plain white is not in the word. the letter keys show the same colours.',
       `with high contrast on, in its place stays solid, in the word but somewhere else gets a thick solid outline, and not in the word gets a dashed outline, and each letter key also shows ${MARK_SYMBOL.here}, ${MARK_SYMBOL.elsewhere} or ${MARK_SYMBOL.absent}. forced colours on your device show them as solid, double and dashed outlines.`,
       'a letter you use twice is marked twice only if the word has it twice.',
       "a word that isn't in the word list doesn't use up a guess.",

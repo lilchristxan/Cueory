@@ -105,7 +105,7 @@ test('vialo keys keep their size on narrower phones without sideways scrolling',
   }
 });
 
-// A key's mark shows without colour: "in place" is a solid cap, "elsewhere" carries a ring inside its edge, and a
+// A key's mark shows without colour: "in place" is a solid cap, "elsewhere" carries a small dot under its letter, and a
 // letter that is not in the word is struck through and sits down flat. Each key's name says the mark in words.
 test('vialo keys show each mark by finish and by name, never by colour alone', async ({ page }) => {
   const vialo = page.getByTestId('vialo');
@@ -123,7 +123,7 @@ test('vialo keys show each mark by finish and by name, never by colour alone', a
         name: key.getAttribute('aria-label')!,
         kind: ['here', 'elsewhere', 'absent'].find((mark) => key.classList.contains(`vialo-${mark}`))!,
         struck: style.textDecorationLine.includes('line-through'),
-        ringed: ring.content !== 'none' && Number.parseFloat(ring.borderTopWidth) >= 2,
+        ringed: ring.content !== 'none' && Number.parseFloat(ring.width) >= 3 && ring.borderTopLeftRadius === '50%',
         lifted: style.boxShadow !== 'none',
       };
     }),

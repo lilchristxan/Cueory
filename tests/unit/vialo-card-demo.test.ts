@@ -39,8 +39,8 @@ describe('the home vialo card preview', () => {
     expect(token('game-demo-vialo-absent-ink')).toBe(token('vialo-absent-ink'));
     expect(demoStyle).not.toMatch(/::after/);
     expect(demoStyle).not.toContain('\\25CF');
-    // Only the red pill carries the thin light inset ring.
-    expect(demoStyle).toMatch(/\.gc\.gc-elsewhere::before \{[^}]*inset: var\(--game-demo-vialo-ring-gap\);[^}]*border: var\(--game-demo-vialo-ring\) solid var\(--gc-ring\)/);
+    // Only the pink pill carries the small dot under its letter, the sign besides colour.
+    expect(demoStyle).toMatch(/\.gc\.gc-elsewhere::before \{[^}]*border-radius: 50%;[^}]*background-color: var\(--game-demo-vialo-on-red\)/);
     expect(demoStyle.match(/::before/g)).toHaveLength(1);
     expect(card.match(/class="gc gc-here/g)!.length).toBeGreaterThan(0);
     expect(card.match(/class="gc gc-elsewhere/g)!.length).toBeGreaterThan(0);

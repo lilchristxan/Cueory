@@ -17,7 +17,7 @@ async function guessCrane(page: Page) {
 }
 
 for (const scheme of ['light', 'dark'] as const) {
-  test(`only the red pill has an inner ring and nothing is drawn under a letter: ${scheme}`, async ({ page }) => {
+  test(`only the pink pill has a dot under its letter and no text mark is drawn: ${scheme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
     const row = await guessCrane(page);
     const pills = await row.locator('.vialo-pill').evaluateAll((nodes) =>
@@ -28,7 +28,7 @@ for (const scheme of ['light', 'dark'] as const) {
         const box = pill.getBoundingClientRect();
         return {
           kind: ['here', 'elsewhere', 'absent'].find((mark) => pill.classList.contains(`vialo-${mark}`)),
-          ring: after.content === '""' && after.position === 'absolute' && Number.parseFloat(after.borderTopWidth) >= 2,
+          ring: after.content === '""' && after.position === 'absolute' && Number.parseFloat(after.width) >= 3 && after.borderTopLeftRadius === '50%',
           text: after.content === 'none' || after.content === 'normal' ? '' : after.content,
           shine: before.content !== 'none' && before.content !== 'normal',
           // The letter's own centre is the pill's centre: it was lifted when a mark sat below it.
@@ -38,7 +38,7 @@ for (const scheme of ['light', 'dark'] as const) {
     );
     expect(pills.map((p) => p.kind)).toEqual(['elsewhere', 'here', 'here', 'absent', 'here']);
     expect(pills.map((p) => p.ring)).toEqual([true, false, false, false, false]);
-    // The red pill's ring is an empty box; no ● ○ · or any other text is drawn by a pill.
+    // The pink pill's dot is an empty round box (Christian, 2026-11-27); no ● ○ · or any other text is drawn by a pill.
     expect(pills.map((p) => p.text)).toEqual(['""', '', '', '', '']);
     for (const p of pills) expect(p.offCentre).toBeLessThanOrEqual(3);
     expect(pills.every((p) => !p.shine)).toBe(true);
@@ -59,7 +59,7 @@ for (const highContrast of [false, true]) {
     await page.goto('/play/wordpill');
     await page.getByRole('button', { name: 'how to play wordpill' }).click();
     const dialog = page.getByRole('dialog', { name: 'how to play wordpill' });
-    await expect(dialog).toContainText('in the standard look, light green is in its place, pink is in the word but somewhere else');
+    await expect(dialog).toContainText('in the standard look, light green is in its place, pink with a small dot under the letter is in the word but somewhere else');
     await expect(dialog).toContainText('with high contrast on, in its place stays solid');
     await expect(dialog).toContainText('a thick solid outline');
     await expect(dialog).toContainText('a dashed outline');

@@ -73,7 +73,7 @@ const helloCardsAvailable = helloCardsPage(
       <div id="games-track" class="gtrack" data-games-track>
         <!-- Card 1: Vialo -->
         <a href="/play/wordpill" class="gcard on" data-game-card="vialo" aria-label={`${gameName('vialo')}: guess the five-letter word in six tries`}>
-          <img class="gpip tl" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip gpip-bare tl" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
           <span class="gface">
             <span class="gname">
               <img src={imageLogo('vialo').card.wordmark} alt={gameName('vialo')} width="168" height="60" loading="lazy" decoding="async" />
@@ -101,7 +101,7 @@ const helloCardsAvailable = helloCardsPage(
               </span>
             </span>
           </span>
-          <img class="gpip br" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <img class="gpip gpip-bare br" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
         </a>
 
         <!-- Card 2: Tachyyy -->
@@ -611,6 +611,12 @@ const helloCardsAvailable = helloCardsPage(
     box-shadow: var(--game-pip-shadow);
   }
 
+  /* wordpill's logo is a capsule with its own outline, so it has no tile behind it (Christian, 2026-11-27). */
+  .gpip.gpip-bare {
+    box-shadow: none;
+    background: none;
+  }
+
   .gpip.tl {
     top: var(--game-pip-inset);
     left: var(--game-pip-inset);
@@ -903,7 +909,7 @@ const helloCardsAvailable = helloCardsPage(
   /* Vialo Demo: a miniature of the live board (src/styles/vialo.css). Oblong capsule pills in a strip of the same grey
      blister foil, drawn in CSS from the board's own tokens; the card stays light in Evening, so the foil and the pill
      colours are the Daytime ones (--game-demo-vialo-*). The guess is CARES against NURSE: in place is light green, elsewhere in
-     the word is pink, not in the word is white (Christian, 2026-11-27). The first look at rest (and under reduced motion) is the finished rows. */
+     the word is pink with a small dot under its letter, not in the word is white (Christian, 2026-11-27), so colour is never the only signal. The first look at rest (and under reduced motion) is the finished rows. */
   .vialo-grid {
     display: grid;
     gap: var(--game-demo-vialo-grid-gap);
@@ -961,9 +967,13 @@ const helloCardsAvailable = helloCardsPage(
   .gc.gc-elsewhere::before {
     content: "";
     position: absolute;
-    inset: var(--game-demo-vialo-ring-gap);
-    border: var(--game-demo-vialo-ring) solid var(--gc-ring);
-    border-radius: inherit;
+    inset-block-end: var(--game-demo-vialo-ring);
+    inset-inline-start: 50%;
+    inline-size: var(--game-demo-vialo-ring-gap);
+    block-size: var(--game-demo-vialo-ring-gap);
+    translate: -50% 0;
+    border-radius: 50%;
+    background-color: var(--game-demo-vialo-on-red);
     pointer-events: none;
   }
 

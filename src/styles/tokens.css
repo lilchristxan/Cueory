@@ -1540,6 +1540,7 @@
   --wordpill-elsewhere-deep: #ec8fb0;
   --wordpill-elsewhere-lip: #ec8fb0;
   --wordpill-elsewhere-ring: transparent; /* no ring on a pink pill or key (Christian, 2026-11-27) */
+  --vialo-pill-dot: 0.25rem;            /* 4px: the dot under the letter on a pink pill or key, the sign besides colour */
   --wordpill-on-elsewhere: #3e2c23;
   --wordpill-sky-mint: #a8d5ba;
   --wordpill-sky-pale-mint: #dff1e6;
