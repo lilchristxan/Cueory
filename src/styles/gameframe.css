@@ -1417,6 +1417,9 @@
    lets it show through. Evening has its own dark sky: tokens.css swaps the sky's colours there. */
 .game-frame[data-game-look="wordpill"] {
   background: var(--wordpill-sky);
+  /* Secondary text (the date, the timer, the line under the copper bar) sits straight on the sky here, so it takes the
+     main ink colour: the soft ink measured under 4.5:1 on the mint in Daytime and on the bronze in Evening. */
+  --color-ink-soft: var(--color-ink);
 }
 
 .game-frame[data-game-look="wordpill"] .game-frame-sidebar {
