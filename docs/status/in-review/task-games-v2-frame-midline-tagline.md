@@ -1,2 +1,2 @@
-status: in review: on every game page the copper "join the launch list" bar sits on the screen's vertical midline in the desktop side panel, and the tagline under the game's name is lower case and smaller (18 px)
+status: in review: on every game page the round buttons are centred on phones, the copper "join the launch list" bar sits on the screen's vertical midline in the desktop side panel, and the tagline under the game's name is lower case and smaller (18 px)
 decision: D-pending (Christian, 2026-11-27): game taglines are lower case at 18 px, and the signed-out copper bar is centred on the screen's height in the desktop side panel (it keeps its place in the flow on windows shorter than 50rem and on tablets and phones)
