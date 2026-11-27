@@ -1,0 +1,2 @@
+status: Give the Anatomy Lab system identifier its own name in Astro island props and restore the internal identifier on hydration. This keeps the draft preview compatible with the unchanged built answer-key guard.
+The draft-enabled built answer-key check passed. Hosted CI passed three browser shards and found the same legacy Wordpill request-tracking failure as the engine PR in the fourth shard. The shared test repair is #1262.
