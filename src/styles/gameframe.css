@@ -1444,6 +1444,16 @@
     inset-inline-end: 50%;
     translate: 50% 0;
   }
+  /* The "how to play" popover hangs from the middle of the centred row, not from the "?" button's right edge, so it
+     stays on the screen. */
+  .game-frame-main:not(:has(.game-frame-controls-middle:not(:empty))) .game-frame-corner .game-frame-how-wrap {
+    position: static;
+  }
+  .game-frame-main:not(:has(.game-frame-controls-middle:not(:empty))) .game-frame-corner .game-frame-popover {
+    right: auto;
+    left: 50%;
+    translate: -50% 0;
+  }
 }
 
 /* wordpill's logo is a capsule with its own outline, so its deck card shows it with no tile behind it
