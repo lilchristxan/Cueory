@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import SpeakButton from './SpeakButton';
+import TachyyyMode from './TachyyyMode';
 import {
   advance,
   canAdvance,
@@ -19,6 +20,8 @@ import {
 } from './learn';
 
 interface Props {
+  /** The tachyyy tile shown on the tachyyy mode chip. */
+  tachyyyIcon?: string;
   cards: LearnCard[];
   /** Where "Back to the lesson" on the summary card goes. */
   lessonHref?: string;
@@ -68,8 +71,9 @@ function ResultIcon({ correct }: { correct: boolean }) {
  * tapping, clicking or keyboard, and nothing moves on by itself. Rendered only in the browser (client:only); without
  * JavaScript the page shows its <noscript> note instead.
  */
-export default function LearnSession({ cards, lessonHref = '/learn/study-skills' }: Props) {
+export default function LearnSession({ cards, lessonHref = '/learn/study-skills', tachyyyIcon = '/brand/games/tachyyy-light.svg' }: Props) {
   const [state, setState] = useState<LearnState>(() => startLearn(cards));
+  const [timedOut, setTimedOut] = useState('');
   const [typed, setTyped] = useState('');
   // Every action moves keyboard focus to the card, so the next thing to do is right there.
   const [focusRequest, setFocusRequest] = useState(0);
@@ -217,6 +221,19 @@ export default function LearnSession({ cards, lessonHref = '/learn/study-skills'
           The deck's one live region stays in the page; the card inside it is drawn fresh for every card and step, so
           it rises in after each action. Under reduced motion it simply appears.
         */}
+        {/* Outside the live region, so the running clock is never read out second by second. */}
+        <TachyyyMode
+          questionKey={`${state.queue.length}-${index}-${step}-${masteredCount(state)}`}
+          guessing={step !== 'see' && !result}
+          icon={tachyyyIcon}
+          onTimeUp={() => {
+            setProblem('');
+            setTimedOut(`time is up: ${card.front} is marked not right.`);
+            // Marked not right, and the next card comes up at once (no feedback screen to dismiss).
+            act((s) => advance(giveUp(s, cards), cards));
+          }}
+        />
+        <p className="sr-only" role="status" data-testid="tachyyy-said">{timedOut}</p>
         <div aria-live="polite">
           <div key={`${index}-${step}`} ref={cardRef} tabIndex={-1} data-testid="learn-card" className={`${enter}rounded-lg`}>
             <div className="flex min-h-(--tap-min) items-center gap-1 text-sm text-ink-soft">

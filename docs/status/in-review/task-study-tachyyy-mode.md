@@ -1,0 +1,2 @@
+status: tachyyy mode on learn: an optional countdown per question (off by default, 5 to 120 seconds, starting at 10); when it runs out the card is marked not right and the next one comes up at once; the choice is kept on this device. stacked on the focused learn screen (#1255). questions, fill in and matching come next.
+decision: D-pending: tachyyy mode keeps its on/off and seconds in this browser only (like the theme choice); nothing is sent or stored on a server.
