@@ -1,2 +1,3 @@
 status: Adaptive learning engine in review. Implements pure card memory, scheduling, practice selection and unit-check evidence. Simulation, browser storage and preview are separate changes.
 decision: Keep this draft while full browser verification is red. On the checked tree, the Vialo CSP test stopped while waiting for a shared React script request to finish. The asset responded over localhost and the adaptive engine is not used by that route. The guard passed on the standard build.
+The full hosted run passed three browser shards. The fourth hit the legacy Wordpill request-tracking failure addressed by #1262. The simulation now measures both policies on the same follow-up day and the design note reports the recalculated figures.
