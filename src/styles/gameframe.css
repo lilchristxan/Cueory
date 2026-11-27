@@ -947,13 +947,19 @@
     --game-frame-main-pr: calc(var(--spacing) * 6 + var(--game-deck-reach));
     --game-frame-main-pl: calc(var(--spacing) * 6);
   }
-  /* The wide crossword grid and the 720 px showcase boards must keep their full width (the plain row below 1120 px does), so
-     they cannot take the symmetric reserve above. They keep the usual even padding: centred on the play area at full width.
-     Their box reaches under the fanned cards, but the drawn game does not (game-deck.spec.ts checks the real outlines), and
-     no control sits at the box's edge any more (the printer is in the Frame's corner). */
+  /* The wide crossword grid and the 720 px showcase boards must keep their full width (the plain row below 1120 px does),
+     so they give up the cards' reach on the right only as far as the window has room for it: nothing on a narrow
+     desktop, all of it on a wide one, where they too sit midway between the side panel and the cards (Christian,
+     2026-11-27). The room is the window less the side panel, the board, the usual padding on both sides and a margin
+     for a scrollbar. Where there is no room their box still reaches under the fanned cards, but the drawn game does not
+     (game-deck.spec.ts checks the real outlines). */
   .game-frame-main:has(.game-frame-board.is-wide, .game-frame-board.is-showcase) {
+    --game-frame-wide-board: var(--game-frame-max-board-showcase);
     --game-frame-main-pl: calc(var(--spacing) * 6);
-    --game-frame-main-pr: calc(var(--spacing) * 6);
+    --game-frame-main-pr: calc(var(--spacing) * 6 + clamp(0px, 100vw - var(--game-frame-sidebar-width) - var(--game-frame-wide-board) - var(--spacing) * 16, var(--game-deck-reach)));
+  }
+  .game-frame-main:has(.game-frame-board.is-wide) {
+    --game-frame-wide-board: var(--game-frame-max-board-wide);
   }
 }
 
