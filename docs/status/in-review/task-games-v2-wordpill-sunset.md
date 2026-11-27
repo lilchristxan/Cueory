@@ -1,0 +1,2 @@
+status: draft: wordpill's new look: the name in green script with no capsule, a wp capsule logo, a pale mint-to-pink sky behind its game page, and light green, pink and white marks (dark green, dark brown and bronze in Evening)
+decision: D-pending (Christian, 2026-11-27): wordpill has its own colours beyond the brand palette (mint, pink and white, swapped with their letter colours in Evening), its name is set in Yellowtail outlines, and its pink mark has no ring in the standard look

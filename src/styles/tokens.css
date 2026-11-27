@@ -1925,3 +1925,49 @@
     --game-frame-account-pad: calc(var(--spacing) * 6);
   }
 }
+
+/* wordpill in Evening (Christian, 2026-11-27): every colour swaps with the colour of the letter that sat on it in
+   Daytime. Light green becomes the dark green of its letter, pink becomes the dark brown of its letter and white becomes
+   the bronze of its letter, and each letter takes the Daytime pill colour. The page's sky uses the same three darks.
+   Two copies, as for every Evening value: one for the device setting, one for the footer's Dark pick. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wordpill-here: #053321;
+    --wordpill-here-light: #0e5a3d;
+    --wordpill-here-deep: #053321;
+    --wordpill-on-here: #a8d5ba;
+    --wordpill-elsewhere: #3e2c23;
+    --wordpill-elsewhere-light: #543c30;
+    --wordpill-elsewhere-deep: #3e2c23;
+    --wordpill-elsewhere-lip: #2a1d16;
+    --wordpill-on-elsewhere: #f4a6c0;
+    --vialo-absent-face: #6b5243;
+    --vialo-absent-ink: #ffffff;
+    --wordpill-sky-mint: #053321;
+    --wordpill-sky-pale-mint: #2c4a37;
+    --wordpill-sky-white: #6b5243;
+    --wordpill-sky-rose: #543c30;
+    --wordpill-sky-pink: #3e2c23;
+    --wordpill-sky-glow: #6b5243;
+  }
+}
+
+:root[data-theme="dark"] {
+  --wordpill-here: #053321;
+  --wordpill-here-light: #0e5a3d;
+  --wordpill-here-deep: #053321;
+  --wordpill-on-here: #a8d5ba;
+  --wordpill-elsewhere: #3e2c23;
+  --wordpill-elsewhere-light: #543c30;
+  --wordpill-elsewhere-deep: #3e2c23;
+  --wordpill-elsewhere-lip: #2a1d16;
+  --wordpill-on-elsewhere: #f4a6c0;
+  --vialo-absent-face: #6b5243;
+  --vialo-absent-ink: #ffffff;
+  --wordpill-sky-mint: #053321;
+  --wordpill-sky-pale-mint: #2c4a37;
+  --wordpill-sky-white: #6b5243;
+  --wordpill-sky-rose: #543c30;
+  --wordpill-sky-pink: #3e2c23;
+  --wordpill-sky-glow: #6b5243;
+}

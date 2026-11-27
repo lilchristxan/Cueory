@@ -140,7 +140,7 @@ describe('the shared logo source equals what the game pages use (GameFrame.astro
   });
 });
 
-describe("wordpill's artwork (the game formerly called vialo; Christian's designs B and L1, 2026-11-26)", () => {
+describe("wordpill's artwork (the game formerly called vialo; Christian's script name and wp capsule, 2026-11-27)", () => {
   const dir = new URL('../../public/design/games-v2/assets/', import.meta.url);
   const read = (name: string) => readFileSync(new URL(name, dir), 'utf8');
   const day = read('wordpill-wordmark-light.svg');
@@ -150,18 +150,25 @@ describe("wordpill's artwork (the game formerly called vialo; Christian's design
   it('is drawn in outlines only: no live text, so it looks the same everywhere', () => {
     for (const svg of [day, evening, icon]) {
       expect(svg).not.toMatch(/<text|font-family|<image/);
-      expect(svg.match(/<path /g)).toHaveLength(2);
+      expect(svg.match(/<path /g)).toHaveLength(1);
     }
   });
 
-  it('has the same letters in Light and Evening; Evening only adds the thin ivory rim', () => {
-    const paths = (svg: string) => [...svg.matchAll(/<path d="([^"]+)"/g)].map((m) => m[1]);
-    expect(paths(evening)).toEqual(paths(day));
-    // The Daytime wordmark uses the brand's deep game green so it passes the contrast guard (2.49 with the regular green).
-    expect(day).toContain('stroke="#053321" stroke-width="2"');
-    expect(day).toContain('fill="#053321"');
-    expect(evening).toContain('stroke="#f9f5ef" stroke-width="2"');
-    expect(evening.replace('stroke="#f9f5ef"', 'stroke="#053321"').replace('fill="#0e5a3d"', 'fill="#053321"').replaceAll('wordpill-clip-evening', 'wordpill-clip-day')).toBe(day);
+  it('writes the name on its own, with no capsule: green with a thin white outline in Light, white with a thin green outline in Evening', () => {
+    const letters = (svg: string) => svg.match(/<path d="([^"]+)"/)![1];
+    expect(letters(evening)).toBe(letters(day));
+    expect(day).not.toContain('<rect');
+    expect(evening).not.toContain('<rect');
+    expect(day).toContain('fill="#0e5a3d" stroke="#ffffff"');
+    expect(evening).toContain('fill="#ffffff" stroke="#0e5a3d"');
+    expect(day).toContain('paint-order="stroke"');
+  });
+
+  it('keeps the capsule for the logo: wp in green on the pale sky, inside a thin green rim', () => {
+    expect(icon.match(/<rect /g)).toHaveLength(1);
+    expect(icon).toContain('<linearGradient id="wordpill-icon-sky"');
+    expect(icon).toContain('stroke="#0e5a3d" stroke-width="2"');
+    expect(icon).toContain('fill="#0e5a3d" stroke="#ffffff"');
   });
 
   it('is the wordmark and icon on every surface: Evening art on the hub and game page, Daytime on the cream carousel', () => {
