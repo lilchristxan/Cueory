@@ -1,0 +1,1 @@
+status: in progress: staging fails in Safari and Firefox on the home game cards at 844 x 390, the word-path print hint and the glove note count; tracing and fixing here (Chrome passes, so pull requests never showed it).
