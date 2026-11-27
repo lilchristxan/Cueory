@@ -2,7 +2,7 @@
    carries .always-daytime (tokens.css), which re-declares the Daytime palette for everything inside. */
 @layer components {
   /* One accent per game; the card re-declares the Daytime palette (.always-daytime), so these are Daytime values. */
-  .share-dialog-vialo { --share-dialog-accent: var(--game-dark-green); }
+  .share-dialog-vialo { --share-dialog-accent: var(--game-oxblood); }
   .share-dialog-piccline { --share-dialog-accent: var(--color-game-teal); }
   .share-dialog-sudoku { --share-dialog-accent: var(--sudoku-sticker-espresso); }
 

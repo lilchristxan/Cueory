@@ -1500,6 +1500,30 @@
   --game-demo-active-bg: var(--color-surface);
 }
 
+/* wordpill's Evening sky (Christian, 2026-11-27): each sky colour swaps with the colour of the letter that sits on its
+   pill in Daytime: light green becomes that letter's dark green, white becomes bronze and pink becomes dark brown.
+   The pills and keys themselves keep their Daytime colours in Evening. Two copies, as for every Evening value: one for
+   the device setting, one for the footer's Dark pick. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wordpill-sky-mint: #053321;
+    --wordpill-sky-pale-mint: #2c4a37;
+    --wordpill-sky-white: #6b5243;
+    --wordpill-sky-rose: #543c30;
+    --wordpill-sky-pink: #3e2c23;
+    --wordpill-sky-glow: #6b5243;
+  }
+}
+
+:root[data-theme="dark"] {
+  --wordpill-sky-mint: #053321;
+  --wordpill-sky-pale-mint: #2c4a37;
+  --wordpill-sky-white: #6b5243;
+  --wordpill-sky-rose: #543c30;
+  --wordpill-sky-pink: #3e2c23;
+  --wordpill-sky-glow: #6b5243;
+}
+
 @theme static {
   /* ---------- wordpill's Daytime page sky (Christian's "S6", 2026-11-27) ----------
      Mint at the top, a white glow in the middle, pink at the bottom. Only wordpill's game page uses it, and only in
@@ -1927,28 +1951,4 @@
     --game-frame-account-shift: calc(var(--game-frame-btn-size) / -2);
     --game-frame-account-pad: calc(var(--spacing) * 6);
   }
-}
-
-/* wordpill's Evening sky (Christian, 2026-11-27): each sky colour swaps with the colour of the letter that sits on its
-   pill in Daytime: light green becomes that letter's dark green, white becomes bronze and pink becomes dark brown.
-   The pills and keys themselves keep their Daytime colours in Evening. Two copies, as for every Evening value: one for
-   the device setting, one for the footer's Dark pick. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --wordpill-sky-mint: #053321;
-    --wordpill-sky-pale-mint: #2c4a37;
-    --wordpill-sky-white: #6b5243;
-    --wordpill-sky-rose: #543c30;
-    --wordpill-sky-pink: #3e2c23;
-    --wordpill-sky-glow: #6b5243;
-  }
-}
-
-:root[data-theme="dark"] {
-  --wordpill-sky-mint: #053321;
-  --wordpill-sky-pale-mint: #2c4a37;
-  --wordpill-sky-white: #6b5243;
-  --wordpill-sky-rose: #543c30;
-  --wordpill-sky-pink: #3e2c23;
-  --wordpill-sky-glow: #6b5243;
 }

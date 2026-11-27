@@ -59,8 +59,8 @@ for (const highContrast of [false, true]) {
     await page.goto('/play/wordpill');
     await page.getByRole('button', { name: 'how to play wordpill' }).click();
     const dialog = page.getByRole('dialog', { name: 'how to play wordpill' });
-    await expect(dialog).toContainText('in the standard look, solid green is in its place, red with a thin light ring inside it');
-    await expect(dialog).toContainText('with high contrast on, there is no ring: in its place stays solid');
+    await expect(dialog).toContainText('in the standard look, light green is in its place, pink is in the word but somewhere else');
+    await expect(dialog).toContainText('with high contrast on, in its place stays solid');
     await expect(dialog).toContainText('a thick solid outline');
     await expect(dialog).toContainText('a dashed outline');
     await expect(dialog).toContainText('forced colours on your device show them as solid, double and dashed outlines');
