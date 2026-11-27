@@ -26,6 +26,7 @@
 
   /* ---------- Daytime palette (brand guide) ---------- */
   --color-page: #f9f5ef;        /* Ivory    — page background */
+  --study-page: #ffffff;        /* study screens sit on plain white in Daytime (Christian, 2026-11-26); not a brand colour, so not a --color-* token */
   --color-surface: #eadccf;     /* Linen    — cards and panels */
   --color-soft: #d3b7a1;        /* Taupe    — decorative / soft fill (notice bar) */
   --color-highlight: #8b6f5b;   /* Mocha    — accents and highlights (not for small text) */
@@ -1217,6 +1218,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-page: #1c1917;      /* Charcoal      — page background */
+    --study-page: var(--color-page); /* study screens in Evening stay Charcoal */
     --share-story-dark-logo: 1;
     --color-surface: #3a2d24;   /* Walnut        — cards and panels */
     --color-soft: #3a2d24;      /* Walnut        — notice bar */
@@ -1349,6 +1351,7 @@
 
 :root[data-theme="dark"] {
   --color-page: #1c1917;      /* Charcoal      — page background */
+  --study-page: var(--color-page); /* study screens in Evening stay Charcoal */
   --share-story-dark-logo: 1;
   --color-surface: #3a2d24;   /* Walnut        — cards and panels */
   --color-soft: #3a2d24;      /* Walnut        — notice bar */
