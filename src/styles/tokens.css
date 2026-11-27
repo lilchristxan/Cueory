@@ -125,7 +125,7 @@
   --game-frame-emblem-hi-size: 2.0625rem;/* 33px */
   --game-frame-wordmark-height: 3.75rem; /* 60px */
   --game-frame-title-size: 2.5rem;       /* 40px */
-  --game-frame-tagline-size: 1.5rem;     /* 24px */
+  --game-frame-tagline-size: 1.125rem;   /* 18px (Christian, 2026-11-27: smaller, and every tagline in lower case) */
   --game-frame-stat-value-size: 1.75rem; /* 28px */
   --game-frame-stat-label-size: 0.8125rem; /* 13px */
   --game-frame-dateline-size: 0.875rem;  /* 14px */
@@ -780,17 +780,18 @@
      dark green in place, oxblood elsewhere. A cap is the colour itself, its deep step as the lip and a little of its
      light step at the lit top. The caps keep the Daytime values in Evening too, as the pills on the LOCKED v1 board
      do, so the white letter is at least 5:1 on every part of either cap in both palettes. */
-  --vialo-key-here-top: color-mix(in srgb, #3f8a68 30%, #0e5a3d);       /* in place: a dark green cap, lit at the top */
-  --vialo-key-here-bottom: #0e5a3d;
-  --vialo-key-here-lip: #053321;
-  --vialo-key-elsewhere-top: color-mix(in srgb, #a0413a 35%, #6e2019);  /* elsewhere in the word: an oxblood cap */
-  --vialo-key-elsewhere-bottom: #6e2019;
-  --vialo-key-elsewhere-lip: #4a100d;
-  --vialo-key-on-mark: #ffffff;         /* the letter on a green or oxblood key */
+  --vialo-key-here-top: var(--wordpill-here-light);       /* in place: a light green cap, lit at the top */
+  --vialo-key-here-bottom: var(--wordpill-here);
+  --vialo-key-here-lip: var(--wordpill-here-deep);
+  --vialo-key-elsewhere-top: var(--wordpill-elsewhere-light);  /* elsewhere in the word: a pink cap */
+  --vialo-key-elsewhere-bottom: var(--wordpill-elsewhere);
+  --vialo-key-elsewhere-lip: var(--wordpill-elsewhere-lip);
+  --vialo-key-on-mark: var(--wordpill-on-here);         /* the letter on a light green key */
+  --vialo-key-on-elsewhere: var(--wordpill-on-elsewhere); /* the letter on a pink key */
   --vialo-pill-ring: 2px;               /* the light ring inside an "elsewhere" pill on the board, as on its key */
   --vialo-pill-ring-gap: 3px;           /* how far that ring sits inside the pill's edge */
   --vialo-pill-ring-color: var(--vialo-key-ring-color);
-  --vialo-key-ring-color: rgb(255 255 255 / 0.6);
+  --vialo-key-ring-color: var(--wordpill-elsewhere-ring);
   --vialo-key-shine: rgb(255 255 255 / 0.35);  /* the lit top edge of a green key */
   --shadow-vialo-key: 0 8px 12px rgb(var(--shadow-tint) / 0.13);
 }
@@ -1494,6 +1495,34 @@
   --game-pip-bg: var(--color-surface);
   --game-pip-ink: var(--color-ink);
   --game-demo-active-bg: var(--color-surface);
+}
+
+@theme static {
+  /* ---------- wordpill's Daytime page sky (Christian's "S6", 2026-11-27) ----------
+     Mint at the top, a white glow in the middle, pink at the bottom. Only wordpill's game page uses it, and only in
+     Daytime: Evening keeps the usual page. The same five colours fill the capsule in wordpill's artwork. */
+  /* wordpill's marks (Christian, 2026-11-27): light green in place, pink elsewhere in the word, white not in the
+     word. Dark letters on all three (tests check AA); the pink mark also keeps its ring, so colour is never the only
+     signal. The same values in Daytime and Evening, as the caps had before. */
+  --wordpill-here: #a8d5ba;
+  --wordpill-here-light: #dff1e6;
+  --wordpill-here-deep: #8fae8b;
+  --wordpill-on-here: #053321;
+  --wordpill-elsewhere: #f4a6c0;
+  --wordpill-elsewhere-light: #f7c6d4;
+  --wordpill-elsewhere-deep: #ec8fb0;
+  --wordpill-elsewhere-lip: #ec8fb0;
+  --wordpill-elsewhere-ring: transparent; /* no ring on a pink pill or key (Christian, 2026-11-27) */
+  --wordpill-on-elsewhere: #3e2c23;
+  --wordpill-sky-mint: #a8d5ba;
+  --wordpill-sky-pale-mint: #dff1e6;
+  --wordpill-sky-white: #fff5f7;
+  --wordpill-sky-rose: #f7c6d4;
+  --wordpill-sky-pink: #f4a6c0;
+  --wordpill-sky-glow: #ffffff;
+  --wordpill-sky:
+    radial-gradient(90% 55% at 50% 50%, var(--wordpill-sky-glow), transparent 70%),
+    linear-gradient(180deg, var(--wordpill-sky-mint) 0%, var(--wordpill-sky-pale-mint) 30%, var(--wordpill-sky-white) 55%, var(--wordpill-sky-rose) 80%, var(--wordpill-sky-pink) 100%);
 }
 
 @theme static {

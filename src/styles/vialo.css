@@ -108,12 +108,9 @@
   }
 
   .vialo-pill.vialo-here {
-    /* A dark shoulder keeps the white letter legible throughout the shine, including in Evening. */
-    --vialo-cap-shoulder: color-mix(in srgb, var(--game-dark-green-light) 38%, var(--game-dark-green-deep));
-    --vialo-cap-face: var(--game-dark-green);
-    color: var(--game-frame-pill-text-color);
-    background-color: var(--vialo-cap-face);
-    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, var(--vialo-cap-shoulder), var(--vialo-cap-face) 55%, var(--game-dark-green-deep));
+    color: var(--wordpill-on-here);
+    background-color: var(--wordpill-here);
+    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, var(--wordpill-here-light), var(--wordpill-here) 55%, var(--wordpill-here-deep));
     box-shadow: var(--shadow-pillo-pill);
   }
 
@@ -137,10 +134,10 @@
   }
 
   .vialo-pill.vialo-elsewhere {
-    color: var(--game-frame-pill-text-color);
-    background-color: var(--game-oxblood);
-    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-oxblood-light) 80%, var(--game-oxblood)), var(--game-oxblood) 55%, var(--game-oxblood-deep));
-    box-shadow: inset 0 0 0 var(--pillo-contrast-rim) var(--game-oxblood-light), var(--shadow-pillo-pill);
+    color: var(--wordpill-on-elsewhere);
+    background-color: var(--wordpill-elsewhere);
+    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, var(--wordpill-elsewhere-light), var(--wordpill-elsewhere) 55%, var(--wordpill-elsewhere-deep));
+    box-shadow: var(--shadow-pillo-pill);
   }
 
   .vialo-pill.vialo-absent {
@@ -361,7 +358,7 @@
     --vialo-key-lip-now: var(--vialo-key-elsewhere-lip);
     border-color: var(--vialo-key-elsewhere-lip);
     background-image: linear-gradient(180deg, var(--vialo-key-elsewhere-top), var(--vialo-key-elsewhere-bottom));
-    color: var(--vialo-key-on-mark);
+    color: var(--vialo-key-on-elsewhere);
   }
 
   /* Elsewhere in the word: a light ring inside the key's edge, so it differs from "in place" by more than colour. */

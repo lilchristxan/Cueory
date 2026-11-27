@@ -1405,3 +1405,31 @@
     display: none !important;
   }
 }
+
+/* wordpill's own Daytime page (Christian's "S6", 2026-11-27): its pale sky fills the whole frame, and the side panel
+   lets it show through. Evening keeps the usual page, with the same theme rules as the artwork above. */
+.game-frame[data-game-look="wordpill"] {
+  background: var(--wordpill-sky);
+}
+
+.game-frame[data-game-look="wordpill"] .game-frame-sidebar {
+  background-color: transparent;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .game-frame[data-game-look="wordpill"] {
+    background: var(--color-page);
+  }
+
+  :root:not([data-theme="light"]) .game-frame[data-game-look="wordpill"] .game-frame-sidebar {
+    background-color: var(--game-frame-sidebar-bg);
+  }
+}
+
+:root[data-theme="dark"] .game-frame[data-game-look="wordpill"] {
+  background: var(--color-page);
+}
+
+:root[data-theme="dark"] .game-frame[data-game-look="wordpill"] .game-frame-sidebar {
+  background-color: var(--game-frame-sidebar-bg);
+}
