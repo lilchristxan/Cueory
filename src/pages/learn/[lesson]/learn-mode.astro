@@ -7,10 +7,14 @@ import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
 import LearnSession from '../../../islands/LearnSession';
+import StudySettings from '../../../islands/StudySettings';
+import Wordmark from '../../../components/Wordmark.astro';
+import { site } from '../../../config/site';
 import AdaptiveStudySession from '../../../islands/AdaptiveStudySession';
 import { adaptiveLearnEnabled } from '../../../lessons/adaptive-gate';
 import { pathsFor, statusNotice, type CatalogLesson } from '../../../lessons/catalog';
 import { lessonCatalog } from '../../../lessons/load';
+import { studyModes } from '../../../config/modes';
 
 export async function getStaticPaths() {
   return pathsFor(await lessonCatalog(), 'learn');
@@ -26,26 +30,56 @@ const pilot = adaptiveLearnEnabled(deck.id, status);
 const learnCards = cards.map(({ front, back, blank }) => (blank ? { front, back, blank } : { front, back }));
 // Match the generated lesson hub's course count without restoring the deleted study-skills route.
 const olderLessons = (await lessonCatalog()).lessons.filter((candidate) => !candidate.curriculumId && candidate.name === lesson.name).length;
+// The other ways to study this lesson, for the menu beside the heading (Christian, 2026-11-26).
+const otherModes = lesson.modes
+  .filter((mode) => mode.id !== 'learn')
+  .map((mode) => ({ href: mode.href, name: studyModes.find((known) => known.id === mode.id)?.name ?? mode.id }));
 const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of ${olderLessons}` : lesson.context;
 ---
 
 {hold ? <LessonComingSoon /> : (
-<Layout title={`learn mode: ${title}`} description={`learn mode for ${lesson.about}.`} variant="study">
-  <div class="mx-auto max-w-prose pt-8">
-    <p class="text-sm text-ink-soft">{context}</p>
-    <div class="mt-2 flex flex-wrap items-center gap-x-1">
-      <h1 class="text-2xl">learn mode</h1>
-      <InfoTip
-        id="lesson-intro-info"
-        label="learn mode"
-        text={pilot
-          ? "try the sample cards and see when the next review is due. this session resets when you reload."
-          : "see each card, choose its answer, then type it. anything you miss comes back until you know every card."}
-      />
+<Layout title={`learn mode: ${title}`} description={`learn mode for ${lesson.about}.`} variant="study" bareHeader>
+  {/* A focused screen, as in Christian's approved draft (2026-11-26): back and the mode's menu on the left, close on the right. */}
+  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-gutter pt-4 sm:pt-5" data-testid="learn-bar">
+    <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <a href={lesson.href} aria-label="back to the lesson" class="press inline-flex size-(--tap-min) shrink-0 items-center justify-center rounded-pill border border-line text-ink no-underline">
+        <svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 6l-6 6 6 6" />
+        </svg>
+      </a>
+      <h1 class="min-w-0 text-lg font-bold">learn<span class="sr-only"> mode</span></h1>
+      {otherModes.length > 0 && (
+        <details class="relative" data-testid="learn-switch">
+          <summary aria-label="other ways to study this lesson" class="inline-flex size-(--tap-min) cursor-pointer list-none items-center justify-center rounded-pill text-ink">
+            <svg aria-hidden="true" viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </summary>
+          <ul class="absolute start-0 top-full z-10 min-w-48 rounded-xl border border-line bg-page p-2 shadow-card">
+            {otherModes.map((mode) => (
+              <li><a href={mode.href} class="flex min-h-(--tap-min) items-center rounded-lg px-3 no-underline hover:bg-surface">{mode.name}</a></li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
-    {cardsNotice && <p class="mt-3 text-sm text-ink-soft">{cardsNotice}</p>}
+    {/* The logo, top middle on every study screen (Christian, 2026-11-26): the full logo from 640 px; on phones the emblem, on its own line above the bar. */}
+    <a href="/" class="shrink-0 p-(--logo-clear) text-ink max-sm:order-first max-sm:flex max-sm:w-full max-sm:justify-center max-sm:py-0" aria-label={`${site.name} home`} data-testid="study-logo">
+      <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
+      <Wordmark class="hidden w-(--logo-width) sm:block" sizes="15rem" />
+    </a>
+    <div class="flex flex-1 items-center justify-end gap-3">
+      <StudySettings client:only="react" />
+      <a href={lesson.href} aria-label="close learn mode" data-testid="learn-close" class="press inline-flex size-(--tap-min) shrink-0 items-center justify-center rounded-pill border border-line text-ink no-underline">
+      <svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+        <path d="M6 6l12 12M18 6 6 18" />
+      </svg>
+      </a>
+    </div>
+  </div>
 
-    <div class="mt-10">
+  <div class="mx-auto max-w-3xl px-gutter pb-section">
+    <div class="mt-4">
       {/* client:only: nothing is pre-rendered, so without JavaScript only the note below shows. */}
       {pilot
         ? <AdaptiveStudySession client:only="react" cards={cards} />
@@ -55,10 +89,20 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
       </noscript>
     </div>
 
-    <p class="mt-section text-sm">
-      <a href={lesson.href}>back to the lesson</a>
-    </p>
-    <div class="mt-8">
+    {/* The quiet notes sit well below the card, so the first screen is only the bar, the progress and the card. */}
+    <div class="mt-section space-y-2 text-sm text-ink-soft">
+      <div class="flex flex-wrap items-center gap-x-1">
+        <p>{context}</p>
+        <InfoTip
+          id="lesson-intro-info"
+          label="learn mode"
+          text={pilot
+            ? "try the sample cards and see when the next review is due. this session resets when you reload."
+            : "see each card, choose its answer, then type it. anything you miss comes back until you know every card."}
+        />
+      </div>
+      {cardsNotice && <p>{cardsNotice}</p>}
+      <p>anything you miss comes back a little later, until you know every card. nothing is saved yet.</p>
       <ContentLabel />
     </div>
   </div>

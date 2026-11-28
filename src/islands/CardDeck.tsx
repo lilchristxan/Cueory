@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import SpeakButton from './SpeakButton';
 import { cardKeyAction } from './cardkeys';
 import { CARD_ROUND_KEY as ROUND_KEY, restoreCardRound } from './cardresume';
 import { migrateLegacyStars, pileOf, PROGRESS_STORAGE_KEY, readProgress, saveSort, type Pile } from '../scripts/progress';
@@ -132,6 +134,27 @@ function RepeatIcon() {
 }
 
 
+const iconProps = {
+  'aria-hidden': true,
+  viewBox: '0 0 24 24',
+  className: 'size-5',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const;
+const ShuffleIcon = () => <svg {...iconProps}><path d="M16 3h5v5M21 3l-7 7M4 20l6-6M16 21h5v-5M21 21l-7-7M4 4l5 5" /></svg>;
+const PrevIcon = () => <svg {...iconProps}><path d="M15 6l-6 6 6 6" /></svg>;
+const NextIcon = () => <svg {...iconProps}><path d="M9 6l6 6-6 6" /></svg>;
+const FlipIcon = () => <svg {...iconProps} className="size-6"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 9M20 4v5h-5M20 12a8 8 0 0 1-13.7 5.6L4 15M4 20v-5h5" /></svg>;
+
+// The row of icon buttons under the card (Christian's approved render, 2026-11-26). Each keeps a spoken name and a
+// tooltip (title), so an icon is never the only way to know what it does.
+const roundButton = 'press inline-flex size-13 shrink-0 items-center justify-center rounded-pill border border-line bg-(--study-card) text-ink disabled:opacity-40';
+const bareButton = 'press relative inline-flex size-13 shrink-0 items-center justify-center rounded-pill text-ink has-checked:bg-surface has-disabled:opacity-40';
+const flipButton = 'press inline-flex size-16 shrink-0 items-center justify-center rounded-pill bg-button text-on-button hover:bg-button-hover';
+
 function CloseIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
@@ -174,6 +197,10 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const faceRef = useRef<HTMLDivElement>(null);
   const fillRef = useRef<HTMLDivElement>(null);
+  // Cards whose answer has been looked at, or that were passed, this visit: the others say "new".
+  const [seen, setSeen] = useState<ReadonlySet<string>>(() => new Set());
+  const [countSlot, setCountSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => setCountSlot(document.getElementById('cards-bar-count')), []);
   const draftRef = useRef<ResumeDraft | null>(null);
   draftRef.current = !resumePending && hasAnswered ? draftOf(state, cards, deckId, shuffle, starredOnly, page) : null;
   useEffect(() => attachResumeLifecycle(storage, () => {
@@ -316,7 +343,8 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
   }, []);
 
   const roundOver = isRoundOver(state);
-  const progress = roundOver ? 1 : (state.pos + 1) / Math.max(state.round.length, 1);
+  // The bar shows the cards already passed, so it starts empty (Christian's render: 0 / 3 with an empty bar).
+  const progress = roundOver ? 1 : state.pos / Math.max(state.round.length, 1);
 
   // The bar's length is a CSS custom property set through the style object, never a style="" attribute, so the strict
   // style-src policy allows it (the pattern described with .progress-fill in global.css). It runs after every render
@@ -328,39 +356,43 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
   // Two independent switches styled as one pill (.segmented, Task 77). Each real checkbox covers its whole segment,
   // invisible, so a tap anywhere on it toggles it (the ThemePicker pattern). An "on" segment fills in and shows a check
   // mark, so the state never depends on color.
-  const optionClass = 'segmented-option relative has-disabled:cursor-not-allowed has-disabled:opacity-50';
-  // The checkbox covers its whole segment but draws nothing itself except the shared keyboard focus ring, so the
-  // focused element shows its own outline (Task 74 sweep).
+  // Two independent switches drawn as icons. Each real checkbox covers its whole button, invisible, so a tap anywhere
+  // on it toggles it; "on" fills the button, and the checkbox state is what assistive technology reads.
   const optionInput = 'absolute inset-0 cursor-pointer appearance-none rounded-pill bg-transparent disabled:cursor-not-allowed';
+  // "On" is a filled button plus a dot under the icon, so the state never depends on colour alone.
+  const onDot = <span aria-hidden="true" className="absolute bottom-1.5 hidden size-1.5 rounded-pill bg-ink peer-checked:block" />;
+  const shuffleToggle = (
+    <label className={bareButton}>
+      <input type="checkbox" checked={shuffle} onChange={(e) => changeShuffle(e.currentTarget.checked)} className={`peer ${optionInput}`} />
+      <ShuffleIcon />
+      {onDot}
+      <span className="sr-only">Shuffle</span>
+    </label>
+  );
+  const starredToggle = (
+    <label className={bareButton}>
+      <input
+        type="checkbox"
+        checked={starredOnly && starred.size > 0}
+        disabled={starred.size === 0}
+        onChange={(e) => changeStarredOnly(e.currentTarget.checked)}
+        className={`peer ${optionInput}`}
+      />
+      <StarIcon filled />
+      {onDot}
+      <span className="sr-only">Only starred cards ({starred.size})</span>
+    </label>
+  );
   const options = (
-    <div className="segmented" role="group" aria-label="Study options">
-      <label className={optionClass}>
-        <input
-          type="checkbox"
-          checked={shuffle}
-          onChange={(e) => changeShuffle(e.currentTarget.checked)}
-          className={optionInput}
-        />
-        {shuffle && <CheckIcon />}
-        <span>Shuffle</span>
-      </label>
-      <label className={optionClass}>
-        <input
-          type="checkbox"
-          checked={starredOnly && starred.size > 0}
-          disabled={starred.size === 0}
-          onChange={(e) => changeStarredOnly(e.currentTarget.checked)}
-          className={optionInput}
-        />
-        {starredOnly && starred.size > 0 ? <CheckIcon /> : <StarIcon filled={false} />}
-        <span>Only starred cards ({starred.size})</span>
-      </label>
+    <div className="flex justify-center gap-3" role="group" aria-label="Study options">
+      {shuffleToggle}
+      {starredToggle}
     </div>
   );
 
   const progressBar = (label: string) => (
     <div
-      className="progress-track mt-stack"
+      className="progress-track h-3"
       role="progressbar"
       aria-label="Cards in this round"
       aria-valuemin={0}
@@ -440,99 +472,122 @@ export default function CardDeck({ deckId, cards, page = RESUME_PAGE }: Props) {
   const isStarred = starred.has(card.id);
   const round = state.roundNumber > 1 ? `Round ${state.roundNumber} · ` : '';
   const position = `${round}Card ${state.pos + 1} of ${state.round.length}`;
-  const face = 'col-start-1 row-start-1 flex min-h-56 min-w-0 flex-col justify-center rounded-xl border border-line bg-surface px-6 py-10 shadow-card sm:px-10';
+  const face = 'col-start-1 row-start-1 flex min-h-96 min-w-0 flex-col items-center justify-center rounded-2xl border border-line bg-(--study-card) px-6 py-20 text-center shadow-card sm:min-h-108 sm:px-10';
+  const isNew = !seen.has(card.id) && !state.flipped;
+  const markSeen = () => setSeen((before) => (before.has(card.id) ? before : new Set(before).add(card.id)));
+  const turn = () => {
+    markSeen();
+    act(flip);
+  };
 
   return (
     <>
     {resumeChoice}
+    {countSlot && createPortal(<span data-testid="card-count">{state.pos} / {state.round.length}</span>, countSlot)}
     <div ref={rootRef}>
-      {options}
-
-      {/*
-        The card (.flip, Task 77). Both sides stay in the page, stacked in one grid cell so the card is as tall as its
-        longer side; the hidden side is aria-hidden. Under reduced motion the shared CSS swaps the sides with a fade
-        instead of turning the card. The status line below is the deck's one live region.
-      */}
-      <div
-        // A new card gets a fresh flip container, so the back never animates in with the next card's answer.
-        key={`${state.roundNumber}:${state.pos}:${card.id}`}
-        ref={faceRef}
-        role="region"
-        aria-label={state.flipped ? 'Answer' : 'Question'}
-        tabIndex={0}
-        onClick={() => act(flip)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && e.target === e.currentTarget) {
-            e.preventDefault();
-            act(flip);
-          }
-        }}
-        className={`flip mt-stack cursor-pointer touch-manipulation rounded-xl${state.flipped ? ' is-flipped' : ''}`}
-        data-testid="flashcard"
-      >
-        <div className="flip-inner grid min-w-0 grid-cols-1">
-          <div className={`flip-face ${face}`} aria-hidden={state.flipped || undefined}>
-            <p className="text-sm text-ink-soft">Question</p>
-            <p data-testid="card-text" className="mt-3 wrap-anywhere text-xl">
-              {card.front}
-            </p>
-          </div>
-          <div className={`flip-back relative ${face}`} aria-hidden={!state.flipped || undefined}>
-            <p className="text-sm text-ink-soft">Answer</p>
-            <p className="mt-3 wrap-anywhere text-xl">{card.back}</p>
-          </div>
-        </div>
-      </div>
-
       {progressBar(position)}
 
-      <div className="mt-stack flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink-soft" aria-live="polite" data-testid="card-status">
-          {position} · Know it: {tally.know} · Still learning: {tally.learning}
-          <span className="sr-only">{state.flipped ? ' · answer showing' : ''}</span>
-        </p>
+      <div className="relative mt-6">
+        {/*
+          The card (.flip, Task 77). Both sides stay in the page, stacked in one grid cell so the card is as tall as
+          its longer side; the hidden side is aria-hidden. Under reduced motion the shared CSS swaps the sides with a
+          fade instead of turning the card. The status line below is the deck's one live region.
+        */}
+        <div
+          // A new card gets a fresh flip container, so the back never animates in with the next card's answer.
+          key={`${state.roundNumber}:${state.pos}:${card.id}`}
+          ref={faceRef}
+          role="region"
+          aria-label={state.flipped ? 'Answer' : 'Question'}
+          tabIndex={0}
+          onClick={turn}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && e.target === e.currentTarget) {
+              e.preventDefault();
+              turn();
+            }
+          }}
+          className={`flip cursor-pointer touch-manipulation rounded-2xl${state.flipped ? ' is-flipped' : ''}`}
+          data-testid="flashcard"
+        >
+          <div className="flip-inner grid min-w-0 grid-cols-1">
+            <div className={`flip-face ${face}`} aria-hidden={state.flipped || undefined}>
+              <p className="sr-only">Question</p>
+              <p data-testid="card-text" className="wrap-anywhere text-xl font-bold sm:text-2xl">
+                {card.front}
+              </p>
+            </div>
+            <div className={`flip-back relative ${face}`} aria-hidden={!state.flipped || undefined}>
+              <p className="sr-only">Answer</p>
+              <p className="wrap-anywhere text-xl font-bold sm:text-2xl">{card.back}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* On the card but outside the part that turns: the star, the "new" chip and the listen button. */}
         <button
           type="button"
           aria-pressed={isStarred}
+          aria-label="Star"
           onClick={() => changeStar(card.id)}
-          className="press flex min-h-(--tap-min) items-center gap-2 rounded-pill border border-control px-4 py-2 text-sm text-ink aria-pressed:bg-surface"
+          className="press absolute start-3 top-3 inline-flex size-(--tap-min) items-center justify-center rounded-pill text-ink"
         >
           <StarIcon filled={isStarred} />
-          Star
         </button>
-      </div>
-
-      <div className="mt-stack flex flex-wrap gap-3">
-        {state.flipped ? (
-          <>
-            <button type="button" onClick={() => sort('know')} className={`${primaryButton} grow sm:grow-0`}>
-              <CheckIcon />
-              Know it
-            </button>
-            <button type="button" onClick={() => sort('learning')} className={`${secondaryButton} grow sm:grow-0`}>
-              <RepeatIcon />
-              Still learning
-            </button>
-            <button
-              type="button"
-              onClick={() => act(flip)}
-              className="min-h-(--tap-min) rounded-pill px-3 py-2.5 text-ink-soft underline"
-            >
-              Show question
-            </button>
-          </>
-        ) : (
-          <>
-            <button type="button" onClick={() => act(flip)} className={primaryButton}>
-              Show answer
-            </button>
-            <button type="button" onClick={goBack} disabled={state.pos === 0} className={secondaryButton}>
-              Back
-            </button>
-          </>
+        {isNew && (
+          <span data-testid="card-new" className="pointer-events-none absolute start-1/2 top-5 -translate-x-1/2 rounded-pill bg-surface px-3 py-0.5 text-sm font-bold text-ink rtl:translate-x-1/2">
+            new
+          </span>
         )}
+        <div className="absolute end-3 top-3 rounded-pill bg-surface">
+          <SpeakButton text={state.flipped ? card.back : card.front} />
+        </div>
       </div>
 
+      <p className="sr-only" aria-live="polite" data-testid="card-status">
+        {position} · Know it: {tally.know} · Still learning: {tally.learning}
+        <span>{state.flipped ? ' · answer showing' : ''}</span>
+      </p>
+
+      {/*
+        Icons only (Christian, 2026-11-26): shuffle, back, flip, next, starred only. Once the answer shows, back and
+        next become the two piles (still learning, know it); "next" before flipping passes the card as still learning.
+      */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4" role="group" aria-label="Study options">
+        {shuffleToggle}
+        {state.flipped ? (
+          <button type="button" onClick={() => sort('learning')} aria-label="Still learning" className={roundButton}>
+            <RepeatIcon />
+          </button>
+        ) : (
+          <button type="button" onClick={goBack} disabled={state.pos === 0} aria-label="Back" className={roundButton}>
+            <PrevIcon />
+          </button>
+        )}
+        <button type="button" onClick={turn} aria-label={state.flipped ? 'Show question' : 'Show answer'} className={flipButton}>
+          <FlipIcon />
+        </button>
+        {state.flipped ? (
+          <button type="button" onClick={() => sort('know')} aria-label="Know it" className={roundButton}>
+            <CheckIcon />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              markSeen();
+              sort('learning');
+            }}
+            aria-label="Next card"
+            className={roundButton}
+          >
+            <NextIcon />
+          </button>
+        )}
+        {starredToggle}
+      </div>
+
+      <div className="mt-section pt-section" />
       {keysHint && (
         <div className="mt-stack flex items-center gap-3 text-sm text-ink-soft" data-testid="card-keys">
           <p className="min-w-0 flex-1">

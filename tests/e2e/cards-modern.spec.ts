@@ -171,10 +171,10 @@ test('the progress bar and text follow the card number', async ({ page }) => {
   await expect(bar).toHaveAttribute('aria-valuenow', '1');
   await expect(bar).toHaveAttribute('aria-valuemax', '3');
   await expect(bar).toHaveAttribute('aria-valuetext', 'Card 1 of 3');
+  // The drawn bar shows the cards already passed, so it starts empty (0 / 3); the spoken value names the card on screen.
   const fill = bar.locator('.progress-fill');
-  await expect.poll(() => fill.evaluate((el) => getComputedStyle(el).getPropertyValue('--progress').trim())).toBe(
-    String(1 / 3),
-  );
+  await expect.poll(() => fill.evaluate((el) => getComputedStyle(el).getPropertyValue('--progress').trim())).toBe('0');
+  await expect(page.getByTestId('card-count')).toHaveText('0 / 3');
 
   await page.getByRole('button', { name: 'Show answer' }).click();
   await page.getByRole('button', { name: 'Know it' }).click();
@@ -182,8 +182,9 @@ test('the progress bar and text follow the card number', async ({ page }) => {
   await expect(bar).toHaveAttribute('aria-valuetext', 'Card 2 of 3');
   await expect(status(page)).toContainText('Card 2 of 3 · Know it: 1 · Still learning: 0');
   await expect.poll(() => fill.evaluate((el) => getComputedStyle(el).getPropertyValue('--progress').trim())).toBe(
-    String(2 / 3),
+    String(1 / 3),
   );
+  await expect(page.getByTestId('card-count')).toHaveText('1 / 3');
 
   for (let i = 0; i < 2; i++) {
     await page.getByRole('button', { name: 'Show answer' }).click();
@@ -257,7 +258,7 @@ test('the keys hint shows and can be hidden', async ({ page }) => {
 
 // ── Study options ──────────────────────────────────────────────────────────────────────────────────────────────────
 
-test('Shuffle and "Only starred cards" are real checkboxes in one tidy control', async ({ page }) => {
+test('Shuffle and "Only starred cards" are real checkboxes, drawn as icons in the control row', async ({ page }) => {
   await page.goto(DECK_URL);
   const group = page.getByRole('group', { name: 'Study options' });
   const shuffle = group.getByRole('checkbox', { name: 'Shuffle' });
@@ -267,9 +268,51 @@ test('Shuffle and "Only starred cards" are real checkboxes in one tidy control',
   // The invisible box covers its whole segment, so tapping anywhere on the segment toggles it.
   await group.locator('label').filter({ hasText: 'Shuffle' }).click();
   await expect(shuffle).toBeChecked();
-  // An "on" option shows a check mark, not only a fill color.
+  // An "on" option shows a dot under its icon, not only a fill color.
   await expect(group.locator('label').filter({ hasText: 'Shuffle' }).locator('svg')).toHaveCount(1);
+  await expect(group.locator('label').filter({ hasText: 'Shuffle' }).locator('span[aria-hidden="true"]')).toBeVisible();
   await shuffle.focus();
   await page.keyboard.press('Space');
   await expect(shuffle).not.toBeChecked();
+});
+
+// ── The focused look (Christian's approved render, 2026-11-26) ─────────────────
+
+test('the focused cards screen: count in the bar, a "new" chip, and icon buttons with spoken names', async ({ page }) => {
+  await page.goto(DECK_URL);
+  await expect(page.getByTestId('building-notice')).toHaveCount(0);
+  await expect(page.getByTestId('card-count')).toHaveText('0 / 3');
+  await expect(page.getByTestId('card-new')).toHaveText('new');
+  const row = page.getByRole('group', { name: 'Study options' });
+  // Icons only: no button in the row shows words, and each has a name and is at least 44 px.
+  for (const name of ['Back', 'Show answer', 'Next card']) {
+    const button = row.getByRole('button', { name, exact: true });
+    await expect(button).toHaveText('');
+    const box = (await button.boundingBox())!;
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(44);
+  }
+  await expect(row.getByRole('button', { name: 'Back', exact: true })).toBeDisabled();
+
+  // Flipping takes the chip away and turns back and next into the two piles.
+  await row.getByRole('button', { name: 'Show answer', exact: true }).click();
+  await expect(page.getByTestId('card-new')).toHaveCount(0);
+  await expect(row.getByRole('button', { name: 'Still learning', exact: true })).toBeVisible();
+  await expect(row.getByRole('button', { name: 'Know it', exact: true })).toBeVisible();
+  await row.getByRole('button', { name: 'Show question', exact: true }).click();
+
+  // "Next" before flipping passes the card as still learning.
+  await row.getByRole('button', { name: 'Next card', exact: true }).click();
+  await expect(page.getByTestId('card-count')).toHaveText('1 / 3');
+  await expect(page.getByTestId('card-status')).toContainText('Still learning: 1');
+  await expect(row.getByRole('button', { name: 'Back', exact: true })).toBeEnabled();
+});
+
+test('the close button goes back to the lesson, and the menu lists the other ways to study', async ({ page }) => {
+  await page.goto(DECK_URL);
+  const menu = page.getByTestId('cards-switch');
+  await menu.locator('summary').click();
+  await expect(menu.getByRole('link', { name: 'learn', exact: true })).toBeVisible();
+  await expect(menu.getByRole('link', { name: 'cards', exact: true })).toHaveCount(0);
+  await page.getByRole('link', { name: 'close cards' }).click();
+  await expect(page).toHaveURL(/\/learn\/study-skills$/);
 });

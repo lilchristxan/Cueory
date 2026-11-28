@@ -28,6 +28,7 @@
   --color-page: #f9f5ef;        /* Ivory    — page background */
   --study-page: #ffffff;        /* study screens sit on plain white in Daytime (Christian, 2026-11-26); not a brand colour, so not a --color-* token */
   --color-surface: #eadccf;     /* Linen    — cards and panels */
+  --study-card: #fffdf9;        /* the focused study card (learn, cards): a step lighter than the Ivory page, from Christian's approved renders (2026-11-26); in Evening it is Walnut */
   --color-soft: #d3b7a1;        /* Taupe    — decorative / soft fill (notice bar) */
   --color-highlight: #8b6f5b;   /* Mocha    — accents and highlights (not for small text) */
   --color-ink: #3e2c23;         /* Espresso — primary text, logo, buttons */
@@ -1198,6 +1199,7 @@
 .always-daytime {
   --color-page: #f9f5ef;
   --color-surface: #eadccf;
+  --study-card: #fffdf9;
   --color-soft: #d3b7a1;
   --color-highlight: #8b6f5b;
   --color-ink: #3e2c23;
@@ -1226,6 +1228,7 @@
     --study-page: var(--color-page); /* study screens in Evening stay Charcoal */
     --share-story-dark-logo: 1;
     --color-surface: #3a2d24;   /* Walnut        — cards and panels */
+    --study-card: var(--color-surface); /* the focused study card in Evening: Walnut */
     --color-soft: #3a2d24;      /* Walnut        — notice bar */
     --color-highlight: #6b5243; /* Bronze        — accents and highlights (not for text) */
     --color-ink: #f9f5ef;       /* Ivory         — primary text and logo */
@@ -1359,6 +1362,7 @@
   --study-page: var(--color-page); /* study screens in Evening stay Charcoal */
   --share-story-dark-logo: 1;
   --color-surface: #3a2d24;   /* Walnut        — cards and panels */
+  --study-card: var(--color-surface); /* the focused study card in Evening: Walnut */
   --color-soft: #3a2d24;      /* Walnut        — notice bar */
   --color-highlight: #6b5243; /* Bronze        — accents and highlights (not for text) */
   --color-ink: #f9f5ef;       /* Ivory         — primary text and logo */
