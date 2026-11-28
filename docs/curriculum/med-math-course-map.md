@@ -353,53 +353,70 @@ Lessons:
 
 ## 4. The module path applied to this course
 
-Stages follow `module-mastery-path.md`. They are recommendations, never locks.
+Stages follow `module-mastery-path.md` and issue #1281. They are recommendations, never locks. The module exam is
+always open.
 
-1. **Input.** One video and one reading per module (per lesson where a module is long). Both come from reviewed
-   scripts and tables: `[from Christian's reviewed batch]`.
+1. **Input.** One video and one reading per lesson, each cut into anchors (a video time range or a reading section id).
+   Both come from reviewed scripts and tables: `[from Christian's reviewed batch]`.
 2. **Active practice round.** One round of each technique the module has. Remember objectives use flashcards, label it
    and matching. Understand objectives use fill in the blank, matching and learning questions. Apply objectives use
    learning questions. Label it works on sample orders, labels, pump screens and drip sets, using labeled sample
-   images only.
-3. **Diagnostic quiz.** The quiz after practice. Starting blueprint, to tune with use:
-   - 2 items per objective at remember, understand and apply.
-   - Of those 2, one at the objective's own level and one a level below (an objective at remember gets 2 at remember).
-   - Analyze and evaluate objectives are left for the deeper round, except in the strand (see the readiness rule).
-4. **Adaptive practice.** Chosen by the engine, weakest foundations first. A skill's concept starts at the lowest level
-   not yet shown.
-5. **Readiness rule.** A module is ready when every objective is shown at remember, understand and apply, as defined
-   in the module path ("shown" needs the last two answers right and a smoothed share right at or above the starting
-   value in that document). Where a module has no objective at some of those levels, the levels it has are the ready
-   levels. Strand modules have their objectives at analyze, so for them the ready levels are the levels they have.
-   This rule is a starting value (question 9).
+   images only. Learning questions are account-only (see section 5, accounts).
+3. **Diagnostic quiz.** One item per objective at the understand or apply thinking level, as the objective carries.
+   Difficulty is a separate setting from thinking level. Each objective's item starts at difficulty 2, and a correct
+   answer opens one follow-up at difficulty 3, following the existing level-test rule. The quiz sets each objective's
+   starting status. If an objective has no item for the diagnostic, the module shows "diagnostic coverage missing" and
+   names the objective. It is never skipped quietly. Objectives at analyze or evaluate are covered in the deeper round.
+4. **Adaptive practice.** Chosen by the engine, weakest foundations first, with a reason shown for each item.
+5. **Readiness rule.** The "ready for the practice test" recommendation needs sufficient evidence at both understand
+   and apply for every objective, as defined in the module path. No objective is exempt, and no application evidence
+   means no ready. When that evidence cannot be assessed yet (for example the objective has no apply item, or too few
+   responses), the module shows "cannot be assessed yet", names the objective, and the student can still open the
+   exam. The rule is a starting value (question 9).
 6. **Optional deeper round.** Analyze and evaluate items, mostly cases about unsafe orders: find the mismatch, find the
    slip, decide to give, hold or clarify, and explain why. Every case is written and reviewed by Christian:
    `[from Christian's reviewed batch]`.
 7. **Module exam.** The module practice exam. Starting blueprint per objective: 1 item at remember, 1 at understand,
-   2 at apply, 1 at analyze, 1 at evaluate, for the levels the objective carries. Exam items are never reused from
-   practice, the diagnostic or the deeper round. The exam is a count of what was shown, not a score prediction.
+   2 at apply, 1 at analyze, 1 at evaluate, for the levels the objective carries. Exam items are fresh: never reused
+   from practice, the diagnostic or the deeper round. The exam shows the number right and a status per objective, never
+   a score prediction.
 
-**Item pool each objective needs (starting values).** Enough items that none repeat across stages: about 3 for the
-active round, 2 for the diagnostic, 4 for adaptive practice, 2 for the deeper round and 2 for the exam. Christian's
-template needs the four columns the module path names: module id, concept id, thinking level, technique.
+**Item plan carried by every item (authoring columns).** Every item carries: the targeted objective id (`lo`), the
+thinking level (`bloom`), the difficulty (`level`, 1 to 3), the technique, and the anchor (the video time range or
+reading section id that teaches it). Thinking level and difficulty are two columns and are never merged. A gap links
+the student back to the anchor. Missing anchor, missing diagnostic item or an item pointing to a missing objective
+should fail the content check.
+
+**Item pool each objective needs (starting values).** The brief warns when an objective has fewer than 3 unused items
+for the practice exam, so the pool must leave at least 3 fresh exam items per objective after the other stages. That
+is about 3 for the active round, 2 for the diagnostic, 4 for adaptive practice, 2 for the deeper round and at least 3
+fresh for the exam. These are starting values and can change after the simulation.
 
 **Numbers are always practice values.** Sample items in the repo are labeled samples with no real clinical values. Real
 numbers live only in the private store and the database, and the browser never receives answer keys (CLAUDE.md rule 1).
 
 ## 5. Unit tests and the course picture
 
-- **Unit test.** One test per unit, built from the module exams' objectives but with its own items (never reused from
-  any module). Blueprint: 1 or 2 items per objective, weighted toward apply and above. Unit tests need all of that
-  unit's modules to have reached the module exam stage before they are offered, as a recommendation only.
+- **Unit test.** One test per unit, built from the module exams' objectives but with its own fresh items (never reused
+  from any module). Blueprint: 1 or 2 items per objective, weighted toward apply and above. A unit test is recommended
+  once the unit's modules have reached the module exam stage, and is never locked.
 - **Strand check.** The unsafe-order strand is also tested inside each unit test as a set of cases, so the skill is
   checked where the math happens.
 - **Module roll-up.** Each module page shows, per thinking level, how many objectives are shown, learning or not
-  started, and the list to strengthen. Words and icons, never color alone.
-- **Course roll-up.** The course page shows how many modules are at each stage and, per thinking level, objectives
-  shown out of all objectives in the course, plus the next module to open. It is a count of what has been shown.
-  Never a score, never a prediction of an exam or a chance of passing (D-36).
-- **Accounts.** The diagnostic, adaptive practice, deeper round, exams and roll-ups are for signed-in students.
-  Guests keep the video, reading and active practice.
+  started, and the list to strengthen. Words, icons and evidence counts, never color alone.
+- **Course roll-up.** The course page shows how many modules are at each stage and, per thinking level (understanding,
+  application, analysis, evaluation), objectives shown out of all objectives in the course, plus the next module to
+  open. These four tier totals cannot supply real-world application.
+- **Real-world application.** This is a separate dimension: a reviewed cumulative-case set where each case draws on
+  objectives from at least two modules (and, where it fits, the unsafe-order strand). Evidence for an objective that
+  appears in several cases is counted once (deduplicated). Until the set exists, the course page shows "case set not
+  built yet" for this dimension. Course readiness requires this dimension as well as every module, so a course can
+  never be marked ready while the set is missing. All cases are `[from Christian's reviewed batch]`.
+- **Never a score.** Every roll-up is a count and a status word. Never a score, never a prediction of an exam or a
+  chance of passing (D-36).
+- **Accounts.** Learning questions are graded question-bank checks reserved for confirmed accounts (D-86, D-130), and
+  so are the diagnostic, adaptive practice, deeper round, exams and roll-ups. Guests keep the video and reading and
+  continue the other permitted practice methods (flashcards, label it, fill in the blank, matching) without signing in.
 
 ## 6. Content needed from Christian
 
@@ -448,7 +465,7 @@ module also needs its video script, reading, and the item pool described in sect
 7. Should the strand's modules open at any time, or after MMU1-M03?
 8. Which content should sit before this course (for example basic arithmetic, or a short check on fractions and
    decimals)? Do you want a small placement check?
-9. Is the readiness rule right for strand modules, whose objectives start at analyze?
+9. Strand objectives mostly sit at analyze or evaluate, so the readiness rule would show "cannot be assessed yet" for them. Do you want some understand and apply objectives and items added to the strand modules?
 10. Is high-alert medication content part of the reviewed batches for MMU3, and who is the qualified reviewer?
     Dosing and first-action content waits for a qualified reviewer under the content review policy.
 
@@ -463,3 +480,4 @@ module also needs its video script, reading, and the item pool described in sect
     values only.
 16. Do you want this course's modules to share items with other courses (for example fluids and electrolytes), or keep
     separate pools?
+17. Which module pairs should the cumulative cases span first, and how many cases are enough before the course can be called ready?
