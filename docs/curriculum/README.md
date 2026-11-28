@@ -19,3 +19,4 @@ mental health, and exit-exam readiness.
 - Exam weighting numbers in the picture come from the NCSBN RN test plan (2023). Check the current plan before quoting
   them anywhere public.
 - Suggested build order: units 00 and 01 first (every later lesson leans on them), then the systems in the order shown.
+- [med-math-course-map.md](med-math-course-map.md) and [med-math-course-map.csv](med-math-course-map.csv): the planned structure of the nursing math course (skeleton only, no clinical facts).
