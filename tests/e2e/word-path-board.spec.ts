@@ -82,7 +82,25 @@ test.describe('word path: board format (#722)', () => {
     await expect(game(page).getByRole('button', { name: 'cue' })).toBeEnabled();
   });
 
-  test('tap letters then submit: a theme word gets its own state, a dot symbol and a spoken label', async ({ page }) => {
+  test('the words under the board are visually hidden but still read aloud; the ? row, buttons and the help text stay', async ({ page }) => {
+    const hidden = (text: string) => game(page).locator('p.sr-only', { hasText: text });
+    await expect(hidden(`0 of ${total} words found`)).toHaveCount(1);
+    await expect(hidden('words toward a cue')).toHaveCount(1);
+    await expect(hidden(`find all ${total} answers`)).toHaveCount(1);
+    await expect(hidden('drag across touching letters')).toHaveCount(1);
+    await expect(hidden('sample puzzle')).toHaveCount(1);
+    // None of that text is painted: every one of those paragraphs is clipped to a 1 px box.
+    for (const p of await game(page).locator('p.sr-only').all()) {
+      const box = (await p.boundingBox())!;
+      expect(box.width).toBeLessThanOrEqual(1);
+      expect(box.height).toBeLessThanOrEqual(1);
+    }
+    await expect(game(page).locator('.wordpath-missing-pill')).toHaveCount(total);
+    for (const name of ['submit', 'clear', 'cue']) await expect(game(page).getByRole('button', { name })).toBeVisible();
+    await expect(game(page).getByRole('grid')).toHaveAttribute('aria-describedby', /.+/);
+  });
+
+  test('tap letters then submit: a theme word gets its own state, a pill with a check and a spoken label', async ({ page }) => {
     const word = themes[0]!;
     await tapWord(page, word.path);
     await expect(page.getByTestId('suture-picked')).toHaveText(word.answer.toLowerCase());
@@ -92,7 +110,8 @@ test.describe('word path: board format (#722)', () => {
     await submitButton(page).click();
     await expect(live(page)).toHaveText(`theme word: ${word.answer.toLowerCase()}, 1 of ${total}.`);
     await expect(cell(page, word.path[0]!)).toHaveAttribute('data-look', 'theme');
-    await expect(cell(page, word.path[0]!).locator('svg[data-mark="theme"]')).toHaveCount(1);
+    // No corner dot any more: the fill, the joining line, the "✓ word" pill and the spoken label carry a found theme word.
+    await expect(cell(page, word.path[0]!).locator('svg')).toHaveCount(0);
     await expect(cell(page, word.path[0]!)).toHaveAccessibleName(new RegExp(`theme word: ${word.answer.toLowerCase()}$`));
     const found = page.getByRole('list', { name: 'answers found' }).getByRole('listitem');
     await expect(found).toHaveCount(1);
@@ -104,14 +123,42 @@ test.describe('word path: board format (#722)', () => {
     await expect(game(page).locator('.wordpath-missing-pill')).toHaveCount(total - 1);
   });
 
-  test('tapping the last letter again submits; the thread gets a second state and a diamond symbol', async ({ page }) => {
+  test('tapping the last letter again submits; the thread gets a second state, teal, and a diamond chip', async ({ page }) => {
     await tapWord(page, thread.path);
     await cell(page, thread.path.at(-1)!).click();
     await expect(live(page)).toHaveText(`the thread: ${thread.answer.toLowerCase()}, 1 of ${total}.`);
     for (const at of thread.path) await expect(cell(page, at)).toHaveAttribute('data-look', 'special');
-    await expect(cell(page, thread.path[0]!).locator('svg[data-mark="thread"]')).toHaveCount(1);
+    await expect(cell(page, thread.path[0]!).locator('svg')).toHaveCount(0);
     await expect(cell(page, thread.path[0]!)).toHaveAccessibleName(new RegExp(`the thread: ${thread.answer.toLowerCase()}$`));
     await expect(page.getByRole('list', { name: 'answers found' })).toContainText('(the thread)');
+  });
+
+  test('a found thread is teal on its tiles and chip, an ordinary found word is not, and the chip keeps a diamond and "(the thread)"', async ({ page }) => {
+    const teal = () => page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'var(--color-game-teal)';
+      document.body.append(probe);
+      const value = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return value;
+    });
+    await tapWord(page, thread.path);
+    await cell(page, thread.path.at(-1)!).click();
+    await tapWord(page, themes[0]!.path);
+    await cell(page, themes[0]!.path.at(-1)!).click();
+    const bg = (locator: ReturnType<typeof cell>) => locator.locator('.wordpath-dot').evaluate((el) => getComputedStyle(el).backgroundColor);
+    const color = await teal();
+    expect(await bg(cell(page, thread.path[0]!))).toBe(color);
+    expect(await bg(cell(page, themes[0]!.path[0]!))).not.toBe(color);
+    const chips = page.getByRole('list', { name: 'answers found' }).getByRole('listitem');
+    const threadChip = chips.filter({ hasText: '(the thread)' });
+    await expect(threadChip).toHaveCount(1);
+    await expect(threadChip).toContainText('◆');
+    expect(await threadChip.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(color);
+    const other = chips.filter({ hasText: '(theme word)' });
+    expect(await other.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(color);
+    const stroke = await page.locator('line[data-kind="special"]').first().evaluate((el) => getComputedStyle(el).stroke);
+    expect(stroke).toBe(color);
   });
 
   test('dragging across the letters finds a word when the pointer lifts', async ({ page }) => {

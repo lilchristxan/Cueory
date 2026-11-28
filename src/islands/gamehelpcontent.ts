@@ -128,8 +128,9 @@ export const GAME_HELP: Readonly<Record<HelpTopic, GameHelpContent>> = Object.fr
     play: [
       'find every answer on the board. each letter belongs to exactly one answer.',
       'answers run through touching letters, up, down, sideways or diagonally, and can turn. a path never uses the same letter twice.',
-      'one answer, the thread, names the theme and runs from one side of the board to the other. found theme words get a dot, and the thread gets a diamond.',
-      'drag across the letters, or tap them one by one and press submit. tapping the last letter again also submits, and clear starts over.',
+      'one answer, the thread, names the theme and runs from one side of the board to the other. once found, the thread turns teal and its chip under the board gets a diamond.',
+      'drag across the letters, or tap them one by one and press submit. tapping the last letter again also submits, and clear starts over. a teal line joins the letters you are tracing.',
+      'the row of question marks under the board has one for each answer, and each one fills in as you find its word.',
       'on a keyboard, arrows move, enter or space adds a letter, enter on the last letter submits, backspace takes one back and escape clears.',
       `every ${WORDS_PER_HINT} other words of ${MIN_WORD} letters or more earn a cue. a cue marks the letters of one answer, and a second cue on it numbers them in order. there's no limit on guesses.`,
     ],
