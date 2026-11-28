@@ -866,6 +866,33 @@ describe('module path: second review round', () => {
     });
   });
 
+  describe('ordering table: several ranked entries', () => {
+    const two: ModuleShape = { concepts: ['sample-a', 'sample-b'], practiceTechniques: [] };
+    const history = { usedIds: [], recentTechniques: [] };
+    it('G: a genuinely due card is reviewed before a new item, whichever concept it belongs to', () => {
+      let p: ModuleProgress = { ...emptyProgress(), diagnosed: true };
+      for (let i = 0; i < 6; i++) p = at(p, true, `sample-card-${i}`, 0); // A / apply, due by day 3
+      for (let i = 0; i < 6; i++) p = at(p, true, `sample-b-card-${i}`, 0, 'sample-b', 'understand'); // B / understand, due by day 3
+      const pool: ModuleItem[] = [
+        { id: 'sample-card-0', concept: 'sample-a', level: 'apply', technique: 'learning questions' },
+        { id: 'sample-b-new', concept: 'sample-b', level: 'understand', technique: 'fill in the blank' },
+      ];
+      expect(nextStep(two, p, pool, history, () => 0, undefined, clockOn(3))).toMatchObject({ kind: 'step', concept: 'sample-a', level: 'apply', id: 'sample-card-0', reason: 'due for review' });
+      // Interleave still applies among reviews: A just ran twice and B has a due card too.
+      const withB = [...pool, { id: 'sample-b-card-0', concept: 'sample-b', level: 'understand' as const, technique: 'fill in the blank' as const }];
+      expect(nextStep(two, p, withB, { ...history, recentConcepts: ['sample-a', 'sample-a'] }, () => 0, undefined, clockOn(3)))
+        .toMatchObject({ kind: 'step', concept: 'sample-b', id: 'sample-b-card-0', reason: 'due for review' });
+    });
+
+    it('H: a concept is named once in "no content", while exhausted stays scoped to each level', () => {
+      let p: ModuleProgress = { ...emptyProgress(), diagnosed: true };
+      for (let i = 0; i < 6; i++) p = at(p, true, `sample-card-${i}`, 0);
+      p = at(p, true, 'sample-understand-1', 3, 'sample-a', 'understand');
+      const result = nextStep(one, p, [{ id: 'sample-understand-1', concept: 'sample-a', level: 'understand', technique: 'fill in the blank' }], history, () => 0, undefined, clockOn(3));
+      expect(result).toEqual({ kind: 'no content', concepts: ['sample-a'], exhausted: [{ concept: 'sample-a', level: 'understand' }] });
+    });
+  });
+
   function distinctRun(n: number): ModuleProgress {
     let p = emptyProgress();
     for (let i = 0; i < n; i++) p = at(p, true, `sample-card-${i}`, 0);

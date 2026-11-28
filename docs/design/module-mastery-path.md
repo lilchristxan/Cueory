@@ -228,39 +228,60 @@ row at the moment the path says done; the "final" rows after the finish. Three d
 separately: students **prepared at the start**, students who **mastered everything by exit**, and the **learners among
 those who acquired mastery during practice** (not mastered at the end of the diagnostic, mastered at exit).
 
+<!-- simulation:start -->
+300 synthetic students, 6 concepts, step cap 600, seed 7
+
 | Measure (unverified model; levels or students counted) | Old rule | New rule (default, fast track off) | New rule, fast track on |
 | --- | ---: | ---: | ---: |
 | After the diagnostic: placed shown, truly not mastered (too high) | 0 of 0 | 0 of 0 | 0 of 0 |
 | After the diagnostic: placed developing or higher, truly not mastered | 16.3% (332 of 2033) | 16.3% (332 of 2033) | 16.3% (332 of 2033) |
 | After the diagnostic: truly mastered, not placed shown (too low) | 100.0% (1945 of 1945) | 100.0% (1945 of 1945) | 100.0% (1945 of 1945) |
 | After the diagnostic: truly mastered, placed at gap | 12.5% (244 of 1945) | 12.5% (244 of 1945) | 12.5% (244 of 1945) |
-| During practice: level first marked shown, truly not mastered | 11.0% (292 of 2659) | 0.1% (1 of 1471) | 0.1% (1 of 1099) |
-| At the moment of "ready": students with a level truly not mastered | 27.9% (31 of 111) | 6.5% (4 of 62) | 7.4% (5 of 68) |
-| Final: shown, truly not mastered | 18.6% (494 of 2659) | 1.1% (14 of 1302) | 1.4% (13 of 945) |
-| Final: truly mastered, not shown (too low) | 5.1% (116 of 2281) | 44.5% (1033 of 2321) | 59.8% (1388 of 2320) |
+| During practice: level first marked shown, truly not mastered | 11.0% (292 of 2659) | 0.0% (0 of 1494) | 0.0% (0 of 1132) |
+| At the moment of "ready": students with a level truly not mastered | 27.9% (31 of 111) | 8.1% (5 of 62) | 8.7% (6 of 69) |
+| Final: shown, truly not mastered | 18.6% (494 of 2659) | 1.3% (17 of 1356) | 1.7% (17 of 1005) |
+| Final: truly mastered, not shown (too low) | 5.1% (116 of 2281) | 43.1% (1014 of 2353) | 58.0% (1365 of 2353) |
 | Prepared students (all mastered) ready from the diagnostic alone | 0.0% (0 of 64) | 0.0% (0 of 64) | 48.4% (31 of 64) |
-| Prepared students who reach done within the cap | 100.0% (64 of 64) | 76.6% (49 of 64) | 85.9% (55 of 64) |
+| Prepared students who reach done within the cap | 100.0% (64 of 64) | 79.7% (51 of 64) | 90.6% (58 of 64) |
 | Mastered every gate level at exit (of all students) | 26.7% (80 of 300) | 26.7% (80 of 300) | 26.7% (80 of 300) |
-|   of those, declared done | 100.0% (80 of 80) | 72.5% (58 of 80) | 78.8% (63 of 80) |
-|   of those who had not mastered everything after the diagnostic (acquired during practice), declared done | 100.0% (17 of 17) | 54.5% (12 of 22) | 52.4% (11 of 21) |
+|   of those, declared done | 100.0% (80 of 80) | 71.3% (57 of 80) | 78.8% (63 of 80) |
+|   of those who had not mastered everything after the diagnostic (acquired during practice), declared done | 100.0% (17 of 17) | 45.0% (9 of 20) | 42.1% (8 of 19) |
 | Ready from the diagnostic alone, but a level not mastered | 0 of 0 | 0 of 0 | 3.1% (1 of 32) |
 | Diagnostic items asked per student (mean) | 10.1 | 10.1 | 10.1 |
-| Median steps to done (students who finished) | 25 | 375 | 222 |
-| Never done within the cap | 63.0% (189 of 300) | 79.3% (238 of 300) | 77.3% (232 of 300) |
-| Techniques met per student (mean) | 3.73 | 3.81 | 3.38 |
+| Median steps to done (students who finished) | 25 | 406 | 249 |
+| Never done | 63.0% (189 of 300) | 79.3% (238 of 300) | 77.0% (231 of 300) |
+|   because the step cap was reached | 63.0% (189 of 300) | 79.3% (238 of 300) | 77.0% (231 of 300) |
+|   because no content remained | 0.0% (0 of 300) | 0.0% (0 of 300) | 0.0% (0 of 300) |
+| Techniques met per student (mean) | 3.73 | 3.80 | 3.38 |
+
+Across seeds 13, 31, 67, 109, 173, 257, 383 (300 students each, default rule, fast track off):
+
+| Measure | Count |
+| --- | ---: |
+| Declared ready but below criterion | 47 of 403 |
+| Never reached done | 1697 of 2100 (cap reached 1697 of 2100, no content remained 0 of 2100) |
+| Mastered at exit and declared done | 356 of 499 |
+| Gained mastery after the diagnostic and declared done | 51 of 126 |
+<!-- simulation:end -->
+
+The block above is generated: `scripts/simulate-module-path.ts` prints it, and its `--check` option fails if this
+doc has drifted (run it with the pinned Node from `.node-version`: the last digits can differ between Node versions,
+because the model uses floating-point `exp`, `log` and `pow`). A unit test checks the block's labels and percentages.
 
 **Targets and result** (300 students, seed 7, UNVERIFIED model; fast track off unless stated):
 
 | Target | Result |
 | --- | --- |
 | A prepared student can be ready from the diagnostic | only with the opt-in: 31 of 64 prepared (48%); the engine test covers the perfect path |
-| Most students who truly master the material reach done | 58 of 80 (72.5%) who mastered everything by exit; 49 of 64 (76.6%) of the prepared group; 12 of 22 (54.5%) of those who had not mastered everything after the diagnostic but did by exit |
-| Falsely ready at the moment of done stays low | 4 of 62 (6.5%); old rule 31 of 111 (27.9%) |
-| Final shown-but-not-mastered well below the old rule's | 1.1% (14 of 1302); old rule 18.6% |
+| Most students who truly master the material reach done | 57 of 80 (71.3%) who mastered everything by exit; 51 of 64 (79.7%) of the prepared group; 9 of 20 (45.0%) of those who had not mastered everything after the diagnostic but did by exit |
+| Falsely ready at the moment of done stays low | 5 of 62 (8.1%); old rule 31 of 111 (27.9%) |
+| Final shown-but-not-mastered well below the old rule's | 1.3% (17 of 1356); old rule 18.6% |
 
-The 54.5% for learners who acquire mastery during practice is the weak point: they learn partway through, and the
+The 45.0% for learners who acquire mastery during practice is the weak point: they learn partway through, and the
 evidence and retention gates take time to catch up with them. The 79% "never done" students are mostly students who
-have not mastered some concept by the cap.
+have not mastered some concept by the cap. Every one of the 238 stopped because the step cap was reached; none stopped because content ran out (the synthetic module has 12 items per technique and level), so the next tuning trial can attribute never-done to the gates, not to missing items.
+
+Across seven other seeds the picture is the same: 47 of 403 declared ready were below criterion, 1697 of 2100 never reached done, 356 of 499 who mastered everything by exit were declared done, and 51 of 126 who gained mastery after the diagnostic were declared done.
 
 **Sweep behind the retention numbers** (an earlier design: new rule only, 120 students, cap 400; prepared students who
 reach done / falsely ready at done / final shown-but-not-mastered). Judging only scheduler-overdue cards, and fading a

@@ -659,6 +659,20 @@ export function nextStep(
       const evidence = progress.concepts.get(concept)?.[level];
       return evidence && level !== start.get(concept) && level !== dueOverride.get(concept) && levelAssessment(evidence, today).overdue > 0 ? [{ concept, level, evidence }] : [];
     }));
+  // Actual due cards come first: a lowered tier with an eligible overdue card is reviewed before any new item, whichever
+  // concept it belongs to. The ranked order (and so the interleave rule) still decides among several of them.
+  if (today) {
+    for (const { concept, level, evidence, due } of ranked) {
+      if (!due || !evidence) continue;
+      const fitting = TECHNIQUES_FOR_LEVEL[level];
+      const reviewable = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique) &&
+        evidence.cards[item.id] !== undefined && cardOverdue(evidence.cards[item.id]!, today));
+      if (reviewable.length > 0) {
+        const weakest = reviewable.reduce((a, b) => (predictedRecall(evidence.cards[a.id]!, today) <= predictedRecall(evidence.cards[b.id]!, today) ? a : b));
+        return { kind: 'step', id: weakest.id, concept, level, technique: weakest.technique, reason: 'due for review' };
+      }
+    }
+  }
   for (const { concept, level, evidence, overdue } of ranked) {
     const fitting = TECHNIQUES_FOR_LEVEL[level];
     const all = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique));
@@ -714,7 +728,7 @@ export function nextStep(
     })) : [];
     return reviewDue.length > 0 ? { kind: 'done', reviewDue } : { kind: 'done' };
   }
-  return { kind: 'no content', concepts: ranked.map((entry) => entry.concept), ...(exhausted.length > 0 ? { exhausted } : {}) };
+  return { kind: 'no content', concepts: [...new Set(ranked.map((entry) => entry.concept))], ...(exhausted.length > 0 ? { exhausted } : {}) };
 }
 
 export interface ModuleSummary {

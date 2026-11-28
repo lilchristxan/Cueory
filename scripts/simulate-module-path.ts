@@ -8,6 +8,7 @@
  *   - old: every answer counts equally and nothing is ever forgotten (the baseline, kept here only);
  *   - new: weighted by technique, guess-aware, slip-aware, with review due (the rule in module-path.ts).
  */
+import { readFileSync } from 'node:fs';
 import { calendarDay, DAY_MS, dayNumber, type StudyClock } from '../src/islands/adaptive-learning/calendar';
 import {
   emptyProgress, GATE_LEVELS, isShown, levelStatus, nextStep, READY_LEVELS, recordModuleAnswer, RECOGNITION_TECHNIQUES, TECHNIQUES_FOR_LEVEL,
@@ -55,6 +56,10 @@ export interface RuleReport {
   medianStepsToDone: number | null;
   /** Students who never reached "done" within the cap. */
   neverDone: Count;
+  /** Never done because the step cap was reached (the path still had something to offer). */
+  neverDoneCapped: Count;
+  /** Never done because no content remained (no usable item for the levels still to show). */
+  neverDoneNoContent: Count;
   /** Prepared students (every concept truly mastered) declared ready by the diagnostic alone, with no adaptive step. */
   preparedSkipped: Count;
   /** Prepared students who reached "done" within the cap. */
@@ -166,6 +171,7 @@ function clockFor(day: number, first: number): StudyClock {
 interface Tally { n: number; of: number }
 interface StudentRun {
   stepsToDone: number | undefined;
+  stop: 'done' | 'cap' | 'no content';
   diagnostic: Record<'high' | 'low' | 'developingHigh' | 'masteredGap', Tally>;
   placed: Tally;
   ready: Tally;
@@ -196,6 +202,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
   const wasShown = new Set<string>();
   const run: StudentRun = {
     stepsToDone: undefined,
+    stop: 'cap',
     diagnostic: { high: tally(), low: tally(), developingHigh: tally(), masteredGap: tally() },
     placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, prepared: false, masteredAfterDiagnostic: false, masteredAtExit: false, skipped: false, skippedWrong: false, diagnosticItems: 0, techniques: 0,
   };
@@ -272,13 +279,15 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
     const result = next(today);
     if (result.kind === 'done') {
       run.stepsToDone = steps;
+      run.stop = 'done';
       // The moment of readiness: is every level truly mastered right now?
       const wrong = conceptIds.some((concept) => GATE_LEVELS.some((level) => !mastered(concept, level)));
       add(run.ready, wrong);
       if (steps === 0) { run.skipped = true; run.skippedWrong = wrong; }
       break;
     }
-    if (result.kind === 'no content' || steps >= stepCap) break;
+    if (result.kind === 'no content') { run.stop = 'no content'; break; }
+    if (steps >= stepCap) break;
     ask(ITEMS.find((item) => item.id === result.id)!);
     usedIds.push(result.id);
     recentTechniques.push(result.technique);
@@ -332,6 +341,8 @@ export function simulate(rule: RuleName, { students, seed, retention = true, ste
     finalTooLow: total((run) => run.final.low),
     medianStepsToDone: done.length === 0 ? null : done[Math.floor((done.length - 1) / 2)]!,
     neverDone: { n: students - done.length, of: students },
+    neverDoneCapped: { n: runs.filter((r) => r.stop === 'cap').length, of: students },
+    neverDoneNoContent: { n: runs.filter((r) => r.stop === 'no content').length, of: students },
     preparedSkipped: { n: runs.filter((r) => r.prepared && r.skipped).length, of: runs.filter((r) => r.prepared).length },
     preparedDone: { n: runs.filter((r) => r.prepared && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.prepared).length },
     masteredAtExit: { n: runs.filter((r) => r.masteredAtExit).length, of: students },
@@ -364,7 +375,9 @@ export function markdownTable(reports: readonly RuleReport[]): string {
     ['Ready from the diagnostic alone, but a level not mastered', (r) => share(r.falselyReadyAtDiagnostic)],
     ['Diagnostic items asked per student (mean)', (r) => r.diagnosticItems.toFixed(1)],
     ['Median steps to done (students who finished)', (r) => (r.medianStepsToDone === null ? 'none' : String(r.medianStepsToDone))],
-    ['Never done within the cap', (r) => share(r.neverDone)],
+    ['Never done', (r) => share(r.neverDone)],
+    ['  because the step cap was reached', (r) => share(r.neverDoneCapped)],
+    ['  because no content remained', (r) => share(r.neverDoneNoContent)],
     ['Techniques met per student (mean)', (r) => r.techniqueVariety.toFixed(2)],
   ];
   const head = `| Measure (unverified model; levels or students counted) | ${reports.map(label).join(' | ')} |`;
@@ -372,11 +385,58 @@ export function markdownTable(reports: readonly RuleReport[]): string {
   return [head, rule, ...rows.map(([label, value]) => `| ${label} | ${reports.map(value).join(' | ')} |`)].join('\n');
 }
 
-// Print the table when run directly (not when imported by the unit test).
-if (/simulate-module-path\.(ts|mjs|js)$/.test(process.argv[1] ?? '')) {
-  const options = { students: 300, seed: 7 };
-  const reports = [simulate('old', options), simulate('new', options), simulate('new', { ...options, fastTrack: true })];
-  console.log(`${options.students} synthetic students, ${CONCEPTS} concepts, step cap ${STEP_CAP}, seed ${options.seed}\n`);
-  console.log(markdownTable(reports));
+/** Seeds for the multi-seed row (300 students each, default rule). */
+export const MULTI_SEEDS = [13, 31, 67, 109, 173, 257, 383] as const;
+
+/** The default (fast track off) rule across several seeds, with counts and denominators added up. */
+export function simulateSeeds(seeds: readonly number[], students: number): Record<'falselyReady' | 'neverDone' | 'neverDoneCapped' | 'neverDoneNoContent' | 'masteredAtExitDone' | 'acquiredDone', Count> {
+  const keys = ['falselyReady', 'neverDone', 'neverDoneCapped', 'neverDoneNoContent', 'masteredAtExitDone', 'acquiredDone'] as const;
+  const total = Object.fromEntries(keys.map((key) => [key, { n: 0, of: 0 }])) as Record<(typeof keys)[number], Count>;
+  for (const seed of seeds) {
+    const report = simulate('new', { students, seed });
+    for (const key of keys) { total[key].n += report[key].n; total[key].of += report[key].of; }
+  }
+  return total;
 }
 
+export const SIMULATION_START = '<!-- simulation:start -->';
+export const SIMULATION_END = '<!-- simulation:end -->';
+
+/** Everything the design doc quotes, as markdown. `--check` compares this with the doc, so the numbers cannot drift. */
+export function documentBlock(): string {
+  const options = { students: 300, seed: 7 };
+  const reports = [simulate('old', options), simulate('new', options), simulate('new', { ...options, fastTrack: true })];
+  const share = ({ n, of }: Count): string => `${n} of ${of}`;
+  const many = simulateSeeds(MULTI_SEEDS, options.students);
+  return [
+    `${options.students} synthetic students, ${CONCEPTS} concepts, step cap ${STEP_CAP}, seed ${options.seed}`,
+    '',
+    markdownTable(reports),
+    '',
+    `Across seeds ${MULTI_SEEDS.join(', ')} (${options.students} students each, default rule, fast track off):`,
+    '',
+    '| Measure | Count |',
+    '| --- | ---: |',
+    `| Declared ready but below criterion | ${share(many.falselyReady)} |`,
+    `| Never reached done | ${share(many.neverDone)} (cap reached ${share(many.neverDoneCapped)}, no content remained ${share(many.neverDoneNoContent)}) |`,
+    `| Mastered at exit and declared done | ${share(many.masteredAtExitDone)} |`,
+    `| Gained mastery after the diagnostic and declared done | ${share(many.acquiredDone)} |`,
+  ].join('\n');
+}
+
+// Run directly: print the block, or with --check compare it with the design doc (use the pinned Node, see .node-version:
+// the last digits of the numbers can differ between Node versions).
+if (/simulate-module-path\.(ts|mjs|js)$/.test(process.argv[1] ?? '')) {
+  const block = documentBlock();
+  if (process.argv.includes('--check')) {
+    const docPath = process.argv[process.argv.indexOf('--check') + 1] ?? 'docs/design/module-mastery-path.md';
+    const doc = readFileSync(docPath, 'utf8');
+    const from = doc.indexOf(SIMULATION_START);
+    const to = doc.indexOf(SIMULATION_END);
+    const quoted = from < 0 || to < 0 ? '' : doc.slice(from + SIMULATION_START.length, to).trim();
+    if (quoted !== block.trim()) { console.error('The simulation block in the design doc is out of date. Regenerate it with this script.'); process.exit(1); }
+    console.log('The design doc matches the simulation.');
+  } else {
+    console.log(`${SIMULATION_START}\n${block}\n${SIMULATION_END}`);
+  }
+}
