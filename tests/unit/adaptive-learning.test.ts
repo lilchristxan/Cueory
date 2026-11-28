@@ -44,13 +44,44 @@ describe('adaptive card memory', () => {
 
 describe('adaptive review scheduling', () => {
   it('anchors overdue work, handles leap days and uses the day before a future exam', () => {
-    const answered = { ...recordAnswer(undefined, true, clock(0)), halfLifeDays: 60 };
+    const answered = { ...recordAnswer(undefined, true, clock(0)), halfLifeDays: 60, spacedSuccesses: 2 };
     expect(reviewDue(answered, clock(0))).toBe('2028-03-12');
     expect(reviewDue(answered, clock(25))).toBe('2028-03-12');
     expect(reviewDue(answered, clock(0), '2028-03-01')).toBe('2028-02-29');
     expect(reviewDue(answered, clock(0), '2028-02-28')).toBe('2028-03-12');
     expect(reviewDue(answered, clock(5), '2028-03-01')).toBe('2028-03-12');
     expect(() => reviewDue(answered, clock(0), '2027-02-29')).toThrow(RangeError);
+  });
+
+  it('rebuilds the interval after a lapse on a well-practiced card', () => {
+    let mature = recordAnswer(undefined, true, clock(0));
+    for (let day = 1; day <= 10; day++) mature = recordAnswer(mature, true, clock(day));
+    expect(reviewDue(mature, clock(10))).toBe(clock(24).day);
+
+    const missed = recordAnswer(mature, false, clock(24));
+    const nextDayRecall = recordAnswer(missed, true, clock(25));
+    expect(reviewDue(nextDayRecall, clock(25))).toBe(clock(28).day);
+    const corrected = recordAnswer(missed, true, clock(24));
+    expect(reviewDue(missed, clock(24))).toBe(clock(25).day);
+    expect(reviewDue(corrected, clock(24))).toBe(clock(25).day);
+
+    const firstRecall = recordAnswer(corrected, true, clock(25));
+    expect(cardMastered(firstRecall, clock(25))).toBe(false);
+    expect(reviewDue(firstRecall, clock(25))).toBe(clock(28).day);
+    expect(reviewDue(firstRecall, clock(26))).toBe(clock(28).day);
+    expect(reviewDue(firstRecall, clock(25), clock(27).day)).toBe(clock(26).day);
+
+    const missedAgain = recordAnswer(firstRecall, false, clock(28));
+    expect(reviewDue(missedAgain, clock(28))).toBe(clock(29).day);
+    const secondRecall = recordAnswer(firstRecall, true, clock(28));
+    expect(cardMastered(secondRecall, clock(28))).toBe(true);
+    expect(reviewDue(secondRecall, clock(28))).toBe(clock(42).day);
+  });
+
+  it('keeps the earlier model date for a card that needs review before the recovery cap', () => {
+    const missed = recordAnswer(undefined, false, clock(0));
+    const firstRecall = recordAnswer(missed, true, clock(1));
+    expect(reviewDue(firstRecall, clock(1))).toBe(clock(2).day);
   });
 
   it('never makes the correct branch due sooner than the missed branch', () => {

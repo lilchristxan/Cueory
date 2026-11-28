@@ -18,7 +18,9 @@ export interface ConceptEvidence {
 }
 
 export function predictedRecall(memory: CardMemory, clock: StudyClock): number {
-  return 2 ** (-Math.max(0, clock.now - memory.lastAt) / DAY_MS / memory.halfLifeDays);
+  // Math.exp, not `2 **`: V8's power function gives different last digits in Node 22 and Node 24, and a card sitting on
+  // a threshold must not change status with the Node version (the seeded simulation depends on it).
+  return Math.exp(-Math.LN2 * (Math.max(0, clock.now - memory.lastAt) / DAY_MS / memory.halfLifeDays));
 }
 
 export function recordAnswer(

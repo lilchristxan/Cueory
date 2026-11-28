@@ -156,6 +156,19 @@ export function initialSystemKey(keys: readonly string[], focus: LabFocus): stri
   return focus.system && keys.includes(focus.system) ? focus.system : (keys[0] ?? '');
 }
 
+/**
+ * The lab opens on the skeleton (Christian, 2026-11-27): the system whose key ends in this, when the build has it.
+ * The test shapes (?fixture) still come first when they are asked for, and a lesson's own link still wins.
+ */
+const OPENING_SYSTEM_KEY = 'skeleton-axial';
+
+/** The same systems with the opening system moved to the front; unchanged when it is missing or the fixture leads. */
+export function openingSystemFirst<T extends { key: string; fixture?: boolean }>(systems: readonly T[]): T[] {
+  if (systems[0]?.fixture) return [...systems];
+  const opening = systems.find((system) => system.key.endsWith(OPENING_SYSTEM_KEY));
+  return opening ? [opening, ...systems.filter((system) => system !== opening)] : [...systems];
+}
+
 /** A lesson's structure belongs to its requested system and that system's completed model load. */
 export function linkedStructureId(
   focus: LabFocus,

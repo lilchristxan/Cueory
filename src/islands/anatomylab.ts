@@ -415,6 +415,35 @@ export function labelsToShow(
   return selected && visible.includes(selected) ? [selected] : [];
 }
 
+/** With more structures showing than can all be labeled, this many of the largest get a label. */
+export const LABELS_THAT_FIT = 16;
+
+/**
+ * The labels to draw (Christian, 2026-11-27): everything while it all fits; with more showing, the largest structures
+ * (by `sizeOf`, a neutral measure: no part is called more important than another), as many as fit beside the model,
+ * and always the selected one. The layout then drops any that would overlap.
+ */
+export function labelsThatFit(
+  visible: readonly string[],
+  selected: string | null,
+  sizeOf: (id: string) => number,
+  max: number = MAX_LABELS,
+  fit: number = LABELS_THAT_FIT,
+): string[] {
+  if (visible.length <= max) return [...visible];
+  const chosen = selected && visible.includes(selected) ? [selected] : [];
+  const largest = visible
+    .filter((id) => id !== selected)
+    .map((id) => ({ id, size: sizeOf(id) }))
+    .filter((entry) => Number.isFinite(entry.size) && entry.size > 0)
+    .sort((a, b) => b.size - a.size || (a.id < b.id ? -1 : 1));
+  for (const entry of largest) {
+    if (chosen.length >= fit) break;
+    chosen.push(entry.id);
+  }
+  return chosen;
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // "Find it" quiz
 // ---------------------------------------------------------------------------------------------------------------------

@@ -71,6 +71,8 @@
     box-shadow: none;
   }
   .wordpath-found { background-color: var(--color-panel-ink-soft); }
+  /* The found thread is the game's teal, with the page colour on it (the same pairing as a letter being traced). */
+  .wordpath-thread { background-color: var(--color-game-teal); }
   .wordpath-found-ink { color: var(--color-on-panel-button); }
   /* An unpicked letter: a page-colour circle with a hairline rim so it reads against the frosted panel in both palettes. */
   .wordpath-plain {
@@ -138,6 +140,10 @@
   .wordpath-found-pill {
     color: var(--color-on-panel-button);
     background: var(--color-panel-ink-soft);
+  }
+  .wordpath-thread-pill {
+    color: var(--color-page);
+    background: var(--color-game-teal);
   }
   .wordpath-active-pill {
     color: var(--color-ink);
@@ -320,14 +326,7 @@
     stroke: var(--color-panel-ink-soft);
     stroke-width: calc(var(--spacing) * 4.5);
   }
-
-  .wordpath-mark {
-    position: absolute;
-    inset-block-start: 12%;
-    inset-inline-end: 12%;
-    inline-size: calc(var(--spacing) * 2);
-    block-size: calc(var(--spacing) * 2);
-  }
+  .wordpath-line-special { stroke: var(--color-game-teal); }
 
   .wordpath-step {
     position: absolute;
@@ -338,7 +337,6 @@
 }
 
 @media print {
-  .wordpath-mark,
   .wordpath-step,
   .wordpath-lines,
   .wordpath-dot {

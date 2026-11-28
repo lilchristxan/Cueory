@@ -1313,6 +1313,14 @@ const helloCardsAvailable = helloCardsPage(
       object-fit: contain;
     }
 
+    /* Piccline's wordmark is drawn larger about its centre (global.css, --piccline-wordmark-scale). Until its SVG has
+       loaded, Firefox and Safari size the box from the 168 x 60 width and height attributes (wider than the artwork), so
+       the enlarged box came out 4 px past the card's edges. The box is capped so that, enlarged, it still fits the face. */
+    .gname img[src$="piccline-wordmark-light.svg"],
+    .gname img[src$="piccline-wordmark-dark.svg"] {
+      max-width: calc(100% / var(--piccline-wordmark-scale));
+    }
+
     .gname span {
       font-size: var(--game-serif-name-landscape-size);
     }

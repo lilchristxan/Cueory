@@ -7,7 +7,13 @@ export interface StudyClock {
   day: string;
 }
 
+// Valid days only, so an invalid string still throws every time. Bounded so a long session cannot grow it.
+const validDays = new Map<string, number>();
+const MAX_CACHED_DAYS = 2048;
+
 export function dayNumber(day: string): number {
+  const cached = validDays.get(day);
+  if (cached !== undefined) return cached;
   const time = Date.parse(`${day}T00:00:00.000Z`);
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
@@ -17,6 +23,8 @@ export function dayNumber(day: string): number {
   ) {
     throw new RangeError('Expected a calendar day in YYYY-MM-DD format.');
   }
+  if (validDays.size >= MAX_CACHED_DAYS) validDays.clear();
+  validDays.set(day, time / DAY_MS);
   return time / DAY_MS;
 }
 

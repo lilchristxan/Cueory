@@ -54,7 +54,7 @@ test('ignores an initial model failure from the previous body system', async ({ 
       { timeout: 20_000 },
     ).toBe(true);
 
-    const picker = page.getByRole('group', { name: 'body system' }).getByRole('button');
+    const picker = page.getByRole('group', { name: 'body system' }).locator(':scope > button'); // the system rows; the open system's structures are listed under its row
     await expect.poll(() => picker.count(), { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
 
     // Reject the old fixture in the same JavaScript task as the system change,
