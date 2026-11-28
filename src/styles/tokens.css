@@ -1893,13 +1893,14 @@
   --lab-cell-size-large: 1.5em;    /* the letter in a cell */
   --lab-location-dot: 0.75rem;     /* the dot on the location picture */
   --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
-  --lab-rail-width: 16.5rem;       /* orientation, systems and layers */
+  --lab-rail-width: 20rem;         /* orientation, systems and layers */
   --lab-inspector-width: 22.5rem;  /* selected structure and the structure list */
   --lab-rail-clear: calc(var(--lab-rail-width) + 2.25rem);       /* left rail plus its inset and a gap: where the models may start */
   --lab-inspector-clear: calc(var(--lab-inspector-width) + 2.25rem); /* right panel plus its inset and a gap: where the models must stop */
   --lab-rail-gap: 0.75rem;
   --lab-edge-inset: 1.25rem;       /* a panel's distance from the stage edge */
   --lab-stage-height: min(56rem, 100dvh);
+  --lab-remote-clear: 24.5rem;     /* the view remote in the bottom right corner, plus its inset and a gap: where the right panel must stop */
   --lab-stage-min: 30rem;          /* the full-page lab's stage never gets shorter than this; the page scrolls instead */
   --lab-stage-height-small: max(24rem, 100dvh - 19rem);
   --lab-topbar-height: 4.5rem;
@@ -1924,6 +1925,19 @@
   --lab-model: #eadccf;
   --lab-model-alt: #d3b7a1;
   --lab-model-selected: var(--lab-copper);
+}
+
+/* The stage behind the model is flat black or flat white, the student's choice (Christian, 2026-11-27); the panels and
+   bars around it stay brown. Brand colours only: black is Charcoal, white is Ivory, and on white the model is drawn
+   in the brand's dark browns so it stays easy to see. */
+.lab-page {
+  --lab-stage-flat: var(--lab-charcoal);
+}
+.lab-page[data-stage='white'] {
+  --lab-stage-flat: var(--lab-ivory);
+  --lab-model: var(--lab-bronze);
+  --lab-model-alt: var(--lab-walnut);
+  --lab-model-selected: var(--lab-copper-deep);
 }
 
 /* The lab alone keeps the dark instrument look in Light and in Evening: the colour tokens its components use are

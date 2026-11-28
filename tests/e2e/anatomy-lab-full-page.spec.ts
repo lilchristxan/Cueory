@@ -99,3 +99,85 @@ test.describe('anatomy lab: full page', () => {
     expect(await page.evaluate(() => document.documentElement.classList.contains('lab-open'))).toBe(false);
   });
 });
+
+test.describe('anatomy lab: the view remote, the stage and the tree', () => {
+  test('a real body system starts out turning, and the play button in the arrows stops and starts it', async ({ page }) => {
+    await markPanelsSeen(page);
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.getByTestId('anatomy-stage')).toBeVisible({ timeout: 20_000 });
+    const drawer = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'orientation', exact: true });
+    if (await drawer.isVisible()) await drawer.click();
+    const spin = page.getByRole('button', { name: 'turn the model by itself', exact: true });
+    await expect(spin).toBeEnabled({ timeout: 30_000 });
+    await expect(spin).toHaveAttribute('aria-pressed', 'true');
+    const box = (await spin.boundingBox())!;
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await spin.click();
+    await expect(spin).toHaveAttribute('aria-pressed', 'false');
+    await spin.click();
+    await expect(spin).toHaveAttribute('aria-pressed', 'true');
+    // Asking for a set view stops the turning.
+    await page.getByRole('button', { name: 'reset view' }).click();
+    await expect(spin).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('with reduced motion the model starts still', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await markPanelsSeen(page);
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    await expect(page.getByTestId('anatomy-stage')).toBeVisible({ timeout: 20_000 });
+    const drawer = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'orientation', exact: true });
+    if (await drawer.isVisible()) await drawer.click();
+    const spin = page.getByRole('button', { name: 'turn the model by itself', exact: true });
+    await expect(spin).toBeEnabled({ timeout: 30_000 });
+    await expect(spin).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  test('the black / white switch changes the stage, and keeps the panels brown', async ({ page }) => {
+    await openLab(page);
+    const orientation = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'orientation', exact: true });
+    if (await orientation.isVisible()) await orientation.click();
+    const stage = () => page.getByTestId('anatomy-lab').evaluate((lab) => getComputedStyle(lab).backgroundColor);
+    const bar = () => page.getByTestId('anatomy-credits').evaluate((strip) => getComputedStyle(strip).backgroundColor);
+    const choices = page.getByRole('group', { name: 'background' });
+    await expect(choices.getByRole('button', { name: 'black' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await stage()).toBe('rgb(28, 25, 23)');
+    const brown = await bar();
+    await choices.getByRole('button', { name: 'white' }).click();
+    await expect(choices.getByRole('button', { name: 'white' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await stage()).toBe('rgb(249, 245, 239)');
+    expect(await bar()).toBe(brown);
+    await choices.getByRole('button', { name: 'black' }).click();
+    expect(await stage()).toBe('rgb(28, 25, 23)');
+  });
+
+  test('each group heading folds with its arrow, and the − button hides the whole box', async ({ page }) => {
+    await openLab(page);
+    const systems = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'body systems', exact: true });
+    if (await systems.isVisible()) await systems.click();
+    const list = page.getByRole('region', { name: 'structures' });
+    const heading = list.getByRole('heading', { level: 4 }).first().getByRole('button');
+    await expect(heading).toHaveAttribute('aria-expanded', 'true');
+    const rows = await list.locator('li').count();
+    expect(rows).toBeGreaterThan(0);
+    await heading.click();
+    await expect(heading).toHaveAttribute('aria-expanded', 'false');
+    expect(await list.locator('li:visible').count()).toBeLessThan(rows);
+    await heading.click();
+    await expect(list.locator('li:visible')).toHaveCount(rows);
+    // A structure's dot hides and shows it; the dot is a 44 px target named for what it does.
+    const dot = list.getByRole('button', { name: /^hide /u }).first();
+    const size = (await dot.boundingBox())!;
+    expect(size.width).toBeGreaterThanOrEqual(44);
+    expect(size.height).toBeGreaterThanOrEqual(44);
+
+    const min = page.getByRole('button', { name: 'hide the body systems box' });
+    await min.click();
+    await expect(list).toBeHidden();
+    await page.getByRole('button', { name: 'show the body systems box' }).click();
+    await expect(list).toBeVisible();
+  });
+});

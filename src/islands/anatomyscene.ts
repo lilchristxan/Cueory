@@ -6,6 +6,7 @@
  * needs only the CSP's 'wasm-unsafe-eval' (D-49), and its worker mode (blob: workers) is never turned on.
  * Colors come from the brand tokens at runtime (getComputedStyle), so the model follows the Daytime and Evening palettes.
  */
+import { spreadBoard } from './anatomyspread';
 import * as THREE from 'three';
 import { disposeAnatomyMaterials, disposeAnatomyMeshResources, indexAnatomyGroup, summarizeIndexedAnatomyIds } from './anatomymeshindex';
 import { withTemporaryMeshAppearance } from './anatomyidpass';
@@ -217,6 +218,8 @@ export interface LabScene {
   viewFrom(direction: readonly [number, number, number]): void;
   /** Turns drag inertia off (reduced motion) or on; follows the device setting while the lab is open. */
   setReducedMotion(reduced: boolean): void;
+  /** Starts or stops the model turning slowly by itself. Taking hold of the model stops it (see `onSpinStop`). */
+  setSpin(on: boolean): void;
   /** One of the six standard views of the visible model (animated unless reduced motion is on). */
   viewPreset(preset: ViewPreset): void;
   /** Frames one structure's box; false when it is not in the model or is hidden. */
@@ -257,11 +260,15 @@ interface Options {
   posture?: Posture;
   /** Called after every frame the scene draws, so the labels can follow the camera. */
   onRender: () => void;
+  /** Called when the student takes hold of the model while it is turning by itself: the turning has stopped. */
+  onSpinStop?: () => void;
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
-/** "Spread structures apart" at 100% moves each structure this share of the model's largest size away from its middle. */
-const SPREAD_REACH = 0.35;
+/** The model turning by itself takes this long for one full turn: slow enough to study while it moves. */
+const SPIN_TURN_MS = 24_000;
+/** A frame that arrives late (a hidden tab coming back) turns the model by no more than this much time. */
+const SPIN_MAX_STEP_MS = 100;
 /** The orientation thumbnails leave a little room round the model (1 is a tight fit). */
 const THUMBNAIL_MARGIN = 1.08;
 /** How long the camera must be still before the lab checks which labeled structures it can see. */
@@ -269,7 +276,7 @@ const VISIBILITY_IDLE_MS = 120;
 /** The ID picture's size: about this many pixels, whatever the view's size (enough to find small visible parts). */
 const ID_PICTURE_PIXELS = 360_000;
 
-export function createLabScene({ canvas, reducedMotion, colors: initialColors, posture: initialPosture, onRender }: Options): LabScene {
+export function createLabScene({ canvas, reducedMotion, colors: initialColors, posture: initialPosture, onRender, onSpinStop }: Options): LabScene {
   let colors = initialColors;
   let currentReducedMotion = reducedMotion;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -350,8 +357,15 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     requestRender();
     scheduleVisibility();
   };
+  /** The model turning by itself (the remote's play button): one slow turn about the upright axis. */
+  let spinning = false;
+  let lastSpin = 0;
   const onControlsStart = () => {
     move = null;
+    if (spinning) {
+      spinning = false;
+      onSpinStop?.();
+    }
   };
   controls.addEventListener('start', onControlsStart);
   controls.addEventListener('change', onCameraChange);
@@ -393,6 +407,15 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       else moving = true;
       camera.lookAt(controls.target);
       onCameraChange();
+    }
+    if (spinning && !move) {
+      const elapsed = lastSpin === 0 ? 0 : Math.min(time - lastSpin, SPIN_MAX_STEP_MS);
+      lastSpin = time;
+      const offset = camera.position.clone().sub(controls.target).applyAxisAngle(UP, (elapsed / SPIN_TURN_MS) * Math.PI * 2);
+      camera.position.copy(controls.target).add(offset);
+      camera.lookAt(controls.target);
+      onCameraChange();
+      moving = true;
     }
     if (visibilityDirty && root) {
       // Both timestamps use performance.now(). A delayed frame that fires early
@@ -864,7 +887,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     return result;
   }
 
-  /** Puts every structure back, then moves each away from the model's middle by `spread` of the model's size. */
+  /**
+   * Puts every structure back, then slides each toward its own spot on a flat board of tidy rows (anatomyspread.ts):
+   * at 100% the open system is laid out part by part, facing the home view; in between it is partway there.
+   */
   function applySpread() {
     if (!root) return;
     for (const meshes of meshesById.values()) {
@@ -878,16 +904,26 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     }
     recomputeBounds();
     if (spread > 0 && boxes.size > 0) {
+      // The board faces the home view: across is X; up is Y standing, and Z for a model lying on its back.
+      const up = posture === 'lying' ? 'z' : 'y';
+      const depth = posture === 'lying' ? 'y' : 'z';
+      const shown = [...meshesById].filter(([id, meshes]) => meshes.length > 0 && boxes.has(id) && !appearance.hidden.has(id));
       const all = new THREE.Box3();
-      for (const box of boxes.values()) all.union(box);
+      for (const [id] of shown) all.union(boxes.get(id)!);
       const middle = all.getCenter(new THREE.Vector3());
-      const reach = spread * Math.max(...all.getSize(new THREE.Vector3()).toArray()) * SPREAD_REACH;
-      for (const [id, meshes] of meshesById) {
+      const spots = spreadBoard(shown.map(([id]) => {
+        const size = boxes.get(id)!.getSize(new THREE.Vector3());
+        return { id, width: size.x, height: size[up] };
+      }));
+      for (const [id, meshes] of shown) {
         const center = centers.get(id);
-        if (!center || meshes.length === 0) continue;
-        const away = center.clone().sub(middle);
-        if (away.lengthSq() < 1e-12) continue;
-        away.setLength(reach);
+        const spot = spots.get(id);
+        if (!center || !spot) continue;
+        const target = new THREE.Vector3();
+        target.x = middle.x + spot.u;
+        target[up] = middle[up] + (up === 'z' ? -spot.v : spot.v);
+        target[depth] = middle[depth];
+        const away = target.sub(center).multiplyScalar(spread);
         for (const mesh of meshes) {
           if (!mesh.parent) continue;
           mesh.parent.updateWorldMatrix(true, false);
@@ -1273,6 +1309,12 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     resetView,
     viewFrom,
     setReducedMotion,
+    setSpin(on) {
+      if (on === spinning) return;
+      spinning = on;
+      lastSpin = 0;
+      requestRender();
+    },
     viewPreset,
     focusOn,
     setPosture,
@@ -1285,6 +1327,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       if (next === spread) return;
       spread = next;
       applySpread();
+      // The board is far wider than the body: step back (or forward again) so the whole of it stays in view.
+      frame();
+      resetView();
     },
     thumbnail,
     thumbnailMarks,

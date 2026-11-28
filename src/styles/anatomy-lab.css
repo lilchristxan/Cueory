@@ -16,7 +16,17 @@
     visibility: visible;
   }
   .lab-page {
-    background: var(--lab-stage-dark);
+    background: var(--lab-stage-flat);
+  }
+  /* The bars around the stage (top bar, panel buttons, other tools, credits) stay brown on a black or a white stage. */
+  .lab-bar {
+    background: var(--lab-panel-solid);
+  }
+  /* On the white stage the see-through glass would wash out, so the panels are the plain brown panel. */
+  .lab-page[data-stage='white'] .lab-glass {
+    background: var(--lab-panel-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
   /* "flag or comment" in the lab opens the page's own form (in the footer). While it is open the footer sits over the lab,
      pinned to the bottom edge, so a student never has to leave the lab to report something. */
@@ -41,12 +51,7 @@
     color: var(--lab-ivory);
     font-family: var(--font-body);
     line-height: 1.5;
-    background:
-      linear-gradient(180deg, var(--lab-stage-sheen), transparent 38%),
-      radial-gradient(ellipse 30% 58% at 50% 48%, var(--lab-stage-halo) 0%, var(--lab-stage-halo-edge) 46%, transparent 74%),
-      linear-gradient(var(--lab-grid-line) var(--lab-edge), transparent var(--lab-edge)) 0 0 / var(--lab-grid-size) var(--lab-grid-size),
-      linear-gradient(90deg, var(--lab-grid-line) var(--lab-edge), transparent var(--lab-edge)) 0 0 / var(--lab-grid-size) var(--lab-grid-size),
-      radial-gradient(ellipse at 50% 38%, var(--lab-stage-mid) 0%, var(--lab-stage-dark) 70%);
+    background: var(--lab-stage-flat);
   }
 
   /* One focus look on the dark stage: a copper-shine ring, 3:1 or better against the stage and the glass. */
@@ -126,14 +131,16 @@
     white-space: nowrap;
     cursor: pointer;
   }
-  .lab-btn:hover:not(:disabled):not([aria-disabled='true']) {
+  /* Not a pressed button: its dark text needs the copper under it, hovered or not. */
+  .lab-btn:hover:not(:disabled):not([aria-disabled='true']):not([aria-pressed='true']):not(.lab-btn-primary) {
     background: var(--lab-row-on);
     border-color: var(--lab-copper-glow);
   }
   .lab-btn[aria-pressed='true'],
   .lab-btn-primary {
     border-color: transparent;
-    background: var(--lab-copper-fill);
+    /* The plain copper under the gradient is what a contrast check (and a browser without gradients) reads. */
+    background: var(--lab-copper-fill) var(--lab-copper-glow);
     color: var(--lab-charcoal);
     font-weight: 700;
   }
@@ -206,10 +213,32 @@
     border: calc(var(--lab-edge) * 1.5) solid var(--lab-sand);
     background: transparent;
   }
-  .lab-row[aria-pressed='true'] .lab-dot {
+  .lab-row[aria-pressed='true'] .lab-dot,
+  .lab-dot[data-on='true'] {
     background: var(--lab-copper-glow);
     border-color: var(--lab-copper-glow);
     box-shadow: 0 0 var(--lab-dot) var(--lab-copper);
+  }
+  /* A structure's own dot: lit while it shows, hollow while hidden; tapping it hides or shows the structure. */
+  .lab-dot-btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--spacing) * 11);
+    min-height: calc(var(--spacing) * 11);
+    padding: 0;
+    border-radius: 50%;
+    border: var(--lab-edge) solid transparent;
+    background: transparent;
+    cursor: pointer;
+  }
+  .lab-dot-btn:hover:not(:disabled) {
+    background: var(--lab-row-on);
+  }
+  .lab-dot-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
   }
   .lab-state {
     margin-left: auto;

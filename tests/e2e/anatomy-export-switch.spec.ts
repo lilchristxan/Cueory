@@ -32,7 +32,7 @@ test('switching systems invalidates the previous PNG before React effects', asyn
   const fixture = page.getByRole('button', { name: 'fixture cube A', exact: true });
   await expect(fixture).toBeEnabled({ timeout: 20_000 });
 
-  const picker = page.getByRole('group', { name: 'body system' }).getByRole('button');
+  const picker = page.getByRole('group', { name: 'body system' }).locator(':scope > button'); // the system rows; the open system's structures are listed under its row
   // This is a draft-enabled Anatomy Lab test. A missing second system is a regression,
   // not permission to skip the stale-export safety check on slow devices.
   await expect.poll(() => picker.count(), { timeout: 15_000 })
@@ -65,7 +65,7 @@ test('switching systems during font preparation skips the obsolete PNG render', 
   await openLabPanels(page);
   await expect(page.getByRole('button', { name: 'fixture cube A', exact: true }))
     .toBeEnabled({ timeout: 20_000 });
-  const picker = page.getByRole('group', { name: 'body system' }).getByRole('button');
+  const picker = page.getByRole('group', { name: 'body system' }).locator(':scope > button'); // the system rows; the open system's structures are listed under its row
   await expect.poll(() => picker.count(), { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
 
   await page.evaluate(() => {

@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -349,6 +350,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [panels, setPanels] = useState({ orientation: false, systems: false, structures: false });
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidesHidden, setSidesHidden] = useState(false);
+  const [treeMin, setTreeMin] = useState(false);
+  // The model turns by itself until the student stops it (Christian, 2026-11-27).
+  const [spinning, setSpinning] = useState(false);
+  const [stage, setStage] = useState<'black' | 'white'>('black');
   const moreRef = useRef<HTMLDivElement>(null);
   // The other tools open under the stage; bring them into view so the tap visibly does something on a full-page lab.
   useEffect(() => {
@@ -432,8 +437,41 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const visible = useMemo(() => found.filter((id) => !hidden.has(id)), [found, hidden]);
   const groups = useMemo(() => groupStructures(system?.structures ?? [], query), [system, query]);
   const shownCount = groups.reduce((n, g) => n + g.items.length, 0);
-  const listedGroups = useMemo(() => visibleStructureGroups(groups, listLimit), [groups, listLimit]);
-  const listedCount = Math.min(shownCount, listLimit);
+  // A group folded shut with its heading's arrow lists no rows, so the groups after it come up without scrolling.
+  // A search opens every group again: a match must never hide inside a folded group.
+  const [foldedGroups, setFoldedGroups] = useState<ReadonlySet<string>>(new Set());
+  const systemKeyForFolds = system?.key;
+  useEffect(() => setFoldedGroups(new Set()), [systemKeyForFolds]);
+  const searching = query.trim() !== '';
+  const openGroups = useMemo(
+    () => groups.filter((group) => searching || group.group === null || !foldedGroups.has(group.group)),
+    [groups, foldedGroups, searching],
+  );
+  const openCount = openGroups.reduce((n, g) => n + g.items.length, 0);
+  const listedOpen = useMemo(() => visibleStructureGroups(openGroups, listLimit), [openGroups, listLimit]);
+  const listedCount = Math.min(openCount, listLimit);
+  // Every group up to the last one with rows on screen, folded ones included as a heading alone.
+  const listedGroups = useMemo(() => {
+    const rows = new Map(listedOpen.map((group) => [group.group, group.items]));
+    const reachedEnd = listedOpen.reduce((n, g) => n + g.items.length, 0) >= openCount;
+    const last = listedOpen[listedOpen.length - 1]?.group;
+    const result: { group: string | null; items: typeof groups[number]['items']; total: number; folded: boolean }[] = [];
+    let pastLast = listedOpen.length === 0;
+    for (const group of groups) {
+      const items = rows.get(group.group);
+      if (items) result.push({ group: group.group, items, total: group.items.length, folded: false });
+      else if (!openGroups.includes(group) && (!pastLast || reachedEnd)) result.push({ group: group.group, items: [], total: group.items.length, folded: true });
+      if (group.group === last) pastLast = true;
+    }
+    return result;
+  }, [groups, openGroups, listedOpen, openCount]);
+  const toggleGroup = (name: string) => setFoldedGroups((current) => {
+    const next = new Set(current);
+    if (next.has(name)) next.delete(name); else next.add(name);
+    return next;
+  });
+  const namedGroups = groups.filter((group) => group.group !== null).map((group) => group.group as string);
+  const allFolded = namedGroups.length > 0 && namedGroups.every((name) => foldedGroups.has(name));
   // After expanding, keyboard focus moves to the first new row, even if its 3D file is not loaded yet.
   useEffect(() => {
     if (nextListFocusId.current === null) return;
@@ -595,6 +633,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       const nextScene = createLabScene({
         canvas,
         reducedMotion: prefersReducedMotion(),
+        onSpinStop: () => setSpinning(false),
         colors: nextColors,
         posture: postureRef.current,
         onRender: () => updateLabelsRef.current(),
@@ -1247,6 +1286,33 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     setThumbs(next);
   }, [modelReady, systemKey]);
 
+  const spinReady = load.state === 'ready';
+  // A real body system starts out turning; the test shapes (?fixture) and reduced motion start still.
+  const spinSystemKey = system?.key;
+  const spinFixture = system?.fixture === true;
+  useEffect(() => {
+    if (!spinReady) return;
+    const on = !spinFixture && !prefersReducedMotion();
+    setSpinning(on);
+    sceneRef.current?.setSpin(on);
+    if (on) setOrientation('free');
+  }, [spinReady, spinSystemKey, spinFixture]);
+  // Studying a structure needs a still model: selecting one, a quiz, a round or name it stops the turning.
+  const studying = Boolean(selected || quiz || round || recall);
+  useEffect(() => {
+    if (!studying) return;
+    setSpinning(false);
+    sceneRef.current?.setSpin(false);
+  }, [studying]);
+  // The stage colour changes the model's colours (dark parts on white), so the scene reads its tokens again.
+  useEffect(() => {
+    const read = readColorsRef.current;
+    if (!read) return;
+    colorsRef.current = read();
+    sceneRef.current?.setColors(colorsRef.current);
+    compareSceneRef.current?.setColors(colorsRef.current);
+  }, [stage]);
+
   // ── Theme and accessible text sizing ─────────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (phase !== 'open') return;
@@ -1346,7 +1412,24 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     e.preventDefault();
   };
 
+  const stopSpin = () => {
+    setSpinning(false);
+    sceneRef.current?.setSpin(false);
+  };
+  const toggleSpin = () => {
+    const on = !spinning;
+    setSpinning(on);
+    sceneRef.current?.setSpin(on);
+    if (on) setOrientation('free');
+    setAnnounce(on ? 'the model is turning. press pause to stop it.' : 'the model stopped turning.');
+  };
+  const pickStage = (next: 'black' | 'white') => {
+    // Kept for this visit only: saving it on the device would need a line on the privacy page first.
+    setStage(next);
+    setAnnounce(`${next} background.`);
+  };
   const showView = (requested: ViewPreset) => {
+    stopSpin();
     // Pressing "lateral" again turns to the opposite side.
     const preset = requested === 'left' && orientation === 'left' ? 'right' : requested;
     sceneRef.current?.viewFrom(presetDirection(preset));
@@ -1355,19 +1438,17 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   };
   /** Turning the model by a button or a key leaves the preset views: "free rotate" is what is showing. */
   const turn = (yaw: number, pitch: number) => {
+    stopSpin();
     sceneRef.current?.orbit(yaw, pitch);
     setOrientation('free');
   };
-  const freeRotate = () => {
-    setOrientation('free');
-    canvasRef.current?.focus();
-    setAnnounce('free rotate: drag the model, or use the arrow keys.');
-  };
   const resetToHome = () => {
+    stopSpin();
     sceneRef.current?.resetView();
     setOrientation(posture === 'lying' ? null : 'front');
   };
   const changeSpread = (fraction: number) => {
+    if (fraction > 0) stopSpin();
     setSpread(fraction);
     sceneRef.current?.setSpread(fraction);
   };
@@ -1966,13 +2047,120 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     });
   };
 
+  // The open system's structures, listed under its row in the body systems panel (one combined tree).
+  const structuresTree = (
+                    <section id="lab-panel-structures" className="mt-1 mb-2 space-y-2 pl-3" aria-labelledby="anatomy-list-heading">
+          <h3 id="anatomy-list-heading" className="sr-only">structures</h3>
+          {namesHidden ? (
+            <p className="text-sm text-ink-soft" data-testid="anatomy-list-paused">
+              the list is put away while a name is hidden, so it doesn't give the answer away. stop {recall ? 'name it' : 'the round'} to see it again.
+            </p>
+          ) : (<>
+          <p className="text-sm text-ink-soft" aria-live="polite">
+            {listedCount < shownCount
+              ? `showing ${listedCount} of ${shownCount} structures`
+              : shownCount === 1 ? '1 structure' : `${shownCount} structures`}
+          </p>
+          {namedGroups.length > 1 && !searching && (
+            <button
+              type="button"
+              className={`${secondaryButton} self-start`}
+              disabled={!ready}
+              onClick={() => setFoldedGroups(allFolded ? new Set() : new Set(namedGroups))}
+              data-testid="anatomy-fold-all"
+            >
+              {allFolded ? 'open all groups' : 'close all groups'}
+            </button>
+          )}
+          <div className="lab-sheet space-y-4 lg:max-h-none lg:min-h-0 lg:flex-1">
+            {listedGroups.map((group) => (
+              <div key={group.group ?? '—'}>
+                {group.group && (
+                  <h4 className="lab-cap">
+                    {searching ? group.group : (
+                      <button
+                        type="button"
+                        className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 bg-transparent p-0 text-left"
+                        aria-expanded={!group.folded}
+                        disabled={!ready}
+                        onClick={() => toggleGroup(group.group as string)}
+                      >
+                        <span>{group.group}</span>
+                        <span aria-hidden="true">{group.total} {group.folded ? '▸' : '▾'}</span>
+                      </button>
+                    )}
+                  </h4>
+                )}
+                <ul className="mt-1 space-y-1" hidden={group.folded}>
+                  {group.items.map((item) => {
+                    const inModel = foundSet.has(item.id);
+                    const isHidden = hidden.has(item.id);
+                    const isFaded = !isHidden && faded.has(item.id);
+                    const loadNote = structureLoadNote(
+                      item, foundSet, lazy, (id) => filesForLayer(system, id),
+                      system.model.files ?? [], fileIntegratedForStatus, system.model.fileIds,
+                    );
+                    return (
+                      <li
+                        key={item.id}
+                        ref={nextListFocusId.current === item.id ? nextListItemRef : undefined}
+                        tabIndex={nextListFocusId.current === item.id ? -1 : undefined}
+                        className="flex items-stretch gap-1"
+                      >
+                        {inModel && (
+                          <button
+                            type="button"
+                            aria-label={`${isHidden ? 'show' : 'hide'} ${item.text}`}
+                            disabled={!ready || revealedTarget === item.id}
+                            onClick={() => changeVisibility((v) => hideStructure(v, item.id))}
+                            className="lab-dot-btn"
+                          >
+                            <span className="lab-dot" data-on={!isHidden} aria-hidden="true" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          aria-pressed={selected === item.id}
+                          disabled={!ready || !inModel}
+                          onClick={() => pickStructure(item.id)}
+                          className="lab-row min-w-0 flex-1"
+                        >
+                          {item.text}
+                          {selected === item.id && <span className="lab-state" aria-hidden="true">selected</span>}
+                          {isHidden && inModel && <span> (hidden)</span>}
+                          {isFaded && inModel && <span> {FADED_MARK}</span>}
+                          {ready && !inModel && loadNote && <span> ({loadNote})</span>}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            {listedCount < openCount && (
+              <button
+                type="button"
+                className={secondaryButton}
+                onClick={() => {
+                  nextListFocusId.current = openGroups.flatMap((group) => group.items)[listedCount]?.id ?? null;
+                  setListLimit((current) => current + STRUCTURE_PAGE_SIZE);
+                }}
+              >
+                show {Math.min(STRUCTURE_PAGE_SIZE, openCount - listedCount)} more structures
+              </button>
+            )}
+          </div>
+          </>)}
+                    </section>
+  );
+
   return (
-    <div className="lab-page fixed inset-0 z-50 m-0 overflow-x-hidden overflow-y-auto" onKeyDown={onLabKey} data-testid="anatomy-page">
+    <div className="lab-page fixed inset-0 z-50 m-0 overflow-x-hidden overflow-y-auto" onKeyDown={onLabKey} data-stage={stage} data-testid="anatomy-page">
       <LabFullPage />
       <p className="sr-only" aria-live="polite" data-testid="anatomy-announce">{announce}</p>
 
       <div ref={labRef} className="anatomy-lab" data-testid="anatomy-lab">
-        <div className="lab-topbar flex-wrap">
+        <div className="lab-topbar lab-bar flex-wrap">
           <div className="flex min-w-0 items-center gap-3">
             {onExit && (
               <button type="button" className="lab-btn lab-round shrink-0" onClick={onExit} data-testid="anatomy-exit">
@@ -2005,6 +2193,29 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   autoComplete="off"
                 />
               </div>
+            )}
+            {/* Put away while a round runs, so nothing can draw or print the name being asked. */}
+            {!round && (
+              <>
+                <button
+                  type="button"
+                  className="lab-btn shrink-0"
+                  aria-pressed={labelsOn}
+                  disabled={!ready || quiz !== null || namesHidden}
+                  onClick={() => setLabelsOn((on) => !on)}
+                >
+                  labels
+                </button>
+                <button
+                  type="button"
+                  className="lab-btn shrink-0"
+                  aria-expanded={moreOpen}
+                  aria-controls="lab-more"
+                  onClick={() => setMoreOpen((open) => !open)}
+                >
+                  more
+                </button>
+              </>
             )}
             <button
               type="button"
@@ -2180,18 +2391,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </div>
 
             {!round && (
-            <div className="lab-glass absolute inset-x-0 bottom-3 z-10 mx-auto flex w-fit max-w-full items-center gap-3 p-2 pr-4" role="group" aria-label="bottom bar">
-              <button
-                type="button"
-                className={`${secondaryButton} min-h-(--lab-bar-button)`}
-                aria-pressed={labelsOn}
-                disabled={!ready || quiz !== null || namesHidden}
-                onClick={() => setLabelsOn((on) => !on)}
-              >
-                labels
-              </button>
-              <div className="w-28 sm:w-52">
-                <label htmlFor="anatomy-spread" className="lab-cap block">spread structures apart · {Math.round(spread * 100)}%</label>
+            <div className="lab-glass absolute inset-x-0 bottom-3 z-10 mx-auto flex w-fit max-w-full items-center px-5 py-2" role="group" aria-label="bottom bar">
+              <div className="w-56 max-w-full sm:w-72">
+                <label htmlFor="anatomy-spread" className="sr-only">spread structures apart · {Math.round(spread * 100)}%</label>
                 <input
                   id="anatomy-spread"
                   type="range"
@@ -2205,15 +2407,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   onChange={(e) => changeSpread(Number(e.target.value) / 100)}
                 />
               </div>
-              <button
-                type="button"
-                className={`${secondaryButton} min-h-(--lab-bar-button)`}
-                aria-expanded={moreOpen}
-                aria-controls="lab-more"
-                onClick={() => setMoreOpen((open) => !open)}
-              >
-                more
-              </button>
             </div>
             )}
           </div>
@@ -2236,8 +2429,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2 p-3 lg:hidden" role="group" aria-label="panels">
-            {([['orientation', 'orientation'], ['systems', 'body systems'], ['structures', 'structures']] as const).map(([key, label]) => (
+          <div className="lab-bar flex flex-wrap gap-2 p-3 lg:hidden" role="group" aria-label="panels">
+            {([['orientation', 'orientation'], ['systems', 'body systems']] as const).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
@@ -2252,55 +2445,27 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           </div>
 
           <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:bottom-5 lg:left-5 lg:z-10 lg:w-(--lab-rail-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-rail">
-            <section id="lab-panel-orientation" className="lab-glass mx-3 mb-3 hidden p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:block" data-open={panels.orientation || undefined} aria-labelledby="lab-orientation-heading">
-              <h2 id="lab-orientation-heading" className="lab-cap">orientation</h2>
-              <div className="mt-3 flex justify-between gap-2" role="group" aria-label="preset views">
-                {ORIENTATIONS.map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    className="flex flex-col items-center bg-transparent p-0 disabled:opacity-60"
-                    aria-label={`${o.label} view`}
-                    aria-pressed={orientation === o.id}
-                    aria-keyshortcuts={NAV_VIEW_PRESETS.find((p) => p.id === o.id)?.key}
-                    disabled={!ready}
-                    onClick={() => showView(o.id)}
-                  >
-                    <span className="lab-thumb" aria-hidden="true">
-                      {thumbs[o.id] && <img src={thumbs[o.id]} alt="" width={136} height={216} />}
-                    </span>
-                    <span className="lab-thumb-label" data-on={orientation === o.id} aria-hidden="true">{o.label}</span>
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className={`${secondaryButton} mt-3 w-full`}
-                aria-pressed={orientation === 'free'}
-                disabled={!ready}
-                onClick={freeRotate}
-              >
-                free rotate
-              </button>
-              <div className="mt-3 flex flex-wrap items-center gap-2" role="group" aria-label="view">
-                <button type="button" className={iconButton} aria-label="turn left" disabled={!ready} onClick={() => turn(-STEP, 0)}>←</button>
-                <button type="button" className={iconButton} aria-label="turn right" disabled={!ready} onClick={() => turn(STEP, 0)}>→</button>
-                <button type="button" className={iconButton} aria-label="tilt up" disabled={!ready} onClick={() => turn(0, -STEP)}>↑</button>
-                <button type="button" className={iconButton} aria-label="tilt down" disabled={!ready} onClick={() => turn(0, STEP)}>↓</button>
-                <button type="button" className={iconButton} aria-label="zoom in" disabled={!ready} onClick={() => sceneRef.current?.zoom(ZOOM_IN)}>+</button>
-                <button type="button" className={iconButton} aria-label="zoom out" disabled={!ready} onClick={() => sceneRef.current?.zoom(1 / ZOOM_IN)}>−</button>
-                <button type="button" className={secondaryButton} disabled={!ready} onClick={resetToHome}>reset view</button>
-                <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={() => showAll()}>show all</button>
-              </div>
-            </section>
 
             <section id="lab-panel-systems" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:block" data-open={panels.systems || undefined} aria-labelledby="lab-systems-heading">
-              <h2 id="lab-systems-heading" className="lab-cap">body systems</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="lab-systems-heading" className="lab-cap">body systems</h2>
+                <button
+                  type="button"
+                  className="lab-btn lab-round shrink-0"
+                  aria-expanded={!treeMin}
+                  onClick={() => setTreeMin((min) => !min)}
+                  data-testid="anatomy-tree-min"
+                >
+                  <span aria-hidden="true">{treeMin ? '+' : '−'}</span>
+                  <span className="sr-only">{treeMin ? 'show the body systems box' : 'hide the body systems box'}</span>
+                </button>
+              </div>
+              <div className="space-y-3" hidden={treeMin}>
               {systems.length > 1 && (
                 <div role="group" aria-label="body system" className="space-y-1">
                   {systems.map((s) => (
+                    <Fragment key={s.key}>
                     <button
-                      key={s.key}
                       type="button"
                       aria-pressed={s.key === system.key}
                       onClick={() => pickSystem(s.key)}
@@ -2308,11 +2473,14 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                     >
                       <span className="lab-dot" aria-hidden="true" />
                       <span>{s.title}</span>
-                      <span className="lab-state" aria-hidden="true">{s.key === system.key ? 'on' : 'off'}</span>
+                      <span className="lab-state" aria-hidden="true">{s.key === system.key ? '▾' : '▸'}</span>
                     </button>
+                    {s.key === system.key && structuresTree}
+                    </Fragment>
                   ))}
                 </div>
               )}
+              {systems.length <= 1 && structuresTree}
           {layers.length > 1 && (
             <fieldset className="lab-divider min-w-0 space-y-3 border-x-0 border-b-0 p-0 pt-3">
               <legend className="lab-cap float-left w-full">layers, skin to bone</legend>
@@ -2386,10 +2554,77 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               )}
             </fieldset>
           )}
+              </div>
             </section>
           </div>
 
-          <div className={`contents lg:pointer-events-none lg:absolute lg:inset-y-5 lg:right-5 lg:z-10 lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-inspector">
+          <section
+            id="lab-panel-orientation"
+            className="lab-glass mx-3 mb-3 hidden p-4 data-open:block lg:absolute lg:right-5 lg:bottom-5 lg:z-10 lg:m-0 lg:block lg:w-(--lab-inspector-width)"
+            data-open={panels.orientation || undefined}
+            aria-labelledby="lab-orientation-heading"
+            data-testid="anatomy-remote"
+          >
+            <h2 id="lab-orientation-heading" className="lab-cap">orientation</h2>
+            <div role="group" aria-label="view">
+            <div className="mt-3 flex items-start justify-between gap-3">
+              <div className="flex gap-2" role="group" aria-label="preset views">
+                {ORIENTATIONS.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    className="flex flex-col items-center bg-transparent p-0 disabled:opacity-60"
+                    aria-label={`${o.label} view`}
+                    aria-pressed={orientation === o.id}
+                    aria-keyshortcuts={NAV_VIEW_PRESETS.find((p) => p.id === o.id)?.key}
+                    disabled={!ready}
+                    onClick={() => showView(o.id)}
+                  >
+                    <span className="lab-thumb" aria-hidden="true">
+                      {thumbs[o.id] && <img src={thumbs[o.id]} alt="" width={136} height={216} />}
+                    </span>
+                    <span className="lab-thumb-label" data-on={orientation === o.id} aria-hidden="true">{o.label}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                <button type="button" className={iconButton} aria-label="zoom in" disabled={!ready} onClick={() => sceneRef.current?.zoom(ZOOM_IN)}>+</button>
+                <button type="button" className={iconButton} aria-label="zoom out" disabled={!ready} onClick={() => sceneRef.current?.zoom(1 / ZOOM_IN)}>−</button>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="grid w-fit shrink-0 grid-cols-3 gap-1">
+                <button type="button" className={`${iconButton} col-start-2 row-start-1`} aria-label="tilt up" disabled={!ready} onClick={() => turn(0, -STEP)}>↑</button>
+                <button type="button" className={`${iconButton} col-start-1 row-start-2`} aria-label="turn left" disabled={!ready} onClick={() => turn(-STEP, 0)}>←</button>
+                <button type="button" className={`${iconButton} col-start-3 row-start-2`} aria-label="turn right" disabled={!ready} onClick={() => turn(STEP, 0)}>→</button>
+                <button
+                  type="button"
+                  className={`${iconButton} col-start-2 row-start-2 w-11 px-0`}
+                  aria-pressed={spinning}
+                  disabled={!ready}
+                  onClick={toggleSpin}
+                  data-testid="anatomy-spin"
+                >
+                  <span aria-hidden="true">{spinning ? '❙❙' : '▶\uFE0E'}</span>
+                  <span className="sr-only">turn the model by itself</span>
+                </button>
+                <button type="button" className={`${iconButton} col-start-2 row-start-3`} aria-label="tilt down" disabled={!ready} onClick={() => turn(0, STEP)}>↓</button>
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="lab-seg" role="group" aria-label="background">
+                  {(['black', 'white'] as const).map((choice) => (
+                    <button key={choice} type="button" aria-pressed={stage === choice} onClick={() => pickStage(choice)}>
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+                <button type="button" className={secondaryButton} disabled={!ready} onClick={resetToHome}>reset view</button>
+                <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={() => showAll()}>show all</button>
+              </div>
+            </div>
+            </div>
+          </section>
+          <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:right-5 lg:bottom-(--lab-remote-clear) lg:z-10 lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-inspector" role="group" aria-label="selected structure and study" tabIndex={0}>
           {selectedName && !quiz && !namesHidden && (
             <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
               <p className="lab-cap flex justify-between gap-3"><span>selected structure</span><span className="lab-id" data-testid="anatomy-card-id">{selected}</span></p>
@@ -2542,87 +2777,10 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               />
             )
           )}
-        <section id="lab-panel-structures" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:flex lg:min-h-(--lab-list-min) lg:flex-1 lg:flex-col" data-open={panels.structures || undefined} aria-labelledby="anatomy-list-heading">
-          <h2 id="anatomy-list-heading" className="lab-cap">structures</h2>
-          {namesHidden ? (
-            <p className="text-sm text-ink-soft" data-testid="anatomy-list-paused">
-              the list is put away while a name is hidden, so it doesn't give the answer away. stop {recall ? 'name it' : 'the round'} to see it again.
-            </p>
-          ) : (<>
-          <p className="text-sm text-ink-soft" aria-live="polite">
-            {listedCount < shownCount
-              ? `showing ${listedCount} of ${shownCount} structures`
-              : shownCount === 1 ? '1 structure' : `${shownCount} structures`}
-          </p>
-          <div className="lab-sheet space-y-4 lg:max-h-none lg:min-h-0 lg:flex-1">
-            {listedGroups.map((group) => (
-              <div key={group.group ?? '—'}>
-                {group.group && <h3 className="lab-cap">{group.group}</h3>}
-                <ul className="mt-1 space-y-1">
-                  {group.items.map((item) => {
-                    const inModel = foundSet.has(item.id);
-                    const isHidden = hidden.has(item.id);
-                    const isFaded = !isHidden && faded.has(item.id);
-                    const loadNote = structureLoadNote(
-                      item, foundSet, lazy, (id) => filesForLayer(system, id),
-                      system.model.files ?? [], fileIntegratedForStatus, system.model.fileIds,
-                    );
-                    return (
-                      <li
-                        key={item.id}
-                        ref={nextListFocusId.current === item.id ? nextListItemRef : undefined}
-                        tabIndex={nextListFocusId.current === item.id ? -1 : undefined}
-                        className="flex items-stretch gap-1"
-                      >
-                        <button
-                          type="button"
-                          aria-pressed={selected === item.id}
-                          disabled={!ready || !inModel}
-                          onClick={() => pickStructure(item.id)}
-                          className="lab-row min-w-0 flex-1"
-                        >
-                          {item.text}
-                          {selected === item.id && <span className="lab-state" aria-hidden="true">selected</span>}
-                          {isHidden && inModel && <span> (hidden)</span>}
-                          {isFaded && inModel && <span> {FADED_MARK}</span>}
-                          {ready && !inModel && loadNote && <span> ({loadNote})</span>}
-                        </button>
-                        {inModel && (
-                          <button
-                            type="button"
-                            aria-label={`${isHidden ? 'show' : 'hide'} ${item.text}`}
-                            disabled={revealedTarget === item.id}
-                            onClick={() => changeVisibility((v) => hideStructure(v, item.id))}
-                            className="lab-btn min-w-14 px-2"
-                          >
-                            {isHidden ? 'show' : 'hide'}
-                          </button>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-            {listedCount < shownCount && (
-              <button
-                type="button"
-                className={secondaryButton}
-                onClick={() => {
-                  nextListFocusId.current = groups.flatMap((group) => group.items)[listedCount]?.id ?? null;
-                  setListLimit((current) => current + STRUCTURE_PAGE_SIZE);
-                }}
-              >
-                show {Math.min(STRUCTURE_PAGE_SIZE, shownCount - listedCount)} more structures
-              </button>
-            )}
-          </div>
-          </>)}
-        </section>
           </div>
         </div>
 
-        <div id="lab-more" ref={moreRef} hidden={!moreOpen} className="space-y-3 border-t border-line p-4" data-testid="anatomy-more">
+        <div id="lab-more" ref={moreRef} hidden={!moreOpen} className="lab-bar space-y-3 border-t border-line p-4" data-testid="anatomy-more">
           <div className="flex items-center justify-between gap-3">
             <h2 className="lab-cap">more</h2>
             <button type="button" className={secondaryButton} onClick={() => setMoreOpen(false)} data-testid="anatomy-more-close">close</button>
@@ -3180,7 +3338,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           </section>
         </div>
 
-        <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-line px-4 py-2 text-sm text-ink-soft" data-testid="anatomy-credits">
+        <div className="lab-bar flex flex-wrap gap-x-5 gap-y-1 border-t border-line px-4 py-2 text-sm text-ink-soft" data-testid="anatomy-credits">
           {drafts && system.status === 'draft' && <p className="text-ink">draft · labels waiting for review</p>}
             <p>
               {system.fixture ? (
