@@ -1509,6 +1509,45 @@
   --game-demo-active-bg: var(--color-surface);
 }
 
+/* piccline's page sky (Christian's picture, 2026-11-27): soft clouds of blue, cream and peach. Only piccline's game
+   page uses it. The left side stays cream and peach so the teal name keeps its contrast; the blue sits to the right.
+   Evening is the same sky at dusk. Two copies of the Evening values, as for every Evening value. */
+:root {
+  --piccline-sky-blue: #9fc3df;
+  --piccline-sky-mist: #cfe0ec;
+  --piccline-sky-cream: #fdf3d6;
+  --piccline-sky-sun: #fbe6a8;
+  --piccline-sky-blush: #f8d9c2;
+  --piccline-sky-peach: #f5b98f;
+  --piccline-sky:
+    radial-gradient(50% 42% at 62% 14%, var(--piccline-sky-blue) 0%, transparent 70%),
+    radial-gradient(42% 40% at 96% 30%, var(--piccline-sky-sun) 0%, transparent 72%),
+    radial-gradient(46% 40% at 46% 50%, var(--piccline-sky-cream) 0%, transparent 70%),
+    radial-gradient(44% 40% at 78% 90%, var(--piccline-sky-blue) 0%, transparent 70%),
+    radial-gradient(40% 36% at 14% 92%, var(--piccline-sky-peach) 0%, transparent 72%),
+    linear-gradient(180deg, var(--piccline-sky-cream) 0%, var(--piccline-sky-mist) 34%, var(--piccline-sky-cream) 62%, var(--piccline-sky-blush) 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --piccline-sky-blue: #2f4f6b;
+    --piccline-sky-mist: #263a4c;
+    --piccline-sky-cream: #2e2f33;
+    --piccline-sky-sun: #5a4d2e;
+    --piccline-sky-blush: #4a3028;
+    --piccline-sky-peach: #6b4638;
+  }
+}
+
+:root[data-theme="dark"] {
+  --piccline-sky-blue: #2f4f6b;
+  --piccline-sky-mist: #263a4c;
+  --piccline-sky-cream: #2e2f33;
+  --piccline-sky-sun: #5a4d2e;
+  --piccline-sky-blush: #4a3028;
+  --piccline-sky-peach: #6b4638;
+}
+
 /* wordpill's Evening sky (Christian, 2026-11-27): each sky colour swaps with the colour of the letter that sits on its
    pill in Daytime: light green becomes that letter's dark green, white becomes bronze and pink becomes dark brown.
    The pills and keys themselves keep their Daytime colours in Evening. Two copies, as for every Evening value: one for
