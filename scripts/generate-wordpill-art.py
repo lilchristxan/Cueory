@@ -13,10 +13,10 @@ and no font file is added to the site. The font is not in this repository: downl
 to rebuild the three files in public/design/games-v2/assets/ (the generated files are committed). The hex values live in
 the artwork files only; components and CSS never use them.
 
-  wordpill-wordmark-light.svg  Daytime wordmark: deep game-green letters with a thin white outline.
-  wordpill-wordmark-dark.svg   Evening wordmark: the same letters in white with a thin game-green outline.
-  wordpill-icon-l1.svg         The logo (Christian's "V1", 2026-11-27): a white "w" with a thin bronze outline, in the sky
-                               capsule with a thin bronze rim. Bronze is the letter colour on the game's white pill.
+  wordpill-wordmark-light.svg  Daytime wordmark: plain deep game-green letters, no outline.
+  wordpill-wordmark-dark.svg   Evening wordmark: the same letters in plain white, no outline.
+  wordpill-icon-l1.svg         The logo: a plain deep green "w" over an underline, like the name, in the sky capsule
+                               with a thin bronze rim. Bronze is the letter colour on the game's white pill.
 """
 import os
 import sys
@@ -82,6 +82,8 @@ def capsule(x, y, w, h, tag, line, rim=GREEN):
 
 def letters(d, line, fill=GREEN, rim=WHITE):
     # The rim is painted under the fill, so it shows only as a thin line outside the letters.
+    if rim is None:
+        return f'<path d="{d}" fill="{fill}"/>'
     return f'<path d="{d}" fill="{fill}" stroke="{rim}" stroke-width="{line * 2}" stroke-linejoin="round" paint-order="stroke"/>'
 
 
@@ -147,8 +149,8 @@ def wordmark(face, fill, rim):
     num = lambda v: f"{v:.2f}".rstrip("0").rstrip(".")
     swash = " ".join(f"M{num(c[0][0])} {num(c[0][1])} C {num(c[1][0])} {num(c[1][1])}, {num(c[2][0])} {num(c[2][1])}, {num(c[3][0])} {num(c[3][1])}" for c in pieces)
     line = (
-        f'<path d="{swash}" fill="none" stroke="{rim}" stroke-width="6" stroke-linecap="round"/>'
-        f'<path d="{swash}" fill="none" stroke="{fill}" stroke-width="3" stroke-linecap="round"/>'
+        (f'<path d="{swash}" fill="none" stroke="{rim}" stroke-width="6" stroke-linecap="round"/>' if rim else "")
+        + f'<path d="{swash}" fill="none" stroke="{fill}" stroke-width="3" stroke-linecap="round"/>'
     )
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100" role="img" aria-label="wordpill">'
@@ -157,18 +159,23 @@ def wordmark(face, fill, rim):
 
 
 def icon(face):
-    w = text_path(face, "w", 72, 50, 64)
+    # The logo's "w" is the name's own style (Christian, 2026-11-27): plain deep green, no outline, at the same
+    # incline, over the same kind of underline.
+    w = text_path(face, "w", 62, 50, 60)
+    swash = "M30 68 C 40 64.5, 58 63.5, 71 65"
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="wordpill">'
-        f'{capsule(3, 23, 94, 54, "wordpill-icon-sky", 1.5, BRONZE)}{letters(w, 1.2, WHITE, BRONZE)}</svg>\n'
+        f'{capsule(3, 23, 94, 54, "wordpill-icon-sky", 1.5, BRONZE)}'
+        f'<g transform="rotate(-4 50 50)">{letters(w, 1.2, GREEN_DEEP, None)}</g>'
+        f'<path d="{swash}" fill="none" stroke="{GREEN_DEEP}" stroke-width="2.4" stroke-linecap="round"/></svg>\n'
     )
 
 
 if __name__ == "__main__":
     face = load()
     files = {
-        "wordpill-wordmark-light.svg": wordmark(face, GREEN_DEEP, WHITE),
-        "wordpill-wordmark-dark.svg": wordmark(face, WHITE, GREEN),
+        "wordpill-wordmark-light.svg": wordmark(face, GREEN_DEEP, None),
+        "wordpill-wordmark-dark.svg": wordmark(face, WHITE, None),
         "wordpill-icon-l1.svg": icon(face),
     }
     os.makedirs(OUT, exist_ok=True)

@@ -162,7 +162,7 @@
   --game-deck-card-height: 19.25rem;     /* 308px */
   --game-deck-card-radius: 1.25rem;      /* 20px */
   --game-deck-card-line: 0.09375rem;     /* 1.5px */
-  --game-deck-front-top: 23.25rem;       /* 372px from the frame's top edge */
+  --game-deck-front-top: calc(50vh - 4.875rem); /* the fan (back card's top to front card's bottom) sits in the middle of the window's height (Christian, 2026-11-27); 372px down in a 900px window, as before */
   --game-deck-front-hang: 4.875rem;      /* 78px of the front card hangs past the right edge (142px of it shows) */
   --game-deck-front-tilt: 15deg;
   --game-deck-step-up: 2.625rem;         /* 42px: each card behind sits this much higher... */
