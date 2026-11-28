@@ -941,18 +941,25 @@
    never sits under a card. The usual padding is back by --game-deck-reserve-until. */
 @variant deck {
   .game-frame-main {
-    --game-frame-main-pr: round(nearest, clamp(calc(var(--spacing) * 6), calc(calc(var(--spacing) * 6) + (var(--game-deck-reserve-until) - 100vw) * var(--game-deck-reserve-slope)), var(--game-deck-reserve-end)), var(--game-frame-grid-line));
-    /* The same room on the left, so the board and its keyboard sit on the middle of the play area at every width (the board
-       column simply gets a little narrower between 1120 and 1340 px). */
-    --game-frame-main-pl: var(--game-frame-main-pr);
-  }
-  /* The wide crossword grid and the 720 px showcase boards must keep their full width (the plain row below 1120 px does), so
-     they cannot take the symmetric reserve above. They keep the usual even padding: centred on the play area at full width.
-     Their box reaches under the fanned cards, but the drawn game does not (game-deck.spec.ts checks the real outlines), and
-     no control sits at the box's edge any more (the printer is in the Frame's corner). */
-  .game-frame-main:has(.game-frame-board.is-wide, .game-frame-board.is-showcase) {
+    /* Christian, 2026-11-27: the board sits midway between the side panel and the fanned cards, so the empty space on
+       its left equals the space between it and the cards. The play area gives up the cards' reach on its right at
+       every deck width and keeps the usual padding on its left; the backdrop's centre lines follow the content box. */
+    --game-frame-main-pr: calc(var(--spacing) * 6 + var(--game-deck-reach));
     --game-frame-main-pl: calc(var(--spacing) * 6);
-    --game-frame-main-pr: calc(var(--spacing) * 6);
+  }
+  /* The wide crossword grid and the 720 px showcase boards must keep their full width (the plain row below 1120 px does),
+     so they give up the cards' reach on the right only as far as the window has room for it: nothing on a narrow
+     desktop, all of it on a wide one, where they too sit midway between the side panel and the cards (Christian,
+     2026-11-27). The room is the window less the side panel, the board, the usual padding on both sides and a margin
+     for a scrollbar. Where there is no room their box still reaches under the fanned cards, but the drawn game does not
+     (game-deck.spec.ts checks the real outlines). */
+  .game-frame-main:has(.game-frame-board.is-wide, .game-frame-board.is-showcase) {
+    --game-frame-wide-board: var(--game-frame-max-board-showcase);
+    --game-frame-main-pl: calc(var(--spacing) * 6);
+    --game-frame-main-pr: calc(var(--spacing) * 6 + clamp(var(--game-deck-reserve-start), 100vw - var(--game-frame-sidebar-width) - var(--game-frame-wide-board) - var(--spacing) * 16, var(--game-deck-reach)));
+  }
+  .game-frame-main:has(.game-frame-board.is-wide) {
+    --game-frame-wide-board: var(--game-frame-max-board-wide);
   }
 }
 
@@ -1404,4 +1411,57 @@
   .game-frame-evening-art {
     display: none !important;
   }
+}
+
+/* wordpill's own Daytime page (Christian's "S6", 2026-11-27): its pale sky fills the whole frame, and the side panel
+   lets it show through. Evening has its own dark sky: tokens.css swaps the sky's colours there. */
+.game-frame[data-game-look="wordpill"] {
+  background: var(--wordpill-sky);
+  /* Secondary text (the date, the timer, the line under the copper bar) sits straight on the sky here, so it takes the
+     main ink colour: the soft ink measured under 4.5:1 on the mint in Daytime and on the bronze in Evening. */
+  --color-ink-soft: var(--color-ink);
+}
+
+.game-frame[data-game-look="wordpill"] .game-frame-sidebar {
+  background-color: transparent;
+}
+
+/* The copper "join the launch list" bar sits at the middle of the screen's height in the desktop side panel
+   (Christian, 2026-11-27), whatever the height of the badge above it: the button's own centre is on the midline and its
+   one line of text hangs under it. tokens.css switches these values on only for a desktop window tall enough for the bar
+   to clear the tagline; everywhere else the fallbacks keep the bar in the flow, as on tablets and phones. */
+.game-frame-sidebar .game-frame-account-bar {
+  position: var(--game-frame-account-position, static);
+  inset-inline: 0;
+  top: var(--game-frame-account-top, auto);
+  translate: 0 var(--game-frame-account-shift, 0);
+  padding-inline: var(--game-frame-account-pad, 0);
+  box-sizing: border-box;
+}
+
+/* Phone portrait (Christian, 2026-11-27): the round buttons (gear, printer, "?") sit in the middle of the screen's
+   width, not at its right edge. A game with its own control on that row (the sudoku difficulty menu) keeps them on the
+   right, because the menu takes the left of the row. */
+@media (width < 30rem) {
+  .game-frame-main:not(:has(.game-frame-controls-middle:not(:empty))) .game-frame-corner {
+    inset-inline-end: 50%;
+    translate: 50% 0;
+  }
+  /* The "how to play" popover hangs from the middle of the centred row, not from the "?" button's right edge, so it
+     stays on the screen. */
+  .game-frame-main:not(:has(.game-frame-controls-middle:not(:empty))) .game-frame-corner .game-frame-how-wrap {
+    position: static;
+  }
+  .game-frame-main:not(:has(.game-frame-controls-middle:not(:empty))) .game-frame-corner .game-frame-popover {
+    right: auto;
+    left: 50%;
+    translate: -50% 0;
+  }
+}
+
+/* wordpill's logo is a capsule with its own outline, so its deck card shows it with no tile behind it
+   (Christian, 2026-11-27). */
+.game-deck-item[data-game="pulse"] .game-deck-tile {
+  background: none;
+  border-color: transparent;
 }

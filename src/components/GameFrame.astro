@@ -55,7 +55,7 @@ const configs: Record<string, GameConfig> = {
     id: 'pulse',
     name: 'pillo',
     brandName: 'wordpill',
-    defaultTagline: "Find today's word",
+    defaultTagline: "find today's word",
     iconType: 'img',
     iconSrc: '/design/games-v2/assets/wordpill-icon-l1.svg',
     wordmarkType: 'img',
@@ -72,7 +72,7 @@ const configs: Record<string, GameConfig> = {
     id: 'stat',
     name: 'tachyyy',
     brandName: 'tachyyy',
-    defaultTagline: 'Beat the clock',
+    defaultTagline: 'beat the clock',
     iconType: 'tachyyy',
     wordmarkType: 'img',
     wordmarkSrc: '/brand/games/tachyyy-wordmark-light.svg',
@@ -88,7 +88,7 @@ const configs: Record<string, GameConfig> = {
     id: 'suture',
     name: 'word path',
     brandName: 'piccline',
-    defaultTagline: "Picc today's words",
+    defaultTagline: "picc today's words",
     iconType: 'img',
     iconSrc: '/brand/games/piccline-dark.svg',
     wordmarkType: 'img',
@@ -181,7 +181,7 @@ const activeSteps = propHowSteps ?? currentConfig.defaultSteps;
 const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 ---
 
-<div class="game-frame">
+<div class="game-frame" data-game-look={game === 'vialo' ? 'wordpill' : undefined}>
   <div class="game-frame-layout">
     <!-- Left panel (full height above footer) -->
     <aside class="game-frame-sidebar" aria-label="Game details and stats">

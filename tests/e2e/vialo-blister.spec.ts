@@ -39,24 +39,25 @@ test('the Vialo blister artwork carries the live pills and their spoken marks', 
   await expect(pockets).toHaveClass(['elsewhere', 'here', 'here', 'absent', 'here'].map((mark) => `vialo-pill vialo-${mark}`));
   await expect(pockets).toHaveText([...'crane']);
   await expect(pockets.first()).toHaveCSS('font-family', /^"?Times New Roman"?,/);
-  await expect(pockets.nth(0)).toHaveCSS('color', 'rgb(255, 255, 255)');
-  await expect(pockets.nth(1)).toHaveCSS('color', 'rgb(255, 255, 255)');
+  // Dark letters on the pink and light green pills (Christian, 2026-11-27).
+  await expect(pockets.nth(0)).toHaveCSS('color', 'rgb(62, 44, 35)');
+  await expect(pockets.nth(1)).toHaveCSS('color', 'rgb(5, 51, 33)');
   await expect(pockets.nth(3)).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await expect(pockets.nth(3)).toHaveCSS('color', 'rgb(107, 82, 67)');
   await expect(committed.locator('.vialo-here').first()).toHaveCSS('background-image', /gradient/);
   await expect(committed.locator('.vialo-elsewhere').first()).toHaveCSS('box-shadow', /inset/);
   await expect(committed.locator('.vialo-absent').first()).toHaveCSS('background-image', 'none');
 
-  // Colour is never the only signal: in normal mode "elsewhere" (red) carries a thin light inner ring, "in place"
+  // Colour is never the only signal: in normal mode "elsewhere" (pink) carries a small dot under its letter, "in place"
   // (green) and "not in the word" (white) carry none, and no mark of any kind is drawn under a letter.
   const after = await pockets.evaluateAll((pills) =>
     pills.map((pill) => {
       const style = getComputedStyle(pill, '::after');
-      return { content: style.content, ring: style.borderTopWidth, position: style.position, letterShift: getComputedStyle(pill.querySelector('.vialo-letter')!).transform };
+      return { content: style.content, ring: style.width, position: style.position, letterShift: getComputedStyle(pill.querySelector('.vialo-letter')!).transform };
     }),
   );
   expect(after.map((a) => a.content !== 'none' && a.content !== 'normal')).toEqual([true, false, false, false, false]);
-  expect(after[0]).toMatchObject({ content: '""', ring: '2px', position: 'absolute' });
+  expect(after[0]).toMatchObject({ content: '""', ring: '4px', position: 'absolute' });
   // Letters sit centred in the pill: nothing was lifted to make room for a mark.
   for (const a of after) expect(a.letterShift).toBe('none');
   expect(await committed.locator('.vialo-pill').evaluateAll((pills) => pills.map((p) => p.textContent))).toEqual([...'crane']);
