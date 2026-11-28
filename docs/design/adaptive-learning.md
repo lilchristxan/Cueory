@@ -64,6 +64,8 @@ node work/adaptive/simulation.cjs
 
 ## Progress log
 
+- [Account-only adaptive progress proposal](adaptive-account-data.md) for [#1281](https://github.com/lilchristxan/Cueory/issues/1281). Covers cross-device resume, export and erasure. Database changes await approval.
+
 - [#1256](https://github.com/lilchristxan/Cueory/pull/1256) — design draft with the model, release boundaries and research references.
 - [#1257](https://github.com/lilchristxan/Cueory/pull/1257) — shipped to staging with the pure engine, module tests and fixed-seed simulation.
 - [#1258](https://github.com/lilchristxan/Cueory/pull/1258) — shipped the on-device progress format and migration to staging. Browser saving remains disconnected.
