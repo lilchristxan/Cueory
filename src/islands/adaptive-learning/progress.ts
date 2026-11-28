@@ -33,6 +33,7 @@ const MAX_ENTRIES = 500;
 // including when a student has opened many decks.
 const MAX_TOTAL_CARDS = 2_500;
 const MAX_TOTAL_CONCEPTS = 800;
+const HOUR_MS = 3_600_000;
 
 function fields(input: unknown): Fields | undefined {
   return input && typeof input === 'object' && !Array.isArray(input) ? input as Fields : undefined;
@@ -67,6 +68,10 @@ function readCard({ lastAt, lastDay, lastCorrect, halfLifeDays, spacedSuccesses 
     typeof spacedSuccesses !== 'number' || !Number.isInteger(spacedSuccesses) || spacedSuccesses < 0 || spacedSuccesses > 2 ||
     (!lastCorrect && spacedSuccesses !== 0)
   ) return;
+  const dayStart = Date.parse(`${lastDay}T00:00:00.000Z`);
+  // The same local day can start at UTC+14 and end at UTC-12. Outside
+  // that window, the recorded instant and date cannot describe one answer.
+  if (lastAt < dayStart - 14 * HOUR_MS || lastAt >= dayStart + 36 * HOUR_MS) return;
   return { lastAt, lastDay, lastCorrect, halfLifeDays, spacedSuccesses };
 }
 

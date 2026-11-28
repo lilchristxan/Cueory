@@ -55,6 +55,24 @@ describe('on-device adaptive progress', () => {
     expect(Object.keys(saved.cards)).toHaveLength(498);
   });
 
+  it('keeps timestamps on either side of UTC midnight when they fit the recorded local day', () => {
+    const saved = migrateAdaptiveProgress({
+      version: 1,
+      decks: {
+        demo: {
+          revision: 'r1',
+          cards: {
+            earliest: { ...card, lastAt: Date.parse('2028-02-28T10:00:00.000Z') },
+            latest: { ...card, lastAt: Date.parse('2028-03-01T11:59:59.999Z') },
+            early: { ...card, lastAt: Date.parse('2028-02-28T09:59:59.999Z') },
+            late: { ...card, lastAt: Date.parse('2028-03-01T12:00:00.000Z') },
+          },
+        },
+      },
+    })!;
+    expect(Object.keys(adaptiveDeckFor(saved, 'demo', 'r1')!.cards)).toEqual(['earliest', 'latest']);
+  });
+
   it('bounds progress across many decks as well as within a single deck', () => {
     const deck = {
       revision: 'r1',
