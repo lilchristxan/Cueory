@@ -3,7 +3,7 @@ import AnatomyLabCover from './AnatomyLabCover';
 import AnatomyTextRecall from './AnatomyTextRecall';
 import { decodeAnatomySystem, type AnatomySystemProp } from './anatomy-island-data';
 import { systemsForView } from './anatomylayers';
-import { coverDownloadNote } from './anatomyviews';
+import { coverDownloadNote, openingSystemFirst } from './anatomyviews';
 import type { AnatomyLabProps } from './AnatomyLab.tsx';
 
 type AnatomyLabOpenProps = Omit<AnatomyLabProps, 'systems' | 'fixture'> & {
@@ -22,6 +22,7 @@ export default function AnatomyLabOpen({ systems: encodedSystems, fixture: encod
   const fixture = useMemo(() => encodedFixture && decodeAnatomySystem(encodedFixture), [encodedFixture]);
   const [Lab, setLab] = useState<ComponentType<AnatomyLabProps> | null>(null);
   const [state, setState] = useState<'cover' | 'loading' | 'error'>('cover');
+  const [practice, setPractice] = useState(false);
 
   const open = () => {
     if (state === 'loading') return;
@@ -34,15 +35,29 @@ export default function AnatomyLabOpen({ systems: encodedSystems, fixture: encod
 
   const wantsFixture = fixture && new URLSearchParams(window.location.search).has('fixture');
   const textSystems = systemsForView(systems, false, wantsFixture ? fixture : null);
-  const system = textSystems[0];
+  // The cover's download note names the system the lab opens on.
+  const system = openingSystemFirst(textSystems)[0];
   const note = coverDownloadNote(system?.fixture ? null : system?.title ?? null,
     system?.fixture ? undefined : system && props.modelBytes?.[system.key]);
   return (
     <div className="space-y-6">
-      {Lab ? <Lab {...props} systems={systems} fixture={fixture} autoOpen /> : (
+      {Lab ? <Lab {...props} systems={systems} fixture={fixture} autoOpen onExit={() => { setLab(null); setState('cover'); }} /> : (
         <AnatomyLabCover onOpen={open} busy={state === 'loading'} error={state === 'error'} note={note} />
       )}
-      <AnatomyTextRecall systems={textSystems} drafts={props.drafts} />
+      {/* Name practice that needs no 3D view: kept for devices that cannot draw 3D, folded away until asked for. */}
+      <details
+        className="rounded-lg border border-line"
+        data-testid="anatomy-text-practice"
+        onToggle={(event) => setPractice(event.currentTarget.open)}
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm text-ink-soft">practise names without the 3D view</summary>
+        {/* Drawn only while unfolded, so nothing folded away can be reached by keyboard or script. */}
+        {practice ? (
+          <div className="p-2">
+            <AnatomyTextRecall systems={textSystems} drafts={props.drafts} />
+          </div>
+        ) : null}
+      </details>
     </div>
   );
 }

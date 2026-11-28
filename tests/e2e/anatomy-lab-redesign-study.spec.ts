@@ -63,7 +63,7 @@ test.describe('anatomy lab study round', () => {
     await openLab(page);
     await begin(page, 'test it');
     await expect(side(page)).toBeVisible();
-    const rows = page.getByRole('group', { name: 'body system' }).getByRole('button');
+    const rows = page.getByRole('group', { name: 'body system' }).locator(':scope > button'); // the system rows; the open system's structures are listed under its row
     const other = rows.and(page.locator('[aria-pressed="false"]')).first();
     await other.click();
     await expect(side(page)).toHaveCount(0);

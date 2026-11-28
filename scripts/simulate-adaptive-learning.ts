@@ -42,7 +42,21 @@ function clock(day: number) {
   return { day: calendarDay(calendar), now: (calendar + 0.5) * DAY_MS };
 }
 
-function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Totals): void {
+type Scheme = 'adaptive' | 'before-relearning' | 'ladder';
+
+function dueFor(card: SyntheticCard, scheme: Scheme, today: ReturnType<typeof clock>) {
+  if (!card.memory) return;
+  if (scheme === 'ladder') return nextReview(card.history);
+  if (scheme === 'adaptive') return reviewDue(card.memory, today);
+  // Frozen comparison: the no-exam policy on staging at 897f493c.
+  const interval = card.memory.lastCorrect
+    ? Math.min(14, Math.max(1, Math.ceil(-Math.log2(0.8) * card.memory.halfLifeDays)))
+    : 1;
+  return calendarDay(dayNumber(card.memory.lastDay) + interval);
+}
+
+/** Yield the eligible card count before each attended session, then accept its answer budget. */
+function* runStudent(student: number, scheme: Scheme, totals: Totals): Generator<number, void, number> {
   const initialStrength = 1.75 + 4.5 * draw(student, -1, 0);
   const deck: SyntheticCard[] = Array.from({ length: CARDS }, (_, index) => ({
     item: { id: String(index), concept: String(Math.floor(index / 4)), level: 2 },
@@ -58,13 +72,12 @@ function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Tota
     const today = clock(day);
     // The next scheduled review is always at least tomorrow after an answer.
     const items = deck.flatMap(card => {
-      const dueDay = card.memory && (scheme === 'adaptive'
-        ? reviewDue(card.memory, today)
-        : nextReview(card.history));
+      const dueDay = dueFor(card, scheme, today);
       return dueDay && dueDay > today.day ? [] : [{ ...card.item, dueDay }];
     });
+    const dailyLimit = yield items.length;
     let previousId: string | undefined;
-    for (let selections = 0; selections < SESSION_LIMIT; selections++) {
+    for (let selections = 0; selections < dailyLimit; selections++) {
       const next = selectPractice(
         items, { selections, previousId, evidence, preferredLevels }, today,
         () => draw(student, day, CARDS + selections),
@@ -97,13 +110,29 @@ function runStudent(student: number, scheme: 'adaptive' | 'ladder', totals: Tota
   }
 }
 
-for (const scheme of ['adaptive', 'ladder'] as const) {
-  const totals: Totals = { probeRecall: 0, reviews: 0, masteryDays: 0, mastered: 0 };
-  for (let student = 1; student <= STUDENTS; student++) runStudent(student, scheme, totals);
+const matchWork = process.argv.includes('--matched-work');
+const comparison: Scheme = matchWork ? 'before-relearning' : 'ladder';
+const adaptive: Totals = { probeRecall: 0, reviews: 0, masteryDays: 0, mastered: 0 };
+const control: Totals = { ...adaptive };
+for (let student = 1; student <= STUDENTS; student++) {
+  const current = runStudent(student, 'adaptive', adaptive);
+  const baseline = runStudent(student, comparison, control);
+  let currentDay = current.next();
+  let baselineDay = baseline.next();
+  while (!currentDay.done && !baselineDay.done) {
+    const limit = matchWork ? Math.min(SESSION_LIMIT, currentDay.value, baselineDay.value) : SESSION_LIMIT;
+    currentDay = current.next(limit);
+    baselineDay = baseline.next(limit);
+    if (matchWork && adaptive.reviews !== control.reviews) throw new Error('Daily answer counts differ.');
+  }
+  if (currentDay.done !== baselineDay.done) throw new Error('Attendance differs.');
+}
+for (const [scheme, totals] of [['adaptive', adaptive], [comparison, control]] as const) {
   console.log(JSON.stringify({
     scheme,
     students: STUDENTS,
     calendarDays: DAYS,
+    totalAnswers: totals.reviews,
     recallAtSevenDayFollowUp: (totals.probeRecall / (STUDENTS * CARDS)).toFixed(4),
     answersPerCalendarDay: (totals.reviews / (STUDENTS * DAYS)).toFixed(2),
     daysToMasteryAmongThoseReachingIt: totals.mastered ? (totals.masteryDays / totals.mastered).toFixed(2) : null,

@@ -1,0 +1,1 @@
+status: in review: the piccline wordmark on the home game cards in phone landscape is capped so that, drawn 1.5 times larger, it stays inside the card in Firefox and Safari before its picture has loaded (it stuck out 4 px).

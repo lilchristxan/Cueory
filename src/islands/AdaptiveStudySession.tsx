@@ -110,7 +110,9 @@ export default function AdaptiveStudySession({
         <p id="adaptive-preview-exam-format" className="text-sm text-ink-soft">enter a date as YYYY-MM-DD.</p>
         <input id="adaptive-preview-exam" type="text" value={examDay}
           aria-describedby="adaptive-preview-exam-format"
-          onChange={event => {
+          // Firefox checks validity on the input itself to dismiss a previous error.
+          // Update it during capture, before that listener runs.
+          onInputCapture={event => {
             const input = event.currentTarget;
             input.setCustomValidity('');
             if (input.value) {
@@ -120,8 +122,8 @@ export default function AdaptiveStudySession({
                 input.setCustomValidity('Enter a valid date as YYYY-MM-DD.');
               }
             }
-            setExamDay(input.value);
           }}
+          onChange={event => setExamDay(event.currentTarget.value)}
           className="block min-h-(--tap-min) max-w-full rounded-lg border border-control bg-page px-3 text-ink" />
         <button ref={startButton} type="submit" className={primary}>start sample session</button>
       </form>

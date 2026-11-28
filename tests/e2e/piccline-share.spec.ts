@@ -174,11 +174,18 @@ test.describe('the solve timer', () => {
 
   test('a reload mid-game carries the time on, and a finished board reopens with its solve time', async ({ page }) => {
     await open(page);
+    // The page's clock stands still between the test's own steps, so a slow machine's real seconds (Safari's engine on a
+    // busy CI runner) cannot add to the 7 faked ones: the saved time is exactly what this test moved the clock by.
+    // It pauses a minute ahead of wherever the page's clock has got to: opening the game can take more than a real second
+    // on a busy runner, and the clock cannot be paused at a time it has already passed. The solve timer starts at the
+    // first move, so the minute skipped before it adds nothing.
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 60_000);
     await playWord(page, 1);
     await page.clock.fastForward(7000);
     await playWord(page, 0);
     await page.reload();
     await expect(page.getByTestId('suture-time')).toHaveText(/^time: 0:(0[7-9]|1\d)$/);
+    await page.clock.resume();
     for (const index of order.slice(2)) await playWord(page, index);
     await expect(page.getByTestId('suture-result')).toBeVisible();
     // A game that was reloaded part-way and then finished still gets its card.

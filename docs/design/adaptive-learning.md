@@ -14,7 +14,9 @@ Use [Settles and Meeder's half-life model](https://aclanthology.org/P16-1174/), 
 
 ## When a card comes back
 
-Space reviews using the relationship between delay and retention tested by [Cepeda and colleagues](https://doi.org/10.1111/j.1467-9280.2008.02209.x). Use the first whole local-calendar interval that brings predicted recall to or below 80%, with a one-day minimum and a 14-day maximum in this pilot. A missed card is due tomorrow. Keep the existing 1, 3, 7 and 14 day Review ladder as the baseline for comparison (Task 4 and D-87); keep account review rows on that ladder. The 80% target and caps are unverified product defaults.
+Space reviews using the relationship between delay and retention tested by [Cepeda and colleagues](https://doi.org/10.1111/j.1467-9280.2008.02209.x). Use the first whole local-calendar interval that brings predicted recall to or below 80%, with a one-day minimum and a 14-day maximum in this pilot. A new or missed card is due tomorrow. Keep the existing 1, 3, 7 and 14 day Review ladder as the baseline for comparison (Task 4 and D-87).
+
+After a miss, even a previously strong card comes back tomorrow. Correcting it the same day keeps tomorrow's review. After one correct recall on a later day, schedule another opportunity within three days, or sooner if the model calls for it. A second correct recall on a separate day restores the ordinary interval. This gives a student a chance to retrieve a once-familiar answer again before taking a long break. [Rawson and Dunlosky](https://pubmed.ncbi.nlm.nih.gov/21707204/) studied how relearning across sessions affects later recall. The 80% target and the one-, three- and 14-day limits are Cueory trial settings. Their effect on Cueory students is unverified.
 
 If a future exam is set, bring long intervals forward to at most the day before it, while leaving at least one day between scheduled reviews. If no day remains between the answer and the exam, keep the ordinary due date rather than scheduling an extra exam session. After that date, normal intervals resume. Enforce the same practice-session limit near the exam and leave work visible if too many cards are due. A calendar-day input keeps time-zone changes and daylight-saving shifts out of the date rules. The design does not assume a student's exam timetable records when they are available to study.
 
@@ -54,12 +56,27 @@ In spaced practice, call a card mastered only after two correct reviews on separ
 
 Both groups use the same Cueory mastery rule for this measurement. Requiring all cards to meet the 80% recall threshold at once favors schedules that review more frequently. The table illustrates that trade-off and cannot establish better learning or predict an exam result. These runs use no exam date; the calendar and exam rules have separate tests.
 
-To reproduce on a checkout of staging, use the installed dependencies:
+### Comparison after adding short reviews following a miss
+
+We reran the same 2,000 seeds with the same deck, attendance, answer draws, session cap and seven-day follow-up. Only the adaptive scheduling rule changed. The earlier row is reproducible at staging commit `897f493c`.
+
+| Adaptive schedule | Modeled recall at follow-up | Answers per calendar day | Days to first whole-deck mastery among those reaching it | Never observed at whole-deck mastery by day 45 |
+| --- | ---: | ---: | ---: | ---: |
+| Before | 90.11% | 5.70 | 24.13 | 27.90% |
+| With short reviews following a miss | 90.13% | 5.74 | 23.83 | 2.60% |
+
+The modeled recall difference was 0.02 percentage points with slightly more practice. The much larger change in whole-deck mastery counts how often every card met Cueory's rule on the same day.
+
+We also matched the number of answers for each learner on each attended day. Both schedules got as many slots as the smaller eligible queue allowed, up to the same 20-answer cap. Each schedule used exactly 510,300 answers. At the seven-day follow-up, modeled recall was **89.89% before and 89.69% with short reviews**. Earlier checks can take a slot that would have gone to another card. These two simulations give different answers about the trade-off. Use delayed recall and practice effort in a student trial before rolling this out. Neither simulation measures neuroplasticity.
+
+To reproduce either version from its checkout, use the installed dependencies:
 
 ```sh
 mkdir -p work/adaptive
 ./node_modules/.bin/esbuild scripts/simulate-adaptive-learning.ts --bundle --platform=node --outfile=work/adaptive/simulation.cjs
 node work/adaptive/simulation.cjs
+# On the version with short reviews, compare the two adaptive policies at equal practice counts.
+node work/adaptive/simulation.cjs --matched-work
 ```
 
 ## Progress log
@@ -69,7 +86,9 @@ node work/adaptive/simulation.cjs
 - [#1258](https://github.com/lilchristxan/Cueory/pull/1258) — shipped the on-device progress format and migration to staging. Browser saving remains disconnected.
 - [#1292](https://github.com/lilchristxan/Cueory/pull/1292) proposes [account-only adaptive progress](adaptive-account-data.md) for cross-device resume, export and erasure under [#1281](https://github.com/lilchristxan/Cueory/issues/1281). Database changes await approval.
 - [#1266](https://github.com/lilchristxan/Cueory/pull/1266) — shipped the locked sample preview, backwards-clock recovery and measured route budget to staging.
+- [Preview exam-date correction](https://github.com/lilchristxan/Cueory/pulls?q=is%3Apr+head%3Atask-adaptive%2Fpreview-exam-date) — corrects the sample form’s validation timing for Firefox.
 - [#1275](https://github.com/lilchristxan/Cueory/pull/1275) — shipped the Learn connection to staging with the switch off. The existing see, choose and type flow stays active. Explicit opt-in is limited to the labeled study-skills deck in builds that allow samples.
+- [Spaced relearning](https://github.com/lilchristxan/Cueory/pulls?q=is%3Apr+head%3Atask-adaptive%2Fspaced-relearning) — added short follow-up reviews after a miss and compared the two schedules on identical synthetic students.
 
 ## Staging trial approval
 

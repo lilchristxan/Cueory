@@ -20,6 +20,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
     const downloads: string[] = [];
     page.on('request', (request) => { if (/\.glb(?:\?|$)/.test(request.url())) downloads.push(request.url()); });
     await page.goto('/preview/anatomy-lab?fixture');
+    // The practice is folded away on the cover until asked for (Christian, 2026-11-27).
+    await page.getByText('practise names without the 3D view', { exact: true }).click();
     const region = page.getByRole('region', { name: 'source ID practice', exact: true });
     const start = region.getByRole('button', { name: 'start text name it', exact: true });
     await tabTo(page, start);
@@ -79,6 +81,8 @@ for (const colorScheme of ['light', 'dark'] as const) {
       } as typeof original;
     });
     await page.goto('/preview/anatomy-lab?fixture');
+    // The practice is folded away on the cover until asked for (Christian, 2026-11-27).
+    await page.getByText('practise names without the 3D view', { exact: true }).click();
     await activate(page.getByRole('button', { name: 'open the anatomy lab', exact: true }));
     await expect(page.getByRole('heading', { name: 'the 3D anatomy lab could not open.' })).toBeVisible();
     const region = page.getByRole('region', { name: 'source ID practice', exact: true });
