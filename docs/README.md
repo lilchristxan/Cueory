@@ -22,6 +22,7 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [Content handoff](CONTENT-HANDOFF.md) — See the file format for each daily game, where real puzzles live, and how to check them. **Christian:** Read before loading puzzles.
 - [Content batches](BATCHES.md) — Learn how private question batches are checked, reviewed, and imported. **Christian:** Read before submitting a batch.
 - [Visuals kit](VISUALS.md) — See the plan for teaching pictures, sources, and approval checks. **Christian:** Read when approving visuals.
+- [Video lessons](VIDEO-LESSONS.md) — See how one board file from a teaching video becomes label it and the other ways to study. **Christian:** Read when planning a video lesson.
 - [Anatomy lab checks](ANATOMY-LAB-QA.md) — See the release checklist for anatomy models and interactions. **Christian:** Read before approving the anatomy lab.
 - [Admin console plan](ADMIN-CONSOLE.md) — Review the proposed admin account, safety rules, and build phases. **Christian:** Read before approving admin features.
 - [Database backups](BACKUPS.md) — Compare proposed backup choices and recovery steps. **Christian:** Read before choosing a backup plan.

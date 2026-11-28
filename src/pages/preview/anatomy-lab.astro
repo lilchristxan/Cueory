@@ -10,6 +10,7 @@
  */
 import Layout from '../../layouts/Layout.astro';
 import AnatomyLabOpen from '../../islands/AnatomyLabOpen.tsx';
+import { encodeAnatomySystem } from '../../islands/anatomy-island-data';
 import { modelBytesFor } from '../../islands/anatomymodelsize';
 import { labDataForBuild } from '../../islands/anatomylab';
 import fixtureJson from '../../../tests/fixtures/anatomy-fixture.json';
@@ -45,7 +46,13 @@ const modelBytes = modelBytesFor(lab.systems, new URL('../../../public/', import
     {
       hasSystems ? (
         <>
-          <AnatomyLabOpen client:only="react" systems={lab.systems} fixture={lab.fixture} drafts={lab.drafts} modelBytes={modelBytes} />
+          <AnatomyLabOpen
+            client:only="react"
+            systems={lab.systems.map(encodeAnatomySystem)}
+            fixture={lab.fixture && encodeAnatomySystem(lab.fixture)}
+            drafts={lab.drafts}
+            modelBytes={modelBytes}
+          />
           <noscript>
             <p class="rounded-lg border border-line p-4 text-ink">
               the 3D anatomy lab needs javascript. <a href="/preview/anatomy-text" class="underline">read structure names without JavaScript</a>, or <a href="/learn" class="underline">browse lessons</a> instead.

@@ -68,6 +68,7 @@ const publicFiles: Record<string, PublicFile> = {
   'questions/study-skills-01.json': { kind: 'sample', sha256: 'cdb586ab4efc4fc1ef2b6e69f2c3e92b09e7f8aad797c3ae6361260d2f7618d0' },
   // Lane 5 sheet templates: made-up everyday sample rows (the crossword and word path rows reuse public samples).
   'samples/templates/crossword.csv': { kind: 'sample', sha256: '21800bb12de51474d1470bcdf0782f4462cc5e57028400ba38a4908f3a3f78a3' },
+  'samples/templates/lesson-board.json': { kind: 'sample', sha256: 'a14c936fc5523e201a68b82c3d9e66c92c20244023dcfb3aa4d60a815bd21818' },
   'samples/templates/pillo.csv': { kind: 'sample', sha256: '9dc222f7565cab3fe61db7e2641e246d2aed26d4d10b3b215c9058b9b436d832' },
   'samples/templates/word-path.csv': { kind: 'sample', sha256: '96223e4c791d5267b85a4d24820d83bd39eb8393aa573299d484c40c6d5055d8' },
   'videos/study-skills-01.json': { kind: 'empty-video-placeholder', sha256: '81ea27e6b2ef303ee616d2f5a59ed78a71bc8b09c9b93599628bc659ee2a4893' },
@@ -82,6 +83,8 @@ const publicFiles: Record<string, PublicFile> = {
   'visuals/anatomy-skeleton-limbs.json': { kind: 'visual-source-metadata', sha256: '234f2f05c0a55575c77d1403390d5c3a79e7bdb3ac87bbd323a361a95965b401' },
   'visuals/anatomy-skin.json': { kind: 'visual-source-metadata', sha256: '73f20f878e9a85585efa9a710c455ef5c37bfc9ba8aaf738df741d7c3c2979e7' },
   'visuals/anatomy-vessels.json': { kind: 'visual-source-metadata', sha256: '32328b9f797275a5b8ef54db1f7c3937164b0e222af74a96ee40dce131fbe7cf' },
+  // Licence records for outside illustrations (Servier Medical Art, Christian 2026-11-26): titles, links and hashes only.
+  'images/servier-respiratory.json': { kind: 'visual-source-metadata', sha256: '3d60e473cfdbb5942e55b3bd2f1d2ef61991b827bb7e4491d9efc350bc0107cf' },
   'visuals/fluid-compartments.json': { kind: 'visual-source-metadata', sha256: '2eae0645afe44a8a615704280bea45d3936e9d2af0056e769de92df7ebf774be' },
   'visuals/osmosis-fluid-shifts.json': { kind: 'visual-source-metadata', sha256: '4f8d84befcfcd5eb49502f5924525402fc175d119587769b378073309d026aa2' },
   'visuals/sodium-potassium-pump.json': { kind: 'visual-source-metadata', sha256: 'fb11c2fbf2b72d9dfada6c14537eb478ee86fd12cb529283a6a99c7007915ec3' },

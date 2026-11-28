@@ -60,6 +60,21 @@ test.describe('card deck at 1440 x 900', () => {
     }
   });
 
+  test('the fan sits in the middle of the window\'s height, whatever the height', async ({ page }) => {
+    for (const height of [760, 900, 1100]) {
+      await page.setViewportSize({ width: 1440, height });
+      await page.goto('/play/vialo');
+      const span = await page.evaluate(() => {
+        const cards = [...document.querySelectorAll<HTMLElement>('.game-deck-item')];
+        const tops = cards.map((card) => card.getBoundingClientRect().top + window.scrollY);
+        const bottoms = cards.map((card) => card.getBoundingClientRect().bottom + window.scrollY);
+        return { top: Math.min(...tops), bottom: Math.max(...bottoms) };
+      });
+      // The tilted cards' outer box: its middle is the window's middle, within a few pixels.
+      expect(Math.abs((span.top + span.bottom) / 2 - height / 2), `at ${height}px`).toBeLessThanOrEqual(8);
+    }
+  });
+
   test('the cards are positioned from the page top and scroll with the page', async ({ page }) => {
     await page.goto('/play/wordpill');
     const before = await page.locator('.game-deck-item').first().boundingBox();
