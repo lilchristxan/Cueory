@@ -15,7 +15,8 @@ async function openLab(page: Page) {
   await page.goto(URL);
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
   await expect(page.getByTestId('anatomy-stage')).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('button', { name: 'labels', exact: true })).toBeEnabled({ timeout: 20_000 });
+  // The slider is on screen at every size and comes alive with the model (labels now sits in the controls box).
+  await expect(page.getByRole('slider', { name: /spread structures apart/ })).toBeEnabled({ timeout: 20_000 });
 }
 
 test.describe('anatomy lab: full page', () => {
@@ -54,9 +55,17 @@ test.describe('anatomy lab: full page', () => {
     }
   });
 
-  test('the credits stay on screen with the model', async ({ page }) => {
+  test('the credits sit at the bottom of the body systems box and in the ? pop-up', async ({ page }) => {
     await openLab(page);
-    await expect(page.getByTestId('anatomy-credits')).toBeVisible();
+    const systems = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'body systems', exact: true });
+    if (await systems.isVisible()) await systems.click();
+    const box = page.getByRole('region', { name: 'body systems' });
+    await expect(box.getByTestId('anatomy-credits')).toBeVisible();
+    const boxText = await box.getByTestId('anatomy-credits').innerText();
+    expect(boxText.trim().length).toBeGreaterThan(0);
+    await page.getByRole('button', { name: 'keys' }).click();
+    await expect(page.getByTestId('anatomy-credits-help')).toBeVisible();
+    expect(await page.getByTestId('anatomy-credits-help').innerText()).toBe(boxText);
   });
 
   test('"model only" clears the side panels on desktop and brings them back', async ({ page }, testInfo) => {
@@ -72,7 +81,9 @@ test.describe('anatomy lab: full page', () => {
     await expect(page.getByRole('button', { name: 'labels', exact: true })).toBeVisible();
     await focus.click();
     await expect(focus).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.getByRole('button', { name: 'reset view' })).toBeVisible();
+    await expect(page.getByTestId('anatomy-rail')).toBeVisible();
+    // The controls stay through "model only": they are how the model is turned.
+    await expect(page.getByRole('button', { name: 'show all' })).toBeVisible();
   });
 
   test('more opens the other tools in view, and its close button shuts them', async ({ page }) => {
@@ -106,7 +117,7 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     await page.goto('/preview/anatomy-lab');
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.getByTestId('anatomy-stage')).toBeVisible({ timeout: 20_000 });
-    const drawer = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'orientation', exact: true });
+    const drawer = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'controls', exact: true });
     if (await drawer.isVisible()) await drawer.click();
     const spin = page.getByRole('button', { name: 'turn the model by itself', exact: true });
     await expect(spin).toBeEnabled({ timeout: 30_000 });
@@ -119,7 +130,7 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     await spin.click();
     await expect(spin).toHaveAttribute('aria-pressed', 'true');
     // Asking for a set view stops the turning.
-    await page.getByRole('button', { name: 'reset view' }).click();
+    await page.getByRole('button', { name: 'anterior view', exact: true }).click();
     await expect(spin).toHaveAttribute('aria-pressed', 'false');
   });
 
@@ -129,7 +140,7 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     await page.goto('/preview/anatomy-lab');
     await page.getByRole('button', { name: 'open the anatomy lab' }).click();
     await expect(page.getByTestId('anatomy-stage')).toBeVisible({ timeout: 20_000 });
-    const drawer = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'orientation', exact: true });
+    const drawer = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'controls', exact: true });
     if (await drawer.isVisible()) await drawer.click();
     const spin = page.getByRole('button', { name: 'turn the model by itself', exact: true });
     await expect(spin).toBeEnabled({ timeout: 30_000 });
@@ -138,10 +149,10 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
 
   test('the black / white switch changes the stage, and keeps the panels brown', async ({ page }) => {
     await openLab(page);
-    const orientation = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'orientation', exact: true });
+    const orientation = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'controls', exact: true });
     if (await orientation.isVisible()) await orientation.click();
     const stage = () => page.getByTestId('anatomy-lab').evaluate((lab) => getComputedStyle(lab).backgroundColor);
-    const bar = () => page.getByTestId('anatomy-credits').evaluate((strip) => getComputedStyle(strip).backgroundColor);
+    const bar = () => page.locator('.lab-topbar').evaluate((strip) => getComputedStyle(strip).backgroundColor);
     const choices = page.getByRole('group', { name: 'background' });
     await expect(choices.getByRole('button', { name: 'black' })).toHaveAttribute('aria-pressed', 'true');
     expect(await stage()).toBe('rgb(28, 25, 23)');
@@ -152,6 +163,37 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     expect(await bar()).toBe(brown);
     await choices.getByRole('button', { name: 'black' }).click();
     expect(await stage()).toBe('rgb(28, 25, 23)');
+  });
+
+  test('the controls box: undo, up, redo / left, play, right / zoom out, down, zoom in, with a hide button', async ({ page }) => {
+    await openLab(page);
+    const drawer = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'controls', exact: true });
+    if (await drawer.isVisible()) await drawer.click();
+    const box = page.getByRole('region', { name: 'controls' });
+    await expect(box).toBeVisible();
+    await expect(page.getByTestId('anatomy-lab')).not.toContainText('orientation');
+    const names = ['undo', 'tilt up', 'redo', 'turn left', 'turn the model by itself', 'turn right', 'zoom out', 'tilt down', 'zoom in'];
+    const spots: { x: number; y: number }[] = [];
+    for (const name of names) {
+      const button = box.getByRole('button', { name, exact: true });
+      const at = (await button.boundingBox())!;
+      expect(at.width, name).toBeGreaterThanOrEqual(44);
+      expect(at.height, name).toBeGreaterThanOrEqual(44);
+      spots.push({ x: at.x + at.width / 2, y: at.y + at.height / 2 });
+    }
+    // Three rows of three: each row shares a line, each column a centre.
+    for (let row = 0; row < 3; row += 1) {
+      for (let col = 0; col < 3; col += 1) {
+        expect(Math.abs(spots[row * 3 + col]!.y - spots[row * 3]!.y)).toBeLessThan(2);
+        expect(Math.abs(spots[row * 3 + col]!.x - spots[col]!.x)).toBeLessThan(2);
+      }
+    }
+    await expect(box.getByRole('button', { name: 'labels', exact: true })).toBeVisible();
+    await expect(box.getByRole('button', { name: 'reset view' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'hide the controls' }).click();
+    await expect(box.getByRole('button', { name: 'tilt up' })).toBeHidden();
+    await page.getByRole('button', { name: 'show the controls' }).click();
+    await expect(box.getByRole('button', { name: 'tilt up' })).toBeVisible();
   });
 
   test('each group heading folds with its arrow, and the − button hides the whole box', async ({ page }) => {

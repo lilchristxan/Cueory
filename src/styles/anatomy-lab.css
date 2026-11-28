@@ -71,6 +71,11 @@
     border-bottom: var(--lab-edge) solid var(--lab-hair);
   }
 
+  /* Christian's logo artwork in the middle of the top bar: sized only, never recoloured or filtered. */
+  .lab-logo {
+    width: var(--lab-logo-width);
+    height: auto;
+  }
   .lab-title {
     font-size: var(--lab-title-size);
     font-weight: 700;

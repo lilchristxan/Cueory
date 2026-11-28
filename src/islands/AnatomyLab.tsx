@@ -351,6 +351,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const [moreOpen, setMoreOpen] = useState(false);
   const [sidesHidden, setSidesHidden] = useState(false);
   const [treeMin, setTreeMin] = useState(false);
+  const [remoteMin, setRemoteMin] = useState(false);
   // The model turns by itself until the student stops it (Christian, 2026-11-27).
   const [spinning, setSpinning] = useState(false);
   const [stage, setStage] = useState<'black' | 'white'>('black');
@@ -1287,12 +1288,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   }, [modelReady, systemKey]);
 
   const spinReady = load.state === 'ready';
-  // A real body system starts out turning; the test shapes (?fixture) and reduced motion start still.
+  // A real body system starts out turning; the test shapes (?fixture), the whole body and reduced motion start still.
   const spinSystemKey = system?.key;
   const spinFixture = system?.fixture === true;
   useEffect(() => {
     if (!spinReady) return;
-    const on = !spinFixture && !prefersReducedMotion();
+    // The whole body is the heaviest model by far: drawing it again every frame would drain a phone, so it starts still.
+    const on = !spinFixture && !prefersReducedMotion() && spinSystemKey !== WHOLE_BODY_KEY;
     setSpinning(on);
     sceneRef.current?.setSpin(on);
     if (on) setOrientation('free');
@@ -2047,6 +2049,35 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     });
   };
 
+  // The draft note and the model's credit: at the bottom of the body systems box and in the ? pop-up (Christian, 2026-11-27).
+  const creditLines = (
+    <>
+          {drafts && system.status === 'draft' && <p className="text-ink">draft · labels waiting for review</p>}
+            <p>
+              {system.fixture ? (
+                creditFor(system)
+              ) : (
+                <>
+                  {BODYPARTS3D_CREDIT_LEAD}{' '}
+                  <a className="underline" href={BODYPARTS3D_LICENSE_URL} rel="license noopener">{BODYPARTS3D_LICENSE_NAME}</a>
+                </>
+              )}
+            </p>
+            <p>{releaseNoteFor(system)}</p>
+            {!system.fixture && (
+              <p>{BODYPARTS3D_REFERENCE_NOTE}{' '}
+                <a className="underline" href={BODYPARTS3D_REFERENCE_URL} rel="noopener noreferrer">source details</a>
+              </p>
+            )}
+            {budget && <p className="text-ink" data-testid="anatomy-budget-note">{budget}</p>}
+            {ready && missingCount > 0 && (
+              <p data-testid="anatomy-missing-count">
+                {missingCount} listed structures were not found in the loaded model files.
+              </p>
+            )}
+    </>
+  );
+
   // The open system's structures, listed under its row in the body systems panel (one combined tree).
   const structuresTree = (
                     <section id="lab-panel-structures" className="mt-1 mb-2 space-y-2 pl-3" aria-labelledby="anatomy-list-heading">
@@ -2170,14 +2201,21 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             )}
             <div className="min-w-0">
               <p className="lab-title">anatomy lab</p>
-              <p className="lab-cap" data-testid="anatomy-caption">
-                {system.title} · {system.model.release} · {system.structures.length} structures
-              </p>
             </div>
           </div>
+          {/* Christian's logo artwork (brand v1.0), the Evening file: the lab's bars are dark in Light and Evening. */}
+          <img
+            src="/brand/v1/logo-full-dark-480.png"
+            alt="cueory"
+            className="lab-logo pointer-events-none absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 xl:block"
+            width={96}
+            height={24}
+            loading="lazy"
+            decoding="async"
+          />
           <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
             {!namesHidden && (
-              <div className="min-w-0 flex-1 sm:max-w-sm">
+              <div className="min-w-0 flex-1 sm:max-w-xs">
                 <label htmlFor="anatomy-search" className="sr-only">find a structure by name or source ID</label>
                 <input
                   id="anatomy-search"
@@ -2197,15 +2235,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             {/* Put away while a round runs, so nothing can draw or print the name being asked. */}
             {!round && (
               <>
-                <button
-                  type="button"
-                  className="lab-btn shrink-0"
-                  aria-pressed={labelsOn}
-                  disabled={!ready || quiz !== null || namesHidden}
-                  onClick={() => setLabelsOn((on) => !on)}
-                >
-                  labels
-                </button>
                 <button
                   type="button"
                   className="lab-btn shrink-0"
@@ -2262,6 +2291,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   </div>
                 ))}
               </dl>
+              <div className="lab-divider space-y-1 pt-2 text-sm text-ink-soft" data-testid="anatomy-credits-help">{creditLines}</div>
               <button type="button" className={secondaryButton} onClick={() => { setKeysOpen(false); keysButtonRef.current?.focus(); }}>
                 close keys
               </button>
@@ -2430,7 +2460,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           )}
 
           <div className="lab-bar flex flex-wrap gap-2 p-3 lg:hidden" role="group" aria-label="panels">
-            {([['orientation', 'orientation'], ['systems', 'body systems']] as const).map(([key, label]) => (
+            {([['orientation', 'controls'], ['systems', 'body systems']] as const).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
@@ -2446,7 +2476,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
           <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:bottom-5 lg:left-5 lg:z-10 lg:w-(--lab-rail-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-rail">
 
-            <section id="lab-panel-systems" className="lab-glass mx-3 mb-3 hidden space-y-3 p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:block" data-open={panels.systems || undefined} aria-labelledby="lab-systems-heading">
+            <section id="lab-panel-systems" className={`lab-glass mx-3 mb-3 hidden space-y-3 data-open:block lg:pointer-events-auto lg:m-0 lg:block ${treeMin ? 'py-1 pr-1 pl-4 lg:w-fit' : 'p-4'}`} data-open={panels.systems || undefined} aria-labelledby="lab-systems-heading">
               <div className="flex items-center justify-between gap-3">
                 <h2 id="lab-systems-heading" className="lab-cap">body systems</h2>
                 <button
@@ -2554,21 +2584,33 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               )}
             </fieldset>
           )}
+                <div className="lab-divider space-y-1 pt-3 text-sm text-ink-soft" data-testid="anatomy-credits">{creditLines}</div>
               </div>
             </section>
           </div>
 
           <section
             id="lab-panel-orientation"
-            className="lab-glass mx-3 mb-3 hidden p-4 data-open:block lg:absolute lg:right-5 lg:bottom-5 lg:z-10 lg:m-0 lg:block lg:w-(--lab-inspector-width)"
+            className={`lab-glass mx-3 mb-3 hidden data-open:block lg:absolute lg:right-5 lg:bottom-5 lg:z-10 lg:m-0 lg:block ${remoteMin ? 'py-1 pr-1 pl-4 lg:w-fit' : 'p-4 lg:w-(--lab-inspector-width)'}`}
             data-open={panels.orientation || undefined}
             aria-labelledby="lab-orientation-heading"
             data-testid="anatomy-remote"
           >
-            <h2 id="lab-orientation-heading" className="lab-cap">orientation</h2>
-            <div role="group" aria-label="view">
-            <div className="mt-3 flex items-start justify-between gap-3">
-              <div className="flex gap-2" role="group" aria-label="preset views">
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="lab-orientation-heading" className="lab-cap">controls</h2>
+              <button
+                type="button"
+                className="lab-btn lab-round shrink-0"
+                aria-expanded={!remoteMin}
+                onClick={() => setRemoteMin((min) => !min)}
+                data-testid="anatomy-remote-min"
+              >
+                <span aria-hidden="true">{remoteMin ? '+' : '−'}</span>
+                <span className="sr-only">{remoteMin ? 'show the controls' : 'hide the controls'}</span>
+              </button>
+            </div>
+            <div role="group" aria-label="view" hidden={remoteMin}>
+              <div className="mt-3 flex justify-between gap-2" role="group" aria-label="preset views">
                 {ORIENTATIONS.map((o) => (
                   <button
                     key={o.id}
@@ -2587,44 +2629,73 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   </button>
                 ))}
               </div>
-              <div className="flex flex-col gap-2">
-                <button type="button" className={iconButton} aria-label="zoom in" disabled={!ready} onClick={() => sceneRef.current?.zoom(ZOOM_IN)}>+</button>
-                <button type="button" className={iconButton} aria-label="zoom out" disabled={!ready} onClick={() => sceneRef.current?.zoom(1 / ZOOM_IN)}>−</button>
-              </div>
-            </div>
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <div className="grid w-fit shrink-0 grid-cols-3 gap-1">
-                <button type="button" className={`${iconButton} col-start-2 row-start-1`} aria-label="tilt up" disabled={!ready} onClick={() => turn(0, -STEP)}>↑</button>
-                <button type="button" className={`${iconButton} col-start-1 row-start-2`} aria-label="turn left" disabled={!ready} onClick={() => turn(-STEP, 0)}>←</button>
-                <button type="button" className={`${iconButton} col-start-3 row-start-2`} aria-label="turn right" disabled={!ready} onClick={() => turn(STEP, 0)}>→</button>
-                <button
-                  type="button"
-                  className={`${iconButton} col-start-2 row-start-2 w-11 px-0`}
-                  aria-pressed={spinning}
-                  disabled={!ready}
-                  onClick={toggleSpin}
-                  data-testid="anatomy-spin"
-                >
-                  <span aria-hidden="true">{spinning ? '❙❙' : '▶\uFE0E'}</span>
-                  <span className="sr-only">turn the model by itself</span>
-                </button>
-                <button type="button" className={`${iconButton} col-start-2 row-start-3`} aria-label="tilt down" disabled={!ready} onClick={() => turn(0, STEP)}>↓</button>
-              </div>
-              <div className="flex min-w-0 flex-1 flex-col gap-2">
-                <div className="lab-seg" role="group" aria-label="background">
-                  {(['black', 'white'] as const).map((choice) => (
-                    <button key={choice} type="button" aria-pressed={stage === choice} onClick={() => pickStage(choice)}>
-                      {choice}
-                    </button>
-                  ))}
+              <div className="mt-3 flex items-center justify-between gap-3">
+                {/* undo · up · redo / left · play · right / zoom out · down · zoom in (Christian, 2026-11-27) */}
+                <div className="grid w-fit shrink-0 grid-cols-3 gap-1">
+                  <button
+                    type="button"
+                    className={`${iconButton} aria-disabled:opacity-60`}
+                    aria-label="undo"
+                    aria-disabled={!ready || !canUndo(history)}
+                    aria-keyshortcuts="Control+Z Meta+Z"
+                    onClick={() => { if (ready && canUndo(history)) undoVisibility(); }}
+                  >
+                    ↶
+                  </button>
+                  <button type="button" className={iconButton} aria-label="tilt up" disabled={!ready} onClick={() => turn(0, -STEP)}>↑</button>
+                  <button
+                    type="button"
+                    className={`${iconButton} aria-disabled:opacity-60`}
+                    aria-label="redo"
+                    aria-disabled={!ready || !canRedo(history)}
+                    aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z"
+                    onClick={() => { if (ready && canRedo(history)) redoVisibility(); }}
+                  >
+                    ↷
+                  </button>
+                  <button type="button" className={iconButton} aria-label="turn left" disabled={!ready} onClick={() => turn(-STEP, 0)}>←</button>
+                  <button
+                    type="button"
+                    className={`${iconButton} w-11 px-0`}
+                    aria-pressed={spinning}
+                    disabled={!ready}
+                    onClick={toggleSpin}
+                    data-testid="anatomy-spin"
+                  >
+                    <span aria-hidden="true">{spinning ? '❙❙' : '▶\uFE0E'}</span>
+                    <span className="sr-only">turn the model by itself</span>
+                  </button>
+                  <button type="button" className={iconButton} aria-label="turn right" disabled={!ready} onClick={() => turn(STEP, 0)}>→</button>
+                  <button type="button" className={iconButton} aria-label="zoom out" disabled={!ready} onClick={() => sceneRef.current?.zoom(1 / ZOOM_IN)}>−</button>
+                  <button type="button" className={iconButton} aria-label="tilt down" disabled={!ready} onClick={() => turn(0, STEP)}>↓</button>
+                  <button type="button" className={iconButton} aria-label="zoom in" disabled={!ready} onClick={() => sceneRef.current?.zoom(ZOOM_IN)}>+</button>
                 </div>
-                <button type="button" className={secondaryButton} disabled={!ready} onClick={resetToHome}>reset view</button>
-                <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={() => showAll()}>show all</button>
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <div className="lab-seg" role="group" aria-label="background">
+                    {(['black', 'white'] as const).map((choice) => (
+                      <button key={choice} type="button" aria-pressed={stage === choice} onClick={() => pickStage(choice)}>
+                        {choice}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Put away while a round runs, so nothing can draw the name being asked. */}
+                  {!round && (
+                    <button
+                      type="button"
+                      className={secondaryButton}
+                      aria-pressed={labelsOn}
+                      disabled={!ready || quiz !== null || namesHidden}
+                      onClick={() => setLabelsOn((on) => !on)}
+                    >
+                      labels
+                    </button>
+                  )}
+                  <button ref={showAllButtonRef} type="button" className={secondaryButton} disabled={!ready} onClick={() => showAll()}>show all</button>
+                </div>
               </div>
-            </div>
             </div>
           </section>
-          <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:right-5 lg:bottom-(--lab-remote-clear) lg:z-10 lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-inspector" role="group" aria-label="selected structure and study" tabIndex={0}>
+          <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:right-5 lg:z-10 lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${remoteMin ? 'lg:bottom-(--lab-remote-clear-min)' : 'lg:bottom-(--lab-remote-clear)'} ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-inspector" role="group" aria-label="selected structure and study" tabIndex={0}>
           {selectedName && !quiz && !namesHidden && (
             <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
               <p className="lab-cap flex justify-between gap-3"><span>selected structure</span><span className="lab-id" data-testid="anatomy-card-id">{selected}</span></p>
@@ -2877,6 +2948,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   >
                     focus on selected
                   </button>
+                  <button type="button" className={secondaryButton} disabled={!ready} onClick={resetToHome}>reset view</button>
                 </div>
               </div>
 
@@ -3338,31 +3410,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           </section>
         </div>
 
-        <div className="lab-bar flex flex-wrap gap-x-5 gap-y-1 border-t border-line px-4 py-2 text-sm text-ink-soft" data-testid="anatomy-credits">
-          {drafts && system.status === 'draft' && <p className="text-ink">draft · labels waiting for review</p>}
-            <p>
-              {system.fixture ? (
-                creditFor(system)
-              ) : (
-                <>
-                  {BODYPARTS3D_CREDIT_LEAD}{' '}
-                  <a className="underline" href={BODYPARTS3D_LICENSE_URL} rel="license noopener">{BODYPARTS3D_LICENSE_NAME}</a>
-                </>
-              )}
-            </p>
-            <p>{releaseNoteFor(system)}</p>
-            {!system.fixture && (
-              <p>{BODYPARTS3D_REFERENCE_NOTE}{' '}
-                <a className="underline" href={BODYPARTS3D_REFERENCE_URL} rel="noopener noreferrer">source details</a>
-              </p>
-            )}
-            {budget && <p className="text-ink" data-testid="anatomy-budget-note">{budget}</p>}
-            {ready && missingCount > 0 && (
-              <p data-testid="anatomy-missing-count">
-                {missingCount} listed structures were not found in the loaded model files.
-              </p>
-            )}
-        </div>
       </div>
 
           <p id="anatomy-lab-help" className="sr-only">

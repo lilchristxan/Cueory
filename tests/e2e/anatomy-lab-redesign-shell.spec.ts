@@ -17,7 +17,8 @@ async function openClosedLab(page: Page) {
   await page.goto(URL);
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
   await expect(page.getByTestId('anatomy-stage')).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('button', { name: 'labels', exact: true })).toBeEnabled({ timeout: 20_000 });
+  // The slider is on screen at every size and comes alive with the model (labels now sits in the controls box).
+  await expect(page.getByRole('slider', { name: /spread structures apart/ })).toBeEnabled({ timeout: 20_000 });
 }
 
 async function openLab(page: Page) {
@@ -225,7 +226,7 @@ test.describe('anatomy lab shell: layout', () => {
 
   test('desktop shows the panels beside the model; phone and tablet fold them into drawers on 44 px buttons', async ({ page }, info) => {
     await openClosedLab(page);
-    const orientation = page.getByRole('region', { name: 'orientation' });
+    const orientation = page.getByRole('region', { name: 'controls' });
     const systems = page.getByRole('region', { name: 'body systems' });
     const dock = page.getByRole('group', { name: 'panels' });
     if (sizeOf(info) === 'desktop') {
@@ -251,7 +252,7 @@ test.describe('anatomy lab shell: layout', () => {
       await expect(page.getByRole('region', { name: 'structures' })).toBeHidden();
       // The structures are listed inside the body systems panel now, so there are two drawers, not three.
       await expect(dock.getByRole('button', { name: 'structures', exact: true })).toHaveCount(0);
-      for (const name of ['orientation', 'body systems']) {
+      for (const name of ['controls', 'body systems']) {
         const button = dock.getByRole('button', { name, exact: true });
         const box = (await button.boundingBox())!;
         expect(box.height, name).toBeGreaterThanOrEqual(44);
@@ -264,7 +265,7 @@ test.describe('anatomy lab shell: layout', () => {
       await expect(systems).toBeVisible();
       await expect(page.getByRole('region', { name: 'structures' })).toBeVisible();
       // And they close again.
-      await dock.getByRole('button', { name: 'orientation', exact: true }).click();
+      await dock.getByRole('button', { name: 'controls', exact: true }).click();
       await expect(orientation).toBeHidden();
       // The model stays above the panels, still tappable.
       const stage = (await page.getByTestId('anatomy-stage').boundingBox())!;
