@@ -1,0 +1,2 @@
+status: Task 634: wired `node scripts/prod-prune-guard.mjs` directly after `node scripts/prune-preview.mjs` in `package.json`'s build script, ensuring production builds fail if draft models, fixtures, or /preview routes remain in dist, while staging, previews, and local builds continue building normally. Added unit test in `tests/unit/prod-prune-guard.test.ts` verifying execution order.
+decision: Wire production prune guard into build pipeline with Christian's approval (needs-christian).
