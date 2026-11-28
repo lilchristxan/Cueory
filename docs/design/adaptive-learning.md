@@ -80,12 +80,17 @@ The build checks sample item IDs against their existing lesson sources. For a pu
 
 ## Progress log
 
+### Module learning path
+
+- [#1283](https://github.com/lilchristxan/Cueory/pull/1283) adds the content model, sample board metadata and publication checks for objective coverage.
+
+### Adaptive study engine
+
 - [#1256](https://github.com/lilchristxan/Cueory/pull/1256) — design draft with the model, release boundaries and research references.
 - [#1257](https://github.com/lilchristxan/Cueory/pull/1257) — shipped to staging with the pure engine, module tests and fixed-seed simulation.
 - [#1258](https://github.com/lilchristxan/Cueory/pull/1258) — shipped the on-device progress format and migration to staging. Browser saving remains disconnected.
 - [#1266](https://github.com/lilchristxan/Cueory/pull/1266) — shipped the locked sample preview, backwards-clock recovery and measured route budget to staging.
 - [#1275](https://github.com/lilchristxan/Cueory/pull/1275) — shipped the Learn connection to staging with the switch off. The existing see, choose and type flow stays active. Explicit opt-in is limited to the labeled study-skills deck in builds that allow samples.
-- [Module path phase 1](https://github.com/lilchristxan/Cueory/pulls?q=is%3Apr+head%3Atask-adaptive%2Fmodule-content) adds the content model, sample board metadata and publication checks for objective coverage.
 
 ## Staging trial approval
 
