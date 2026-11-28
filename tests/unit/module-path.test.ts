@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   betaCdf, calibrate, credibleLowerBound, emptyProgress, evidenceWeight, EVIDENCE_WEIGHT, isShown, levelAssessment, levelStatus,
-  nextStep, posterior, READY_LEVELS, GATE_LEVELS, PRACTICE_LEVELS, diagnosticFastTrack, cardOverdue, recordModuleAnswer, shownThrough, SOURCE_WEIGHT, stageOf, STALE_AFTER_DAYS, summarize, summarizeCourse,
+  nextStep, posterior, READY_LEVELS, GATE_LEVELS, PRACTICE_LEVELS, diagnosticFastTrack, cardOverdue, recordModuleAnswer, shownThrough, SOURCE_WEIGHT, stageOf, summarize, summarizeCourse,
   TECHNIQUES_FOR_LEVEL, THINKING_LEVELS,
   type AnswerDetail, type LevelStatus, type ModuleItem, type ModuleProgress, type ModuleShape, type Technique, type ThinkingLevel,
 } from '../../src/islands/adaptive-learning/module-path';
@@ -504,18 +504,15 @@ describe('module path: retention uses the card memory (memory.ts) at the supplie
     expect(levelAssessment(missed.concepts.get('sample-a')!.remember, later).due).toBe(true);
   });
 
-  it('falls back to a documented number of days only where no card memory exists', () => {
-    // No item ids: there are no cards, so the fixed fallback applies.
+  it('answers without an item id are history only: they count for nothing and have no cards to fade', () => {
     let p = emptyProgress();
-    for (let i = 0; i < SUFFICIENT_RUN; i++) p = recordModuleAnswer(p, 'sample-a', 'remember', true, { clock: clockOn(0) });
-    // An identified answer without a clock supplies the first-try evidence but no card memory.
-    p = recordModuleAnswer(p, 'sample-a', 'remember', true, { itemId: 'sample-card-fallback' });
-    const level = p.concepts.get('sample-a')!.remember;
-    expect(Object.keys(level!.cards)).toHaveLength(0);
-    expect(levelAssessment(level, clockOn(STALE_AFTER_DAYS)).status).toBe('sufficient');
-    expect(levelAssessment(level, clockOn(STALE_AFTER_DAYS + 1))).toMatchObject({ status: 'developing', due: true });
-    // Answers with no clock at all never fade.
-    expect(levelAssessment(answer(emptyProgress(), 'sample-a', 'remember', runOf(8)).concepts.get('sample-a')!.remember, clockOn(400)).due).toBe(false);
+    for (let i = 0; i < 20; i++) p = recordModuleAnswer(p, 'sample-a', 'remember', true, { clock: clockOn(0), technique: 'learning questions' });
+    const level = p.concepts.get('sample-a')!.remember!;
+    expect(level.right).toBe(20);
+    expect(Object.keys(level.cards)).toHaveLength(0);
+    expect(posterior(level)).toMatchObject({ alpha: 1, beta: 1, directWeight: 0, hasFresh: false });
+    expect(levelAssessment(level, clockOn(400))).toMatchObject({ status: 'developing', due: false, overdue: 0 });
+    expect(p.concepts.get('sample-a')!.understand).toBeUndefined(); // and they give no transfer
   });
 
   it('a level that has faded takes the student out of ready and into adaptive practice', () => {
@@ -612,15 +609,15 @@ describe('module path: review findings (A to E)', () => {
     let p = emptyProgress();
     for (let i = 0; i < 6; i++) p = recordModuleAnswer(p, 'sample-a', 'remember', true, { technique: 'learning questions' });
     const level = p.concepts.get('sample-a')!.remember!;
-    expect(posterior(level)).toMatchObject({ hasFresh: false, alpha: 7 });
+    expect(posterior(level)).toMatchObject({ hasFresh: false, alpha: 1 });
     expect(isShown(levelStatus(level))).toBe(false);
     // Beside it, the identified repeat adds nothing at all.
     let q = emptyProgress();
     for (let i = 0; i < 6; i++) q = recordModuleAnswer(q, 'sample-a', 'remember', true, { technique: 'learning questions', itemId: 'sample-card-same' });
     expect(posterior(q.concepts.get('sample-a')!.remember)).toMatchObject({ hasFresh: true, alpha: 2 });
     expect(isShown(levelStatus(q.concepts.get('sample-a')!.remember))).toBe(false);
-    // One identified first-try answer is what the gate asks for.
-    expect(isShown(levelStatus(answer(p, 'sample-a', 'remember', [true]).concepts.get('sample-a')!.remember))).toBe(true);
+    // Unidentified history cannot be topped up into the gate by one identified answer (finding 4).
+    expect(isShown(levelStatus(answer(p, 'sample-a', 'remember', [true]).concepts.get('sample-a')!.remember))).toBe(false);
   });
 
   it('C: the exam gate is understand and apply; remember stays available for practice', () => {
@@ -682,7 +679,8 @@ describe('module path: review findings (A to E)', () => {
   });
 });
 
-describe('module path: the diagnostic fast track (documented departure)', () => {
+describe('module path: the diagnostic fast track (documented departure, opt-in, default off)', () => {
+  const fast: ModuleShape = { ...shape, diagnosticFastTrack: true };
   const diagnostic = (p: ModuleProgress, concept: string, level: ThinkingLevel, ok: boolean) =>
     recordModuleAnswer(p, concept, level, ok, { technique: 'learning questions', itemId: fresh(), source: 'diagnostic', clock: clockOn(0) });
   const perfect = () => {
@@ -690,26 +688,130 @@ describe('module path: the diagnostic fast track (documented departure)', () => 
     for (const concept of shape.concepts) for (const level of GATE_LEVELS) p = diagnostic(p, concept, level, true);
     return p;
   };
+  const history = { usedIds: [], recentTechniques: [] };
 
-  it('a perfect diagnostic lets a prepared student skip adaptive practice, while every status word stays honest', () => {
-    const p = perfect();
-    expect(diagnosticFastTrack(shape, p, clockOn(0))).toBe(true);
-    expect(stageOf(shape, p, clockOn(0))).toBe('ready');
-    expect(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0, undefined, clockOn(0))).toEqual({ kind: 'done' });
-    expect(statusOf(p, 'apply', clockOn(0))).toBe('developing'); // six or twelve items cannot make a level sufficient
+  it('is off by default: a perfect diagnostic does not change the ordinary recommendation (finding 1)', () => {
+    const one: ModuleShape = { concepts: ['sample-a'], practiceTechniques: [] };
+    let p: ModuleProgress = { ...emptyProgress(), watched: true, read: true, diagnosed: true };
+    p = diagnostic(p, 'sample-a', 'understand', true);
+    p = diagnostic(p, 'sample-a', 'apply', true);
+    expect(statusOf(p, 'understand')).toBe('developing');
+    expect(statusOf(p, 'apply')).toBe('developing');
+    expect(stageOf(one, p, clockOn(0))).toBe('adaptive');
+    expect(nextStep(one, p, items, history, () => 0, undefined, clockOn(0)).kind).toBe('step');
+    expect(diagnosticFastTrack(one, p, clockOn(0))).toBe(false);
   });
 
-  it('one miss, a missing tier, a cue or a lapse of two days puts the student back on adaptive practice', () => {
+  it('with the option on, a perfect diagnostic skips adaptive practice while every status word stays honest', () => {
+    const p = perfect();
+    expect(diagnosticFastTrack(fast, p, clockOn(0))).toBe(true);
+    expect(stageOf(fast, p, clockOn(0))).toBe('ready');
+    expect(nextStep(fast, p, items, history, () => 0, undefined, clockOn(0))).toEqual({ kind: 'done' });
+    expect(statusOf(p, 'apply', clockOn(0))).toBe('developing');
+    expect(stageOf(shape, p, clockOn(0))).toBe('adaptive'); // the same progress without the option
+  });
+
+  it('equal level lists give the same result: policy never depends on array identity (finding 5)', () => {
+    const p = perfect();
+    const same = nextStep(fast, p, items, history, () => 0, ['understand', 'apply'], clockOn(0));
+    expect(same).toEqual(nextStep(fast, p, items, history, () => 0, GATE_LEVELS, clockOn(0)));
+    expect(same).toEqual({ kind: 'done' });
+    expect(nextStep(fast, p, items, history, () => 0, ['apply', 'understand'], clockOn(0))).toEqual({ kind: 'done' });
+    const off = nextStep(shape, p, items, history, () => 0, ['understand', 'apply'], clockOn(0));
+    expect(off).toEqual(nextStep(shape, p, items, history, () => 0, GATE_LEVELS, clockOn(0)));
+    expect(off.kind).toBe('step');
+  });
+
+  it('one miss, a missing tier, a lapse of two days or a missing diagnosis puts the student back on adaptive practice', () => {
     const missed = diagnostic(perfect(), 'sample-a', 'apply', false);
-    expect(diagnosticFastTrack(shape, missed, clockOn(0))).toBe(false);
-    expect(stageOf(shape, missed, clockOn(0))).toBe('adaptive');
+    expect(diagnosticFastTrack(fast, missed, clockOn(0))).toBe(false);
+    expect(stageOf(fast, missed, clockOn(0))).toBe('adaptive');
     let partial: ModuleProgress = { ...emptyProgress(), diagnosed: true };
     for (const concept of shape.concepts) partial = diagnostic(partial, concept, 'understand', true);
-    expect(diagnosticFastTrack(shape, partial, clockOn(0))).toBe(false);
-    expect(diagnosticFastTrack(shape, perfect(), clockOn(5))).toBe(false); // everything is overdue
-    expect(diagnosticFastTrack(shape, { ...perfect(), diagnosed: false }, clockOn(0))).toBe(false);
-    expect(diagnosticFastTrack({ concepts: [], practiceTechniques: [] }, perfect(), clockOn(0))).toBe(false);
+    expect(diagnosticFastTrack(fast, partial, clockOn(0))).toBe(false);
+    expect(diagnosticFastTrack(fast, perfect(), clockOn(5))).toBe(false); // everything is overdue
+    expect(diagnosticFastTrack(fast, { ...perfect(), diagnosed: false }, clockOn(0))).toBe(false);
+    expect(diagnosticFastTrack({ concepts: [], practiceTechniques: [], diagnosticFastTrack: true }, perfect(), clockOn(0))).toBe(false);
   });
+});
+
+describe('module path: second review round', () => {
+  const at = (p: ModuleProgress, ok: boolean, id: string, offset: number, concept = 'sample-a', level: ThinkingLevel = 'apply') =>
+    recordModuleAnswer(p, concept, level, ok, { technique: 'learning questions', itemId: id, clock: clockOn(offset) });
+  const six = () => { let p = emptyProgress(); for (let i = 0; i < 6; i++) p = at(p, true, `sample-card-${i}`, 0); return p; };
+  const one: ModuleShape = { concepts: ['sample-a'], practiceTechniques: [] };
+  const applyItems: ModuleItem[] = Array.from({ length: 12 }, (_, n) => ({ id: `sample-card-${n}`, concept: 'sample-a', level: 'apply' as const, technique: 'learning questions' as const }));
+
+  it('2: one successful review cannot hide five failed ones: they are still offered for review', () => {
+    let p = six();
+    for (let i = 0; i < 5; i++) p = at(p, false, `sample-card-${i}`, 3);
+    p = at(p, true, 'sample-card-5', 3);
+    const level = p.concepts.get('sample-a')!.apply!;
+    expect(levelAssessment(level, clockOn(3))).toMatchObject({ status: 'sufficient', due: false, overdue: 5 }); // tier policy unchanged
+    expect(overdueCardsOf(level)).toHaveLength(5);
+    p = shownOn(p, ['understand'], ['sample-a']); // understand is shown, so only the apply cards are left to review
+    const withOther = { ...p, diagnosed: true };
+    const wide: ModuleShape = { concepts: ['sample-a', 'sample-b'], practiceTechniques: [] };
+    const step = nextStep(wide, withOther, applyItems, { usedIds: [], recentTechniques: [] }, () => 0, undefined, clockOn(3)); // sample-b still needs work but has no item to offer
+    expect(step).toMatchObject({ kind: 'step', concept: 'sample-a', level: 'apply', reason: 'due for review' });
+    if (step.kind === 'step') expect(['sample-card-0', 'sample-card-1', 'sample-card-2', 'sample-card-3', 'sample-card-4']).toContain(step.id);
+    // New material still comes first when there is some; with nothing else to do they come back on "done" as optional review.
+    const both = nextStep(wide, withOther, [...applyItems, { id: 'sample-b-1', concept: 'sample-b', level: 'understand', technique: 'matching' }], { usedIds: [], recentTechniques: [] }, () => 0, undefined, clockOn(3));
+    expect(both).toMatchObject({ kind: 'step', concept: 'sample-b', level: 'understand' });
+    const finished = nextStep(one, { ...p, concepts: new Map([['sample-a', { understand: shownOn(emptyProgress(), ['understand'], ['sample-a']).concepts.get('sample-a')!.understand!, apply: level }]]) }, [], { usedIds: [], recentTechniques: [] }, () => 0, undefined, clockOn(3));
+    expect(finished.kind).toBe('done');
+    if (finished.kind === 'done') expect(finished.reviewDue?.[0]).toMatchObject({ concept: 'sample-a', level: 'apply' });
+  });
+
+  it('3 and 7: a late-arriving older success cannot undo a newer failure', () => {
+    let p = six();
+    p = at(p, false, 'sample-card-0', 3); // a failure on day 3
+    expect(levelAssessment(p.concepts.get('sample-a')!.apply, clockOn(3)).due).toBe(true);
+    p = at(p, true, 'sample-card-0', 2); // the delayed success stamped day 2
+    expect(p.concepts.get('sample-a')!.apply!.cards['sample-card-0']).toMatchObject({ lastCorrect: false });
+    expect(levelAssessment(p.concepts.get('sample-a')!.apply, clockOn(3))).toMatchObject({ status: 'developing', due: true });
+    // The same with every card failed on day 5 and one success stamped day 4.
+    let q = six();
+    for (let i = 0; i < 6; i++) q = at(q, false, `sample-card-${i}`, 5);
+    q = at(q, true, 'sample-card-0', 4);
+    expect(levelAssessment(q.concepts.get('sample-a')!.apply, clockOn(5))).toMatchObject({ status: 'developing', due: true });
+    // A genuinely newer success still restores the card.
+    q = at(q, true, 'sample-card-0', 6);
+    expect(q.concepts.get('sample-a')!.apply!.cards['sample-card-0']).toMatchObject({ lastCorrect: true });
+  });
+
+  it('4: unidentified replays cannot top up the gate, and identified evidence still counts', () => {
+    let p = emptyProgress();
+    for (let i = 0; i < 6; i++) p = recordModuleAnswer(p, 'sample-a', 'apply', true, { source: 'diagnostic', technique: 'learning questions', clock: clockOn(0) });
+    p = at(p, true, 'sample-card-0', 0);
+    const level = p.concepts.get('sample-a')!.apply!;
+    expect(posterior(level)).toMatchObject({ alpha: 2, beta: 1 }); // only the identified answer counts
+    expect(isShown(levelStatus(level))).toBe(false);
+    expect(level.right).toBe(7); // the history is kept
+    expect(isShown(levelStatus(distinctRun(6).concepts.get('sample-a')!.apply))).toBe(true);
+  });
+
+  it('8: exhausted evidence does not loop: no unseen item means "no content", naming the level', () => {
+    const two: ModuleItem[] = [1, 2].map((n) => ({ id: `sample-lq-${n}`, concept: 'sample-a', level: 'apply', technique: 'learning questions' }));
+    let p: ModuleProgress = { ...emptyProgress(), diagnosed: true };
+    for (let i = 0; i < 30; i++) p = at(p, true, `sample-lq-${(i % 2) + 1}`, 0);
+    expect(posterior(p.concepts.get('sample-a')!.apply).directWeight).toBe(2);
+    const result = nextStep(one, p, two, { usedIds: [], recentTechniques: [] }, () => 0, ['apply']);
+    expect(result).toEqual({ kind: 'no content', concepts: ['sample-a'], exhausted: [{ concept: 'sample-a', level: 'apply' }] });
+    // An unseen item makes it a step again.
+    expect(nextStep(one, p, [...two, { id: 'sample-lq-3', concept: 'sample-a', level: 'apply', technique: 'learning questions' }], { usedIds: [], recentTechniques: [] }, () => 0, ['apply'])).toMatchObject({ kind: 'step', id: 'sample-lq-3' });
+    // An overdue review is still offered from the answered items.
+    expect(nextStep(one, p, two, { usedIds: [], recentTechniques: [] }, () => 0, ['apply'], clockOn(6))).toMatchObject({ kind: 'step', reason: 'due for review' });
+  });
+
+  function distinctRun(n: number): ModuleProgress {
+    let p = emptyProgress();
+    for (let i = 0; i < n; i++) p = at(p, true, `sample-card-${i}`, 0);
+    return p;
+  }
+  function overdueCardsOf(level: NonNullable<ReturnType<ModuleProgress['concepts']['get']>>['apply']): string[] {
+    return Object.entries(level!.cards).filter(([, memory]) => cardOverdue(memory, clockOn(3))).map(([id]) => id);
+  }
 });
 
 describe('module path: multi-day completion', () => {

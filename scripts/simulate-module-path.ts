@@ -23,6 +23,8 @@ export interface SimulationOptions {
   retention?: boolean;
   /** Adaptive steps allowed per student. Default STEP_CAP. */
   stepCap?: number;
+  /** New rule only: the opt-in diagnostic fast track (ModuleShape.diagnosticFastTrack). Default off. */
+  fastTrack?: boolean;
 }
 
 /** A count with its denominator, so a share is never reported without what it is a share of. */
@@ -31,6 +33,7 @@ export interface Count { n: number; of: number }
 export interface RuleReport {
   rule: RuleName;
   retention: boolean;
+  fastTrack: boolean;
   students: number;
   /** Right after the diagnostic, before any adaptive practice: placed shown but truly not mastered (levels). */
   diagnosticTooHigh: Count;
@@ -56,6 +59,12 @@ export interface RuleReport {
   preparedSkipped: Count;
   /** Prepared students who reached "done" within the cap. */
   preparedDone: Count;
+  /** Students who, at exit (done or the cap), truly mastered every gate level of every concept. */
+  masteredAtExit: Count;
+  /** Of those, how many the path declared done. */
+  masteredAtExitDone: Count;
+  /** Of those not prepared at the start (mastery acquired during practice), how many the path declared done. */
+  acquiredDone: Count;
   /** Students declared ready by the diagnostic alone who had a level truly not mastered. */
   falselyReadyAtDiagnostic: Count;
   /** Mean number of diagnostic items a student was asked (the authored policy asks 6 to 12 for six concepts). */
@@ -96,6 +105,7 @@ export function seededRandom(seed: number): () => number {
 
 const conceptIds = Array.from({ length: CONCEPTS }, (_, index) => `sample-${String.fromCharCode(97 + index)}`);
 export const SHAPE: ModuleShape = { concepts: conceptIds, practiceTechniques: [] };
+const FAST_SHAPE: ModuleShape = { ...SHAPE, diagnosticFastTrack: true };
 export const ITEMS: readonly ModuleItem[] = conceptIds.flatMap((concept) =>
   READY_LEVELS.flatMap((level) => TECHNIQUES_FOR_LEVEL[level].flatMap((technique) =>
     Array.from({ length: ITEMS_PER_TECHNIQUE }, (_, n) => n + 1).map((n) => ({ id: `${concept}:${level}:${technique}:${n}`, concept, level, technique })))));
@@ -132,7 +142,7 @@ function baselineRank(results: readonly boolean[]): 0 | 1 | 2 {
 }
 
 const synthetic = (correct: boolean): AnswerRecord => ({
-  correct, weight: 1, slip: false, direct: true, fresh: correct, repeat: false, cued: false, timedOut: false,
+  correct, weight: 1, slip: false, direct: true, identified: true, fresh: correct, repeat: false, cued: false, timedOut: false,
 });
 
 /** Shows the engine's own next-step picker what the baseline thinks, by building evidence that says exactly that. */
@@ -143,7 +153,7 @@ function baselineProgress(results: ReadonlyMap<string, boolean[]>): ModuleProgre
     const status = baselineStatus(list);
     const view = status === 'shown' ? Array.from({ length: 8 }, () => true) : status === 'learning' ? [list.at(-1) ?? true] : [];
     const entry = concepts.get(concept) ?? {};
-    entry[level] = { right: view.filter(Boolean).length, wrong: view.filter((c) => !c).length, recent: view.map(synthetic), seen: [], cards: {} };
+    entry[level] = { right: view.filter(Boolean).length, wrong: view.filter((c) => !c).length, recent: view.map(synthetic), seen: [], cards: {}, lastEventAt: {} };
     concepts.set(concept, entry);
   }
   return { ...emptyProgress(), concepts };
@@ -161,6 +171,7 @@ interface StudentRun {
   ready: Tally;
   final: Record<'high' | 'low', Tally>;
   prepared: boolean;
+  masteredAtExit: boolean;
   skipped: boolean;
   skippedWrong: boolean;
   diagnosticItems: number;
@@ -169,7 +180,7 @@ interface StudentRun {
 const tally = (): Tally => ({ n: 0, of: 0 });
 const add = (target: Tally, hit: boolean, counted = true): void => { if (counted) target.of += 1; if (counted && hit) target.n += 1; };
 
-function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: number): StudentRun {
+function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: number, fastTrack: boolean): StudentRun {
   const random = seededRandom(seed); // the same seed gives both rules the same student and the same luck stream
   const draw = seededRandom(seed ^ 0x9e3779b9);
   const first = dayNumber('2028-01-01');
@@ -185,7 +196,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
   const run: StudentRun = {
     stepsToDone: undefined,
     diagnostic: { high: tally(), low: tally(), developingHigh: tally(), masteredGap: tally() },
-    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, prepared: false, skipped: false, skippedWrong: false, diagnosticItems: 0, techniques: 0,
+    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, prepared: false, masteredAtExit: false, skipped: false, skippedWrong: false, diagnosticItems: 0, techniques: 0,
   };
 
   // 0 = gap or not started, 1 = developing, 2 = shown (sufficient or strong).
@@ -251,7 +262,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
   const seen = new Set<Technique>();
   let steps = 0;
   const next = (today: StudyClock): NextResult => nextStep(
-    SHAPE, rule === 'new' ? { ...progress, diagnosed: true } : baselineProgress(results), ITEMS, { usedIds, recentTechniques, recentConcepts }, random, GATE_LEVELS, rule === 'new' && retention ? today : undefined);
+    fastTrack && rule === 'new' ? FAST_SHAPE : SHAPE, rule === 'new' ? { ...progress, diagnosed: true } : baselineProgress(results), ITEMS, { usedIds, recentTechniques, recentConcepts }, random, GATE_LEVELS, rule === 'new' && retention ? today : undefined);
 
   for (;;) {
     const today = clockFor(day, first);
@@ -291,12 +302,13 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
       add(run.final.low, !shown, truly);
     }
   }
+  run.masteredAtExit = conceptIds.every((concept) => GATE_LEVELS.every((level) => mastered(concept, level)));
   run.techniques = seen.size;
   return run;
 }
 
-export function simulate(rule: RuleName, { students, seed, retention = true, stepCap = STEP_CAP }: SimulationOptions): RuleReport {
-  const runs = Array.from({ length: students }, (_, index) => runStudent(rule, seed * 100_003 + index + 1, retention, stepCap));
+export function simulate(rule: RuleName, { students, seed, retention = true, stepCap = STEP_CAP, fastTrack = false }: SimulationOptions): RuleReport {
+  const runs = Array.from({ length: students }, (_, index) => runStudent(rule, seed * 100_003 + index + 1, retention, stepCap, fastTrack));
   const total = (pick: (run: StudentRun) => Tally): Count => ({
     n: runs.reduce((sum, run) => sum + pick(run).n, 0),
     of: runs.reduce((sum, run) => sum + pick(run).of, 0),
@@ -305,6 +317,7 @@ export function simulate(rule: RuleName, { students, seed, retention = true, ste
   return {
     rule,
     retention: rule === 'new' ? retention : false,
+    fastTrack: rule === 'new' && fastTrack,
     students,
     diagnosticTooHigh: total((run) => run.diagnostic.high),
     diagnosticTooLow: total((run) => run.diagnostic.low),
@@ -318,13 +331,16 @@ export function simulate(rule: RuleName, { students, seed, retention = true, ste
     neverDone: { n: students - done.length, of: students },
     preparedSkipped: { n: runs.filter((r) => r.prepared && r.skipped).length, of: runs.filter((r) => r.prepared).length },
     preparedDone: { n: runs.filter((r) => r.prepared && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.prepared).length },
+    masteredAtExit: { n: runs.filter((r) => r.masteredAtExit).length, of: students },
+    masteredAtExitDone: { n: runs.filter((r) => r.masteredAtExit && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.masteredAtExit).length },
+    acquiredDone: { n: runs.filter((r) => r.masteredAtExit && !r.prepared && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.masteredAtExit && !r.prepared).length },
     falselyReadyAtDiagnostic: { n: runs.filter((r) => r.skippedWrong).length, of: runs.filter((r) => r.skipped).length },
     diagnosticItems: runs.reduce((sum, run) => sum + run.diagnosticItems, 0) / students,
     techniqueVariety: runs.reduce((sum, run) => sum + run.techniques, 0) / students,
   };
 }
 
-const label = (r: RuleReport): string => (r.rule === 'old' ? 'Old rule' : r.retention ? 'New rule' : 'New rule, no retention drop');
+const label = (r: RuleReport): string => (r.rule === 'old' ? 'Old rule' : !r.retention ? 'New rule, no retention drop' : r.fastTrack ? 'New rule, fast track on' : 'New rule (default, fast track off)');
 
 export function markdownTable(reports: readonly RuleReport[]): string {
   const share = ({ n, of }: Count): string => (of === 0 ? `0 of 0` : `${((n / of) * 100).toFixed(1)}% (${n} of ${of})`);
@@ -339,6 +355,9 @@ export function markdownTable(reports: readonly RuleReport[]): string {
     ['Final: truly mastered, not shown (too low)', (r) => share(r.finalTooLow)],
     ['Prepared students (all mastered) ready from the diagnostic alone', (r) => share(r.preparedSkipped)],
     ['Prepared students who reach done within the cap', (r) => share(r.preparedDone)],
+    ['Mastered every gate level at exit (of all students)', (r) => share(r.masteredAtExit)],
+    ['  of those, declared done', (r) => share(r.masteredAtExitDone)],
+    ['  of those who were not prepared at the start (acquired mastery during practice), declared done', (r) => share(r.acquiredDone)],
     ['Ready from the diagnostic alone, but a level not mastered', (r) => share(r.falselyReadyAtDiagnostic)],
     ['Diagnostic items asked per student (mean)', (r) => r.diagnosticItems.toFixed(1)],
     ['Median steps to done (students who finished)', (r) => (r.medianStepsToDone === null ? 'none' : String(r.medianStepsToDone))],
@@ -353,7 +372,7 @@ export function markdownTable(reports: readonly RuleReport[]): string {
 // Print the table when run directly (not when imported by the unit test).
 if (/simulate-module-path\.(ts|mjs|js)$/.test(process.argv[1] ?? '')) {
   const options = { students: 300, seed: 7 };
-  const reports = [simulate('old', options), simulate('new', options), simulate('new', { ...options, retention: false })];
+  const reports = [simulate('old', options), simulate('new', options), simulate('new', { ...options, fastTrack: true })];
   console.log(`${options.students} synthetic students, ${CONCEPTS} concepts, step cap ${STEP_CAP}, seed ${options.seed}\n`);
   console.log(markdownTable(reports));
 }

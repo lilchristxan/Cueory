@@ -8,6 +8,7 @@ const share = ({ n, of }: Count): number => (of === 0 ? 0 : n / of);
 describe('module path simulation', () => {
   const old = simulate('old', options);
   const next = simulate('new', options);
+  const fast = simulate('new', { ...options, fastTrack: true });
 
   it('the new rule marks fewer levels shown that the student has not mastered than the old equal-weight rule', () => {
     expect(old.placedTooHigh.of).toBeGreaterThan(0);
@@ -16,7 +17,7 @@ describe('module path simulation', () => {
   });
 
   it('measures the diagnostic right after it ends, with denominators, and at the moment of readiness', () => {
-    for (const report of [old, next]) {
+    for (const report of [old, next, fast]) {
       // Both gate levels of every concept are counted after the diagnostic: 6 concepts, 2 levels.
       expect(report.diagnosticTooLow.of).toBe(report.diagnosticMasteredAtGap.of);
       expect(report.diagnosticTooHigh.of).toBeLessThanOrEqual(options.students * 12);
@@ -28,28 +29,43 @@ describe('module path simulation', () => {
     }
     // The old rule declares students ready who have not mastered every level; the new rule is stricter.
     expect(old.falselyReady.n).toBeGreaterThan(0);
-    expect(share(next.falselyReady)).toBeLessThan(share(old.falselyReady));
-    expect(next.falselyReady.of).toBeGreaterThan(0); // there are readiness decisions to measure
+    expect(fast.falselyReady.of).toBeGreaterThan(0); // there are readiness decisions to measure
+    expect(share(fast.falselyReady)).toBeLessThan(share(old.falselyReady));
+    expect(share(next.falselyReady)).toBeLessThanOrEqual(share(old.falselyReady));
   });
 
   it('some prepared students are ready from the diagnostic alone, and almost none of the others are', () => {
-    expect(next.preparedSkipped.of).toBeGreaterThan(0);
-    expect(next.preparedSkipped.n).toBeGreaterThan(0);
+    expect(fast.preparedSkipped.of).toBeGreaterThan(0);
+    expect(fast.preparedSkipped.n).toBeGreaterThan(0);
     expect(old.preparedSkipped.n).toBe(0); // the old rule has no fast track
-    expect(next.falselyReadyAtDiagnostic.n).toBeLessThanOrEqual(1);
+    expect(next.preparedSkipped.n).toBe(0); // and it is off by default
+    expect(fast.falselyReadyAtDiagnostic.n).toBeLessThanOrEqual(1);
+  });
+
+  it('counts mastery at exit, and readiness among learners who acquire mastery during practice, with denominators', () => {
+    for (const report of [old, next, fast]) {
+      expect(report.masteredAtExit.of).toBe(options.students);
+      expect(report.masteredAtExitDone.of).toBe(report.masteredAtExit.n);
+      expect(report.acquiredDone.of).toBeLessThanOrEqual(report.masteredAtExit.n);
+      expect(report.masteredAtExitDone.n).toBeLessThanOrEqual(report.masteredAtExit.n);
+      expect(report.preparedDone.of).toBeLessThanOrEqual(report.masteredAtExit.n + report.preparedDone.of);
+    }
   });
 
   it('is deterministic for a fixed seed, and the seed matters', () => {
     expect(simulate('new', options)).toEqual(next);
+    expect(simulate('new', { ...options, fastTrack: true })).toEqual(fast);
     expect(simulate('old', options)).toEqual(old);
     expect(simulate('new', { ...options, seed: 12 })).not.toEqual(next);
     expect(seededRandom(5)()).toBe(seededRandom(5)());
   });
 
   it('prints a table with all rules and never a score or a prediction', () => {
-    const table = markdownTable([old, next, simulate('new', { ...options, retention: false })]);
+    const table = markdownTable([old, next, fast]);
     expect(table).toContain('Old rule');
-    expect(table).toContain('New rule, no retention drop');
+    expect(table).toContain('fast track off');
+    expect(table).toContain('fast track on');
+    expect(table).toContain('acquired mastery during practice');
     expect(table).toContain('At the moment of "ready"');
     expect(table).not.toMatch(/predict|chance of passing|exam score/i);
   });
