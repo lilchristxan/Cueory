@@ -74,6 +74,8 @@ node work/adaptive/simulation.cjs
 
 Christian approved trying the 20-item session cap and the proposed spaced mastery rule on staging. The hidden preview already uses both. Study progress and the exam date stay in the open page and clear on reload.
 
+To try the schedule, open `/preview/adaptive-learning` on locked staging. Leave the exam date blank for the ordinary schedule, or enter one as `YYYY-MM-DD`. Start the sample and answer the cards. When the session shows its next scheduled review, choose **jump to that review day** to see which card comes back. That date jump is a preview control.
+
 ## Needs Christian
 
 - Should the exam plan include an optional lighter day before the exam? The pilot uses its usual session cap.
