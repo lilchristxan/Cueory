@@ -158,7 +158,7 @@ test.describe('word path: board format (#722)', () => {
     const other = chips.filter({ hasText: '(theme word)' });
     expect(await other.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(color);
     const stroke = await page.locator('line[data-kind="special"]').first().evaluate((el) => getComputedStyle(el).stroke);
-    expect(stroke).toBe(color.replace('rgb', 'rgb'));
+    expect(stroke).toBe(color);
   });
 
   test('dragging across the letters finds a word when the pointer lifts', async ({ page }) => {
