@@ -15,6 +15,7 @@ own licenses, noted where they are used. We don't take outside pull requests. To
 | If you want to… | Open this |
 | --- | --- |
 | See what's done, what's waiting, and what needs you | [docs/STATUS.md](docs/STATUS.md) |
+| See what's on staging for adaptive learning | [Adaptive learning design](docs/design/adaptive-learning.md#progress-log) |
 | See what's coming next | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | Run the project checks | [docs/TESTING.md](docs/TESTING.md) |
 | Follow the Cloudflare and Kit setup steps | [docs/SETUP.md](docs/SETUP.md) |

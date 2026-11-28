@@ -1,0 +1,2 @@
+status: Adds a versioned on-device study progress format and a pure migration, with validation of card timestamps against their local study dates. The format stays disconnected from browser storage. Type checking and all five focused migration tests passed. Hosted CI on a current staging base is still pending.
+decision: Confirm export, reset and disclosure behavior before connecting the format to browser progress.

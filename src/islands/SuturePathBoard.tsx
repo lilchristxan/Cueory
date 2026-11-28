@@ -43,7 +43,7 @@ const button = 'min-h-11 min-w-11 rounded-md border border-control bg-page px-4 
 const looks: Record<CellLook, { dot: string; text: string }> = {
   // Found paths use the same tan fill as their joining line. The dot and diamond marks still distinguish theme words
   // from the thread without relying on colour.
-  special: { dot: 'wordpath-found', text: 'wordpath-found-ink' },
+  special: { dot: 'wordpath-thread', text: 'wordpath-pick-text' },
   theme: { dot: 'wordpath-found', text: 'wordpath-found-ink' },
   // Teal is the active trace colour in the Piccline reference. The draft word below the grid mirrors the selected letters.
   picked: { dot: 'wordpath-pick', text: 'wordpath-pick-text' },
@@ -67,24 +67,6 @@ function joining(a: Circle, b: { x: number; y: number; r?: number }): Omit<Line,
   const ux = dx / distance;
   const uy = dy / distance;
   return { x1: a.x + ux * a.r, y1: a.y + uy * a.r, x2: b.x - ux * end, y2: b.y - uy * end };
-}
-
-/** The theme-word symbol: a small round dot. */
-function ThemeMark({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 10 10" className={className} aria-hidden="true" focusable="false" data-mark="theme">
-      <circle cx="5" cy="5" r="3" fill="currentColor" />
-    </svg>
-  );
-}
-
-/** The thread symbol: a small diamond, unlike the theme-word dot in shape as well as state. */
-function ThreadMark({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 10 10" className={className} aria-hidden="true" focusable="false" data-mark="thread">
-      <path d="M5 1 9 5 5 9 1 5Z" fill="currentColor" />
-    </svg>
-  );
 }
 
 const cellOf = (element: Element | null): Cell | null => {
@@ -501,8 +483,6 @@ export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props)
                   >
                     <span aria-hidden="true" className={`wordpath-dot rounded-full ${looks[view.look].dot}`} />
                     <span aria-hidden="true" className="relative">{letter}</span>
-                    {view.look === 'theme' && <ThemeMark className="wordpath-mark" />}
-                    {view.look === 'special' && <ThreadMark className="wordpath-mark" />}
                     {/* A second cue's order remains visible when one of its letters is also picked. */}
                     {view.order !== undefined && (
                       <span aria-hidden="true" className="wordpath-step text-xs font-normal">{view.order}</span>
@@ -519,8 +499,8 @@ export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props)
           {state.found.map((i) => {
             const answer = puzzle.words[i]!;
             return (
-              <li key={i} className="wordpath-found-pill">
-                <span aria-hidden="true">✓ </span>{answer.answer.toLowerCase()}
+              <li key={i} className={`wordpath-found-pill${answer.special ? ' wordpath-thread-pill' : ''}`} data-thread={answer.special ? 'true' : undefined}>
+                <span aria-hidden="true">{answer.special ? '◆ ' : '✓ '}</span>{answer.answer.toLowerCase()}
                 <span className="sr-only">{answer.special ? ' (the thread)' : ' (theme word)'}</span>
               </li>
             );
@@ -533,7 +513,7 @@ export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props)
           <span key={i} className="wordpath-missing-pill" aria-hidden="true">?</span>
         ))}
       </div>
-      <p className="wordpath-status mt-3 text-center text-ink-soft" data-testid="suture-count" data-print-hidden>
+      <p className="sr-only" data-testid="suture-count" data-print-hidden>
         {state.found.length} of {total} {total === 1 ? 'word' : 'words'} found · teal line: the word you are tracing
       </p>
       </div>
@@ -553,24 +533,22 @@ export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props)
           </span>
         </span>
       </div>
-      <p id={`${title}-hint`} className="mt-2 text-center text-sm text-ink-soft" data-testid="suture-hint-progress" data-print-hidden>
+      <p id={`${title}-hint`} className="sr-only" data-testid="suture-hint-progress" data-print-hidden>
         {left > 0
           ? `${left} ${left === 1 ? 'cue' : 'cues'} ready.`
           : `${towardHint} of ${WORDS_PER_HINT} words toward a cue. other words of ${MIN_WORD} letters or more count.`}
       </p>
-      <p className="mt-2 text-center text-ink-soft" data-print-hidden>
+      <p className="sr-only" data-print-hidden>
         find all {total} answers. one of them, the thread, names the theme and runs from one side of the board to the
         other. every letter is used once.
       </p>
-      <p id={help} className="mt-2 text-center text-sm text-ink-soft" data-print-hidden>
+      <p id={help} className="sr-only" data-print-hidden>
         drag across touching letters in any direction, or tap them one by one and press submit (tapping the last letter
         again also submits). on a keyboard, arrows move, enter or space adds a letter, enter on the last letter submits,
         backspace takes one back and escape clears.
       </p>
       <p className="wordpath-print-foot text-sm" data-print-only data-testid="suture-print-foot">{printFoot}</p>
-      <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm text-ink-soft" data-print-hidden>
-        {puzzle.sample && <p>sample puzzle</p>}
-      </div>
+      {puzzle.sample && <p className="sr-only" data-print-hidden>sample puzzle</p>}
       {done && (
         <div ref={result} tabIndex={-1} className="mt-6 rounded-md border border-control p-4" data-testid="suture-result" data-print-hidden>
           <p className="text-lg font-medium">board complete.</p>
