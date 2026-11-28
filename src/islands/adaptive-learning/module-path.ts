@@ -8,7 +8,8 @@
 // Design: docs/design/module-mastery-path.md.
 
 import { dayNumber, type StudyClock } from './calendar';
-import { predictedRecall, recordAnswer, RECALL_TARGET, type CardMemory } from './memory';
+import { recordAnswer, predictedRecall, type CardMemory } from './memory';
+import { reviewDue } from './scheduler';
 
 /** Thinking levels, lowest first (Bloom's revised taxonomy, without "create"). */
 export const THINKING_LEVELS = ['remember', 'understand', 'apply', 'analyze', 'evaluate'] as const;
@@ -44,6 +45,8 @@ export interface AnswerRecord {
   fresh: boolean;
   /** The item answered again. It adds nothing to the evidence either way (retention, not understanding, is what it shows). */
   repeat: boolean;
+  /** Set when the answer came from the diagnostic or the practice exam. */
+  source?: AnswerSource;
   /** How it was asked, and whether a cue was used or the tachyyy timer ran out (a timeout is a miss). */
   technique?: Technique;
   cued: boolean;
@@ -115,6 +118,10 @@ export const TRANSFER_SHARE = 0.5;
 export const CUE_SHARE = 0.5;
 /** How many transferred-credit records are kept per level, apart from the direct ones, so credit cannot crowd out direct evidence. UNVERIFIED. */
 export const TRANSFER_WINDOW = 6;
+/** Share of a level's cards that must be overdue before the level drops one status. UNVERIFIED (see the sweep in the design doc). */
+export const FADE_SHARE = 1;
+/** Days past the scheduler's review day before a card counts as overdue. UNVERIFIED. */
+export const OVERDUE_GRACE_DAYS = 0;
 /** Weights are fractions, so sums are compared with this much tolerance. */
 const WEIGHT_TOLERANCE = 1e-9;
 
@@ -149,8 +156,12 @@ export const SLIP_MISS_SHARE = 0.5;
  * direct answer is older than this many days drops one status. UNVERIFIED.
  */
 export const STALE_AFTER_DAYS = 14;
-/** The levels a student must show on every concept before the practice test is offered. */
-export const READY_LEVELS: readonly ThinkingLevel[] = ['remember', 'understand', 'apply'];
+/** The levels practised adaptively by default end here: remember is practised and shown but is not part of the gate. */
+export const PRACTICE_LEVELS: readonly ThinkingLevel[] = ['remember', 'understand', 'apply'];
+/** The levels a student must show on every concept before the practice test is recommended (brief #1281 section 3.5). */
+export const GATE_LEVELS: readonly ThinkingLevel[] = ['understand', 'apply'];
+/** Same as PRACTICE_LEVELS; the name earlier callers use. Readiness is judged on GATE_LEVELS. */
+export const READY_LEVELS: readonly ThinkingLevel[] = PRACTICE_LEVELS;
 /** The levels added by going deeper. */
 export const DEEPER_LEVELS: readonly ThinkingLevel[] = ['analyze', 'evaluate'];
 
@@ -193,30 +204,50 @@ export function evidenceWeight(correct: boolean, detail: AnswerDetail = {}): num
 
 const isDirect = (record: AnswerRecord): boolean => record.direct;
 
+/**
+ * The card memory after one more answer to an item. Two rules keep retention honest:
+ * - a failed or timed-out review never refreshes the card: its clock stays where it was, its half-life halves and it
+ *   stays overdue until a later success (so a wrong review cannot restore a faded level);
+ * - an event older than the card's newest answer (a device clock that went backward) is ignored for retention.
+ */
+function recordCard(previous: CardMemory | undefined, ok: boolean, clock: StudyClock): CardMemory | undefined {
+  if (!Number.isFinite(clock.now)) return previous;
+  if (previous && (clock.now < previous.lastAt || dayNumber(clock.day) < dayNumber(previous.lastDay))) return previous;
+  if (previous && !ok) return { ...previous, lastCorrect: false, halfLifeDays: Math.max(1, previous.halfLifeDays / 2), spacedSuccesses: 0 };
+  return recordAnswer(previous, ok, clock);
+}
+
 export function recordLevelAnswer(previous: LevelEvidence | undefined, answered: boolean, detail: AnswerDetail = {}): LevelEvidence {
   const correct = answered && !detail.timedOut;
   const before = previous?.recent ?? [];
-  const repeat = detail.itemId !== undefined && (previous?.seen ?? []).includes(detail.itemId);
+  const identified = detail.itemId !== undefined;
+  const repeat = identified && (previous?.seen ?? []).includes(detail.itemId!);
   let streak = 0;
   const direct = before.filter(isDirect);
   for (let i = direct.length - 1; i >= 0 && direct[i]!.correct; i--) streak++;
   const cued = detail.cued === true;
+  // A clock that moves backward cannot make the newest evidence older: the record takes the newest day seen so far.
+  const newestDay = direct.filter((record) => record.day !== undefined).at(-1)?.day;
+  const day = detail.clock ? Math.max(dayNumber(detail.clock.day), newestDay ?? Number.NEGATIVE_INFINITY) : undefined;
   const record: AnswerRecord = {
     correct,
     weight: repeat ? 0 : evidenceWeight(correct, detail),
-    ...(detail.clock ? { day: dayNumber(detail.clock.day) } : {}),
+    ...(day !== undefined ? { day } : {}),
     slip: !correct && streak >= SLIP_RUN,
     direct: true,
-    fresh: correct && !repeat && !cued,
+    // Only an identified item can be shown to be unseen: an event without an item id is never a first-try success.
+    fresh: correct && identified && !repeat && !cued,
     repeat,
+    ...(detail.source ? { source: detail.source } : {}),
     ...(detail.technique ? { technique: detail.technique } : {}),
     cued,
     timedOut: detail.timedOut === true,
   };
   const cards = { ...(previous?.cards ?? {}) };
-  if (detail.itemId !== undefined && detail.clock) {
+  if (identified && detail.clock) {
     // Cued or timed-out right answers do not strengthen memory.
-    cards[detail.itemId] = recordAnswer(cards[detail.itemId], correct && !cued, detail.clock);
+    const card = recordCard(cards[detail.itemId!], correct && !cued, detail.clock);
+    if (card) cards[detail.itemId!] = card;
   }
   return {
     right: (previous?.right ?? 0) + (correct ? 1 : 0),
@@ -224,7 +255,7 @@ export function recordLevelAnswer(previous: LevelEvidence | undefined, answered:
     // A repeated item is not independent evidence either way, so it takes no place in the window. It still feeds the
     // item's memory, which is how forgetting an item shows (see levelAssessment).
     recent: repeat ? before : trimmed([...before, record]),
-    seen: detail.itemId !== undefined && !repeat ? [...(previous?.seen ?? []), detail.itemId] : previous?.seen ?? [],
+    seen: identified && !repeat ? [...(previous?.seen ?? []), detail.itemId!] : previous?.seen ?? [],
     cards,
   };
 }
@@ -371,14 +402,33 @@ export interface LevelAssessment {
   due: boolean;
 }
 
-/** True when the cards behind a level have faded below the recall target (brief: "below 80% recall"). */
+/**
+ * A card is overdue when the existing scheduler's review day for it (scheduler.ts reviewDue) is already behind us.
+ * That day is when predicted recall reaches the 80% line, so an overdue card is one that has crossed it and was
+ * not reviewed in time. A card that is merely due today or tomorrow has not faded yet: this is the grace that keeps a
+ * level studied yesterday from being revoked today (a first right answer has a 3-day half-life, 79.4% recall after
+ * 24 hours, one hair under the line).
+ */
+export function cardOverdue(memory: CardMemory, today: StudyClock): boolean {
+  // A card whose last response failed stays overdue until a later success.
+  if (!memory.lastCorrect) return true;
+  if (dayNumber(today.day) < dayNumber(memory.lastDay)) return false;
+  return dayNumber(today.day) > dayNumber(reviewDue(memory, today)) + OVERDUE_GRACE_DAYS;
+}
+
+/** Cards of a level, newest evidence first, that are overdue for review at `today`. */
+export function overdueCards(evidence: LevelEvidence, today: StudyClock): string[] {
+  return Object.entries(evidence.cards).filter(([, memory]) => cardOverdue(memory, today)).map(([id]) => id);
+}
+
+/**
+ * True when a level's cards have faded: at least FADE_SHARE of its cards are overdue (brief: "below 80% recall").
+ * Judged on the scheduler's overdue test, not on raw recall, so studying across days does not revoke a level.
+ */
 function faded(evidence: LevelEvidence, today: StudyClock): boolean {
-  const memories = Object.values(evidence.cards);
-  if (memories.length > 0) {
-    const recall = memories.reduce((sum, memory) => sum + predictedRecall(memory, today), 0) / memories.length;
-    return recall < RECALL_TARGET;
-  }
-  const newest = evidence.recent.filter(isDirect).at(-1)?.day;
+  const total = Object.keys(evidence.cards).length;
+  if (total > 0) return overdueCards(evidence, today).length / total >= FADE_SHARE;
+  const newest = evidence.recent.filter((record) => record.direct && record.day !== undefined).at(-1)?.day;
   return newest !== undefined && dayNumber(today.day) - newest > STALE_AFTER_DAYS;
 }
 
@@ -391,7 +441,21 @@ function faded(evidence: LevelEvidence, today: StudyClock): boolean {
  * evidence, the first-try answer or the last two answers, so it alone can never make a level sufficient.
  * With `today`, a level whose cards have faded below 80% predicted recall drops one status until it is reviewed.
  */
+const assessmentCache = new WeakMap<LevelEvidence, Map<string, LevelAssessment>>();
+
 export function levelAssessment(evidence: LevelEvidence | undefined, today?: StudyClock): LevelAssessment {
+  // Evidence is never changed once built, so an assessment depends only on it and on the day. Cached because the
+  // next-step picker asks about every level many times.
+  if (!evidence) return assess(evidence, today);
+  const key = today?.day ?? '';
+  let byDay = assessmentCache.get(evidence);
+  if (!byDay) assessmentCache.set(evidence, (byDay = new Map()));
+  let result = byDay.get(key);
+  if (!result) byDay.set(key, (result = assess(evidence, today)));
+  return result;
+}
+
+function assess(evidence: LevelEvidence | undefined, today?: StudyClock): LevelAssessment {
   if (!evidence || (evidence.right + evidence.wrong === 0 && evidence.recent.length === 0)) {
     return { earned: 'not started', status: 'not started', due: false };
   }
@@ -429,6 +493,23 @@ function allShown(shape: ModuleShape, progress: ModuleProgress, levels: readonly
     shape.concepts.every((concept) => levels.every((level) => isShown(levelStatus(progress.concepts.get(concept)?.[level], today))));
 }
 
+/**
+ * DEPARTURE FROM THE BRIEF (for Christian's decision): the diagnostic is 6 to 12 items, and a level cannot reach
+ * "sufficient" on that little evidence (that needs about six direct answers). So a prepared student could never skip
+ * adaptive practice. Smallest fix: a **fast track** at student level, leaving every status word honest. If, in every
+ * concept, both gate levels have a first-try right answer from the diagnostic, no direct miss, and nothing overdue,
+ * the practice test is recommended without adaptive practice. The practice exam is never locked either way.
+ */
+export function diagnosticFastTrack(shape: ModuleShape, progress: ModuleProgress, today?: StudyClock): boolean {
+  if (!progress.diagnosed || shape.concepts.length === 0) return false;
+  return shape.concepts.every((concept) => GATE_LEVELS.every((level) => {
+    const evidence = progress.concepts.get(concept)?.[level];
+    const direct = evidence?.recent.filter(isDirect) ?? [];
+    return direct.some((record) => record.source === 'diagnostic' && record.fresh) && direct.every((record) => record.correct) &&
+      !levelAssessment(evidence, today).due;
+  }));
+}
+
 /** Where the student is in the module, from what they have done so far. Stages are suggestions, never locks. */
 export function stageOf(shape: ModuleShape, progress: ModuleProgress, today?: StudyClock): Stage {
   if (progress.examDone) return 'complete';
@@ -436,7 +517,7 @@ export function stageOf(shape: ModuleShape, progress: ModuleProgress, today?: St
   if (!progress.diagnosed) {
     return shape.practiceTechniques.every((technique) => progress.practised.includes(technique)) ? 'diagnostic' : 'practice';
   }
-  if (!allShown(shape, progress, READY_LEVELS, today)) return 'adaptive';
+  if (!allShown(shape, progress, GATE_LEVELS, today) && !diagnosticFastTrack(shape, progress, today)) return 'adaptive';
   if (progress.wantsDeeper && !allShown(shape, progress, DEEPER_LEVELS, today)) return 'deeper';
   return progress.wantsDeeper ? 'exam' : 'ready';
 }
@@ -445,7 +526,7 @@ export function stageOf(shape: ModuleShape, progress: ModuleProgress, today?: St
  * Where adaptive practice starts for each concept after the diagnostic quiz: the lowest level not yet shown.
  * A concept the quiz never reached starts at "remember".
  */
-export function calibrate(shape: ModuleShape, progress: ModuleProgress, upTo: readonly ThinkingLevel[] = READY_LEVELS, today?: StudyClock): Map<string, ThinkingLevel | undefined> {
+export function calibrate(shape: ModuleShape, progress: ModuleProgress, upTo: readonly ThinkingLevel[] = GATE_LEVELS, today?: StudyClock): Map<string, ThinkingLevel | undefined> {
   const start = new Map<string, ThinkingLevel | undefined>();
   for (const concept of shape.concepts) {
     const levels = progress.concepts.get(concept);
@@ -498,10 +579,21 @@ export function nextStep(
   items: readonly ModuleItem[],
   history: StepHistory,
   random: () => number,
-  upTo: readonly ThinkingLevel[] = READY_LEVELS,
+  upTo: readonly ThinkingLevel[] = GATE_LEVELS,
   today?: StudyClock,
 ): NextResult {
-  const start = calibrate(shape, progress, upTo, today);
+  // A perfect diagnostic that has not lapsed needs no adaptive practice (documented departure, see FAST_TRACK).
+  if (upTo === GATE_LEVELS && diagnosticFastTrack(shape, progress, today)) return { kind: 'done' };
+  const start = new Map(calibrate(shape, progress, upTo, today));
+  // A level that is still shown but has faded (strong dropped to sufficient, say) is due for review: it keeps its
+  // place as shown for readiness, but review has priority over new material. The lowest due level wins.
+  if (today) {
+    for (const concept of shape.concepts) {
+      const levels = progress.concepts.get(concept);
+      const dueLevel = upTo.find((level) => levelAssessment(levels?.[level], today).due);
+      if (dueLevel) start.set(concept, dueLevel);
+    }
+  }
   const lastId = history.usedIds.at(-1);
   const run = history.recentTechniques.slice(-SAME_TECHNIQUE_RUN);
   const tired = run.length === SAME_TECHNIQUE_RUN && run.every((technique) => technique === run[0]) ? run[0] : undefined;
@@ -534,7 +626,7 @@ export function nextStep(
     // A level that is due is reviewed with items already answered there, the most faded first, so the review is
     // what brings it back; new items come once nothing there is left to review.
     const cards = evidence?.cards ?? {};
-    const reviewable = due && today ? all.filter((item) => cards[item.id] !== undefined) : [];
+    const reviewable = due && today ? all.filter((item) => cards[item.id] !== undefined && cardOverdue(cards[item.id]!, today)) : [];
     if (reviewable.length > 0) {
       const weakest = reviewable.reduce((a, b) => (predictedRecall(cards[a.id]!, today!) <= predictedRecall(cards[b.id]!, today!) ? a : b));
       return { kind: 'step', id: weakest.id, concept, level, technique: weakest.technique, reason: 'due for review' };
@@ -581,7 +673,7 @@ export function summarize(shape: ModuleShape, progress: ModuleProgress, today?: 
   for (const concept of shape.concepts) {
     const evidence = progress.concepts.get(concept);
     for (const level of THINKING_LEVELS) levels[level][levelStatus(evidence?.[level], today)] += 1;
-    if (!READY_LEVELS.every((level) => isShown(levelStatus(evidence?.[level], today)))) toStrengthen.push(concept);
+    if (!GATE_LEVELS.every((level) => isShown(levelStatus(evidence?.[level], today)))) toStrengthen.push(concept);
   }
   return { stage: stageOf(shape, progress, today), levels, toStrengthen };
 }

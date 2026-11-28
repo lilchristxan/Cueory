@@ -59,7 +59,7 @@ given. It forms a belief that starts as Beta(1,1) and adds the weighted right an
 | **sufficient** | all of: the 10th percentile of the belief is at least 0.70 (brief); at least 3 of direct weighted evidence (brief); at least one first-try right answer on an item not seen before, with no cue (brief); the last two direct answers right |
 | strong | sufficient, and the 10th percentile is at least 0.80 (unverified) |
 
-Sufficient and strong both count as shown for readiness. Six ordinary right answers (learning questions, weight 1)
+Sufficient and strong both count as shown. Readiness (brief section 3.5) needs **understand and apply** sufficient for every objective; remember stays available for practice and is never required for the gate. Six ordinary right answers (learning questions, weight 1)
 reach sufficient and ten reach strong; flashcard flips need eleven and nineteen because each counts half.
 
 ### How much one answer shows
@@ -104,14 +104,23 @@ evidence, the first-try answer or the last two answers, so transferred credit al
 sufficient and can never unlock the practice exam. A miss gives nothing downward, and a repeated item gives no
 credit. Only the latest 6 transferred records are kept (unverified), so credit cannot crowd out direct evidence.
 
-### Retention (brief; replaces a fixed number of days)
+### Retention (brief, calibrated; replaces a fixed number of days)
 
-Retention stays with the memory model in `memory.ts`. Each answered item has a card memory at the supplied clock.
-When the average predicted recall of a level's cards falls under 80% (brief), the level **drops one status** until it
-is reviewed, and the next step is a review: it picks a card already answered at that level, the most faded first, and
-says "due for review". Averaging over the level's cards is an unverified reading of "an LO's cards fall below 80%".
-Only where a level has no card memory (answers recorded without an item id) a fixed fallback applies: a newest
-direct answer more than 14 days old drops one status (unverified).
+Retention stays with the memory model in `memory.ts` and the scheduler in `scheduler.ts`; neither is changed. Each
+answered item has a card memory. A card is **overdue** when the scheduler's review day for it (`reviewDue`) has
+passed: that is the day its predicted recall reached the 80% line (brief), so an overdue card has crossed it and was
+not reviewed in time. A card studied yesterday is not overdue yet. This matters: a first right answer has a 3-day
+half-life, which is 79.4% recall after 24 hours, one hair under 80%, so judging raw recall revoked every level the day
+after it was shown. When **all** the level's cards are overdue (FADE_SHARE = 1, unverified, from the sweep below) the
+level **drops one status** until it is reviewed, and the next step is a review: a card already answered at that level,
+the most faded first, with the reason "due for review". A level that is still shown after the drop (strong falling to
+sufficient) is still offered for review: readiness and review priority are separate.
+
+A failed or timed-out review never refreshes a card: its clock stays put, its half-life halves and it stays overdue
+until a later success, so a wrong review cannot restore readiness. An event dated before the card's newest answer (a
+device clock that went backward) is ignored for retention, is still counted as an answer, and takes the newest day
+seen. Where a level has no card memory (answers without an item id) a fixed fallback applies: newest direct answer
+more than 14 days old drops one status (unverified).
 
 ### Interleaving (brief)
 
@@ -119,9 +128,24 @@ When the next step would be the same concept for a third time in a row, another 
 
 ## The diagnostic and calibration
 
-The quiz after practice is ordinary evidence, recorded the same way as any answer. Calibration then reads it: each
-concept starts adaptive practice at the lowest level it has not shown. A concept the quiz did not reach starts at
-remember. A student who shows every concept through apply on the quiz goes straight to "ready".
+The quiz after practice is ordinary evidence at full diagnostic weight (1.0, brief). The authored policy (brief
+section 3.3, course map section 4) is one understand item per objective at difficulty 2, with one follow-up after a
+right answer: 6 to 12 items for six objectives. Calibration reads it: each concept starts adaptive practice at the
+lowest gate level it has not shown.
+
+**What the diagnostic can and cannot establish.** It sets a *starting status* (gap or developing) for each objective.
+It cannot make a level sufficient: that takes about six direct right answers per level, and the brief allows at most
+two diagnostic items per objective. The brief's numbers cannot all hold at once: "sufficient needs a 0.70 lower bound
+and 3 evidence units" against "the diagnostic is one item and one follow-up" means a prepared student could never
+skip adaptive practice.
+
+**Smallest departure (for Christian's decision): the fast track.** If, in every objective, both gate levels have a
+first-try right diagnostic answer, nothing was missed, and nothing is overdue, the practice test is recommended
+without adaptive practice (the practice exam is never locked either way). The status words stay honest (they still
+say developing). To cover both gate levels in 12 items, the follow-up climbs from understand to apply instead of from
+difficulty 2 to difficulty 3 at the same tier. A student who answers everything right from a slip rate of 8% passes
+the fast track about 37% of the time, so most prepared students still do a little adaptive practice. The alternative
+(a diagnostic of about 36 items) was rejected as too long.
 
 ## Choosing the next step
 
@@ -182,47 +206,65 @@ only from his reviewed batches; this repository holds labeled samples only.
 ## Simulation: old rule against new rule
 
 `scripts/simulate-module-path.ts` runs synthetic students (6 sample concepts each, 12 items per technique and level).
-Each has a hidden true level per concept (none, remember, understand, apply), answers with probabilities that depend
-on that level, the technique (recognition can be guessed) and a slip rate, learns a little from practice, forgets a
-little over time and half of them take one long break; a day holds 10 steps. The path is a diagnostic of six items
-per concept, then adaptive steps until "done" or the cap of 600. "Old" is the equal-weight rule that never forgets
-(kept in the script only). The third column is the new rule with the retention drop switched off, to show which gate
-holds students back. Every probability in the model is an unverified assumption, so read the table as a comparison,
-not a measurement. Counts come with their denominators.
-
-The table below is from 300 students, seed 7 (the first four rows are measured right after the diagnostic, before any
-adaptive practice, so they say whether the diagnostic itself placed learners too high or too low; the "ready" row is
-measured at the moment the path says done; the "final" rows after the finish).
+20% are prepared (every concept truly mastered); the rest have a hidden true level per concept (none, remember,
+understand, apply). They answer with probabilities that depend on that level, the technique (recognition can be
+guessed) and a slip rate of 8%, learn a little from practice, forget a little over time, and half of them take one
+long break; a day holds 10 steps. The path is the authored diagnostic above (about 10 items, the same for every rule),
+then adaptive steps until "done" or the cap of 600. "Old" is the equal-weight rule that never forgets, with no fast
+track (kept in the script only). The third column switches the retention drop off. Every probability in the model is an
+unverified assumption, so read the table as a comparison. Counts come with their denominators. The first four rows are
+measured right after the diagnostic, before any adaptive practice; the "ready" rows at the moment the path says done;
+the "final" rows after the finish.
 
 | Measure (unverified model; levels or students counted) | Old rule | New rule | New rule, no retention drop |
 | --- | ---: | ---: | ---: |
-| After the diagnostic: placed shown, truly not mastered (too high) | 6.9% (175 of 2535) | 0 of 0 | 0 of 0 |
-| After the diagnostic: placed developing or higher, truly not mastered | 28.9% (1185 of 4102) | 23.9% (902 of 3775) | 23.9% (902 of 3775) |
-| After the diagnostic: truly mastered, not placed shown (too low) | 21.3% (638 of 2998) | 100.0% (2998 of 2998) | 100.0% (2998 of 2998) |
-| After the diagnostic: truly mastered, placed at gap | 2.7% (81 of 2998) | 4.2% (125 of 2998) | 4.2% (125 of 2998) |
-| During practice: level first marked shown, truly not mastered | 7.2% (373 of 5206) | 0.0% (0 of 1723) | 0.1% (4 of 3686) |
-| At the moment of "ready": students with a level truly not mastered | 66.0% (132 of 200) | 0 of 0 | 8.3% (1 of 12) |
-| Final: shown, truly not mastered | 13.3% (695 of 5206) | 0.2% (1 of 617) | 7.5% (276 of 3686) |
-| Final: truly mastered, not shown (too low) | 0.2% (7 of 4518) | 82.4% (2883 of 3499) | 18.5% (774 of 4184) |
-| Median steps to done (students who finished) | 99 | none | 242 |
-| Never done within the cap | 33.3% (100 of 300) | 100.0% (300 of 300) | 96.0% (288 of 300) |
-| Techniques met per student (mean) | 5.52 | 5.15 | 5.73 |
+| After the diagnostic: placed shown, truly not mastered (too high) | 0 of 0 | 0 of 0 | 0 of 0 |
+| After the diagnostic: placed developing or higher, truly not mastered | 16.3% (332 of 2033) | 16.3% (332 of 2033) | 16.3% (332 of 2033) |
+| After the diagnostic: truly mastered, not placed shown (too low) | 100.0% (1945 of 1945) | 100.0% (1945 of 1945) | 100.0% (1945 of 1945) |
+| After the diagnostic: truly mastered, placed at gap | 12.5% (244 of 1945) | 12.5% (244 of 1945) | 12.5% (244 of 1945) |
+| During practice: level first marked shown, truly not mastered | 11.0% (292 of 2659) | 0.1% (2 of 1574) | 0.2% (3 of 1491) |
+| At the moment of "ready": students with a level truly not mastered | 27.9% (31 of 111) | 4.8% (3 of 62) | 3.3% (2 of 61) |
+| Final: shown, truly not mastered | 18.6% (494 of 2659) | 1.3% (16 of 1224) | 10.7% (159 of 1491) |
+| Final: truly mastered, not shown (too low) | 5.1% (116 of 2281) | 51.0% (1255 of 2463) | 38.4% (831 of 2163) |
+| Prepared students (all mastered) ready from the diagnostic alone | 0.0% (0 of 64) | 48.4% (31 of 64) | 48.4% (31 of 64) |
+| Prepared students who reach done within the cap | 100.0% (64 of 64) | 84.4% (54 of 64) | 82.8% (53 of 64) |
+| Ready from the diagnostic alone, but a level not mastered | 0 of 0 | 3.1% (1 of 32) | 3.1% (1 of 32) |
+| Diagnostic items asked per student (mean) | 10.1 | 10.1 | 10.1 |
+| Median steps to done (students who finished) | 25 | 0 | 0 |
+| Never done within the cap | 63.0% (189 of 300) | 79.3% (238 of 300) | 79.7% (239 of 300) |
+| Techniques met per student (mean) | 3.73 | 3.42 | 3.13 |
 
 
-What it says, in words:
+Before this calibration (commit 34638b64, 2 items per level, raw recall, remember in the gate) the new rule made no
+readiness decision at all: 0 of 0 at "ready", 100% never done. Now there are readiness decisions with denominators.
 
-- The new rule is much more careful about calling a level shown: during practice almost no level is marked shown
-  that the student has not mastered, and the old rule's students are called ready while a level is truly not
-  mastered in two cases out of three.
-- It is far too strict at these starting values. After the diagnostic no level is yet sufficient (six items per
-  concept cannot reach the 0.70 lower bound), so the diagnostic can only separate gap from developing. Over 600
-  steps no simulated student reached done at all, and with the retention drop off only 4% did. The two gates that
-  hold students back are the lower bound of 0.70 combined with half-weight flashcards and matching (many answers),
-  and the retention drop (a card answered once has a 3-day half-life, so a level is below 80% recall the day after
-  it was practised, which keeps the readiness gate from ever holding for all levels at once).
-- These are Christian's and the brief's starting values, not the engine's final ones. Tuning candidates: a lower
-  bound near 0.60 for sufficient, fewer evidence units for matching, or reading the 80% line over the cards still
-  being reviewed. Each needs his say, because the brief fixes them.
+**Targets and result** (300 students, seed 7, UNVERIFIED model):
+
+| Target | Result |
+| --- | --- |
+| A prepared student can be ready from the diagnostic | yes: 31 of 64 prepared students (48%), and the engine test covers the perfect path |
+| Most students who truly master the material reach done within the cap | 54 of 64 (84%) |
+| Falsely ready at the moment of done stays low | 3 of 62 (4.8%); old rule 31 of 111 (27.9%) |
+| Final shown-but-not-mastered well below the old rule's | 1.3% (16 of 1224); old rule 18.6% |
+
+The remaining "never done" students (79%) are mostly students who truly have not mastered some concept; the 600-step
+cap and slow learning keep them short of ready, which is the intended behaviour, not a failure.
+
+**Sweep behind the retention numbers** (new rule only, 120 students, cap 400, diagnostic and everything else as above;
+prepared students who reach done / falsely ready at done / final shown-but-not-mastered):
+
+| Fade share | Lower bound | Grace days | Prepared done | Falsely ready | Final too high |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 0.5 | 0.70 | 0 | 10 of 23 | 0 of 10 | 0 of 130 |
+| 0.5 | 0.60 | 0 | 16 of 23 | 0 of 17 | 3 of 299 |
+| 0.75 | 0.70 | 0 | 11 of 23 | 1 of 11 | 3 of 200 |
+| 0.75 | 0.60 | 1 | 23 of 23 | 1 of 29 | 4 of 444 |
+| **1.0** | **0.70** | **0** | **20 of 23** | **1 of 23** | **6 of 488** |
+| 1.0 | 0.60 | 0 | 22 of 23 | 2 of 30 | 13 of 595 |
+
+Judging only cards the scheduler calls overdue, and fading a level only when all its cards are overdue, meets the
+targets while keeping the brief's 0.70 lower bound, so that is the smallest departure chosen. Lowering the bound to 0.60
+helps completion a little at the price of more false "ready".
 
 ## What is built, and what is next
 
@@ -240,6 +282,21 @@ Next, in order:
 3. The content columns in the Excel template and the seed-file check.
 4. Database tables for module evidence and the course rollup, with row-level security, export and delete.
 5. The module page and course page.
+
+## Departures from brief #1281, for Christian's decision
+
+All unverified, all chosen as the smallest change that meets the targets above. Everything not listed uses the brief's
+numbers (0.70 lower bound, 3 direct evidence units, a first-try right answer, weights 0.5 / 0.75 / 1.0 / 1.25, cue
+halves, timeout is a miss, transfer 0.5, five status words, understand and apply for readiness).
+
+1. **Retention judged on the scheduler.** A level fades only when all of its cards are past the scheduler's review day
+   (brief: "an LO's cards fall below 80% recall"). Raw recall revoked levels the day after they were shown.
+2. **Diagnostic follow-up climbs a tier** (understand, then apply) instead of difficulty 3 at the same tier (course map
+   section 4), so one short diagnostic touches both gate levels.
+3. **Diagnostic fast track.** A perfect diagnostic recommends the practice test without adaptive practice, because the
+   brief's diagnostic cannot reach "sufficient" on its own. The practice exam stays open regardless.
+4. **Other starting values the brief does not fix:** window of 20 answers, "strong" at a 0.80 lower bound, "gap" under
+   a posterior mean of one half, case questions 1.25, transfer window of 6, guess scaling by option count, slip rule.
 
 ## Needs Christian
 

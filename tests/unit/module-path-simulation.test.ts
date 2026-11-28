@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { markdownTable, seededRandom, simulate, type Count } from '../../scripts/simulate-module-path';
 
 // A small fixed-seed run on synthetic students; every number is an unverified modelling assumption.
-const options = { students: 25, seed: 11 };
+const options = { students: 40, seed: 11, stepCap: 150 };
 const share = ({ n, of }: Count): number => (of === 0 ? 0 : n / of);
 
 describe('module path simulation', () => {
@@ -17,15 +17,26 @@ describe('module path simulation', () => {
 
   it('measures the diagnostic right after it ends, with denominators, and at the moment of readiness', () => {
     for (const report of [old, next]) {
-      // Every student and level is counted after the diagnostic: 6 concepts, 3 ready levels.
+      // Both gate levels of every concept are counted after the diagnostic: 6 concepts, 2 levels.
       expect(report.diagnosticTooLow.of).toBe(report.diagnosticMasteredAtGap.of);
-      expect(report.diagnosticTooHigh.of).toBeLessThanOrEqual(options.students * 18);
+      expect(report.diagnosticTooHigh.of).toBeLessThanOrEqual(options.students * 12);
+      // The authored diagnostic asks one understand item per concept and one follow-up after a right answer: 6 to 12.
+      expect(report.diagnosticItems).toBeGreaterThanOrEqual(6);
+      expect(report.diagnosticItems).toBeLessThanOrEqual(12);
       expect(report.diagnosticDevelopingTooHigh.n).toBeLessThanOrEqual(report.diagnosticDevelopingTooHigh.of);
       expect(report.falselyReady.of).toBe(options.students - report.neverDone.n);
     }
     // The old rule declares students ready who have not mastered every level; the new rule is stricter.
     expect(old.falselyReady.n).toBeGreaterThan(0);
-    expect(share(next.falselyReady)).toBeLessThanOrEqual(share(old.falselyReady));
+    expect(share(next.falselyReady)).toBeLessThan(share(old.falselyReady));
+    expect(next.falselyReady.of).toBeGreaterThan(0); // there are readiness decisions to measure
+  });
+
+  it('some prepared students are ready from the diagnostic alone, and almost none of the others are', () => {
+    expect(next.preparedSkipped.of).toBeGreaterThan(0);
+    expect(next.preparedSkipped.n).toBeGreaterThan(0);
+    expect(old.preparedSkipped.n).toBe(0); // the old rule has no fast track
+    expect(next.falselyReadyAtDiagnostic.n).toBeLessThanOrEqual(1);
   });
 
   it('is deterministic for a fixed seed, and the seed matters', () => {

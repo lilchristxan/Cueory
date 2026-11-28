@@ -10,7 +10,7 @@
  */
 import { calendarDay, DAY_MS, dayNumber, type StudyClock } from '../src/islands/adaptive-learning/calendar';
 import {
-  emptyProgress, isShown, levelStatus, nextStep, READY_LEVELS, recordModuleAnswer, RECOGNITION_TECHNIQUES, TECHNIQUES_FOR_LEVEL,
+  emptyProgress, GATE_LEVELS, isShown, levelStatus, nextStep, READY_LEVELS, recordModuleAnswer, RECOGNITION_TECHNIQUES, TECHNIQUES_FOR_LEVEL,
   type AnswerRecord, type LevelEvidence, type ModuleItem, type ModuleProgress, type ModuleShape, type NextResult, type Technique, type ThinkingLevel,
 } from '../src/islands/adaptive-learning/module-path';
 
@@ -21,6 +21,8 @@ export interface SimulationOptions {
   seed: number;
   /** New rule only: false switches off the retention drop (the rule is then judged on evidence alone). Default true. */
   retention?: boolean;
+  /** Adaptive steps allowed per student. Default STEP_CAP. */
+  stepCap?: number;
 }
 
 /** A count with its denominator, so a share is never reported without what it is a share of. */
@@ -50,6 +52,14 @@ export interface RuleReport {
   medianStepsToDone: number | null;
   /** Students who never reached "done" within the cap. */
   neverDone: Count;
+  /** Prepared students (every concept truly mastered) declared ready by the diagnostic alone, with no adaptive step. */
+  preparedSkipped: Count;
+  /** Prepared students who reached "done" within the cap. */
+  preparedDone: Count;
+  /** Students declared ready by the diagnostic alone who had a level truly not mastered. */
+  falselyReadyAtDiagnostic: Count;
+  /** Mean number of diagnostic items a student was asked (the authored policy asks 6 to 12 for six concepts). */
+  diagnosticItems: number;
   /** Mean number of different techniques a student met in the adaptive steps. */
   techniqueVariety: number;
 }
@@ -67,7 +77,8 @@ const LEARN_CHANCE = 0.12; // per answer at the level just above the true level
 const FORGET_PER_DAY = 0.005; // chance per day that a concept slips down one level
 const BREAK_CHANCE = 0.5; // share of students who take one long break
 const OPTIONS_CYCLE = [3, 4, 4, 5];
-const DIAGNOSTIC_PER_LEVEL = 2;
+/** Share of synthetic students who truly master every concept from the start (known ability). */
+export const PREPARED_SHARE = 0.2;
 /** Items the synthetic module has for each concept, level and technique. Assumption: real modules may have fewer. */
 export const ITEMS_PER_TECHNIQUE = 12;
 
@@ -149,16 +160,21 @@ interface StudentRun {
   placed: Tally;
   ready: Tally;
   final: Record<'high' | 'low', Tally>;
+  prepared: boolean;
+  skipped: boolean;
+  skippedWrong: boolean;
+  diagnosticItems: number;
   techniques: number;
 }
 const tally = (): Tally => ({ n: 0, of: 0 });
 const add = (target: Tally, hit: boolean, counted = true): void => { if (counted) target.of += 1; if (counted && hit) target.n += 1; };
 
-function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRun {
+function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: number): StudentRun {
   const random = seededRandom(seed); // the same seed gives both rules the same student and the same luck stream
   const draw = seededRandom(seed ^ 0x9e3779b9);
   const first = dayNumber('2028-01-01');
-  const trueLevel = new Map(conceptIds.map((concept) => [concept, Math.floor(random() * 4)]));
+  const prepared = random() < PREPARED_SHARE;
+  const trueLevel = new Map(conceptIds.map((concept) => [concept, prepared ? 3 : Math.floor(random() * 4)]));
   const breakAt = random() < BREAK_CHANCE ? 3 + Math.floor(random() * 5) : -1;
   const breakDays = 20 + Math.floor(random() * 30);
 
@@ -169,7 +185,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRu
   const run: StudentRun = {
     stepsToDone: undefined,
     diagnostic: { high: tally(), low: tally(), developingHigh: tally(), masteredGap: tally() },
-    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, techniques: 0,
+    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, prepared: false, skipped: false, skippedWrong: false, diagnosticItems: 0, techniques: 0,
   };
 
   // 0 = gap or not started, 1 = developing, 2 = shown (sufficient or strong).
@@ -180,7 +196,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRu
   };
   const mastered = (concept: string, level: ThinkingLevel): boolean => trueLevel.get(concept)! >= levelNumber(level);
 
-  const ask = (item: ModuleItem, source?: 'diagnostic'): void => {
+  const ask = (item: ModuleItem, source?: 'diagnostic'): boolean => {
     const today = clockFor(day, first);
     const options = optionsOf(item.id);
     const level = trueLevel.get(item.concept)!;
@@ -201,22 +217,25 @@ function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRu
       wasShown.add(key);
       add(run.placed, !mastered(item.concept, item.level));
     }
+    return correct;
   };
 
-  // Diagnostic: a few items per concept, across the ready levels, techniques taken in turn.
-  for (const concept of conceptIds) {
-    for (const level of READY_LEVELS) {
+  // Diagnostic (course map section 4 step 3, authored policy): one understand item per objective at difficulty 2; a
+  // right answer opens one follow-up (here at the apply tier, difficulty 3). That is 6 to 12 items for six concepts.
+  conceptIds.forEach((concept, index) => {
+    for (const level of GATE_LEVELS) {
       const fitting = TECHNIQUES_FOR_LEVEL[level];
-      for (let n = 0; n < DIAGNOSTIC_PER_LEVEL; n++) {
-        const technique = fitting[(n + conceptIds.indexOf(concept)) % fitting.length]!;
-        ask(ITEMS.find((item) => item.concept === concept && item.level === level && item.technique === technique && item.id.endsWith(`:${n + 1}`))!, 'diagnostic');
-      }
+      const technique = fitting[index % fitting.length]!;
+      const item = ITEMS.find((candidate) => candidate.concept === concept && candidate.level === level && candidate.technique === technique && candidate.id.endsWith(':1'))!;
+      run.diagnosticItems += 1;
+      if (!ask(item, 'diagnostic')) break;
     }
-  }
+  });
+  run.prepared = prepared;
   // Placement right after the diagnostic, before any adaptive practice has had a chance to correct it.
   const afterDiagnostic = clockFor(day, first);
   for (const concept of conceptIds) {
-    for (const level of READY_LEVELS) {
+    for (const level of GATE_LEVELS) {
       const placed = rank(concept, level, afterDiagnostic);
       const truly = mastered(concept, level);
       add(run.diagnostic.high, !truly, placed === 2);
@@ -232,7 +251,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRu
   const seen = new Set<Technique>();
   let steps = 0;
   const next = (today: StudyClock): NextResult => nextStep(
-    SHAPE, rule === 'new' ? progress : baselineProgress(results), ITEMS, { usedIds, recentTechniques, recentConcepts }, random, READY_LEVELS, rule === 'new' && retention ? today : undefined);
+    SHAPE, rule === 'new' ? { ...progress, diagnosed: true } : baselineProgress(results), ITEMS, { usedIds, recentTechniques, recentConcepts }, random, GATE_LEVELS, rule === 'new' && retention ? today : undefined);
 
   for (;;) {
     const today = clockFor(day, first);
@@ -240,10 +259,12 @@ function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRu
     if (result.kind === 'done') {
       run.stepsToDone = steps;
       // The moment of readiness: is every level truly mastered right now?
-      add(run.ready, conceptIds.some((concept) => READY_LEVELS.some((level) => !mastered(concept, level))));
+      const wrong = conceptIds.some((concept) => GATE_LEVELS.some((level) => !mastered(concept, level)));
+      add(run.ready, wrong);
+      if (steps === 0) { run.skipped = true; run.skippedWrong = wrong; }
       break;
     }
-    if (result.kind === 'no content' || steps >= STEP_CAP) break;
+    if (result.kind === 'no content' || steps >= stepCap) break;
     ask(ITEMS.find((item) => item.id === result.id)!);
     usedIds.push(result.id);
     recentTechniques.push(result.technique);
@@ -263,7 +284,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRu
 
   const finish = clockFor(day, first);
   for (const concept of conceptIds) {
-    for (const level of READY_LEVELS) {
+    for (const level of GATE_LEVELS) {
       const truly = mastered(concept, level);
       const shown = rank(concept, level, finish) === 2;
       add(run.final.high, !truly, shown);
@@ -274,8 +295,8 @@ function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRu
   return run;
 }
 
-export function simulate(rule: RuleName, { students, seed, retention = true }: SimulationOptions): RuleReport {
-  const runs = Array.from({ length: students }, (_, index) => runStudent(rule, seed * 100_003 + index + 1, retention));
+export function simulate(rule: RuleName, { students, seed, retention = true, stepCap = STEP_CAP }: SimulationOptions): RuleReport {
+  const runs = Array.from({ length: students }, (_, index) => runStudent(rule, seed * 100_003 + index + 1, retention, stepCap));
   const total = (pick: (run: StudentRun) => Tally): Count => ({
     n: runs.reduce((sum, run) => sum + pick(run).n, 0),
     of: runs.reduce((sum, run) => sum + pick(run).of, 0),
@@ -295,6 +316,10 @@ export function simulate(rule: RuleName, { students, seed, retention = true }: S
     finalTooLow: total((run) => run.final.low),
     medianStepsToDone: done.length === 0 ? null : done[Math.floor((done.length - 1) / 2)]!,
     neverDone: { n: students - done.length, of: students },
+    preparedSkipped: { n: runs.filter((r) => r.prepared && r.skipped).length, of: runs.filter((r) => r.prepared).length },
+    preparedDone: { n: runs.filter((r) => r.prepared && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.prepared).length },
+    falselyReadyAtDiagnostic: { n: runs.filter((r) => r.skippedWrong).length, of: runs.filter((r) => r.skipped).length },
+    diagnosticItems: runs.reduce((sum, run) => sum + run.diagnosticItems, 0) / students,
     techniqueVariety: runs.reduce((sum, run) => sum + run.techniques, 0) / students,
   };
 }
@@ -312,6 +337,10 @@ export function markdownTable(reports: readonly RuleReport[]): string {
     ['At the moment of "ready": students with a level truly not mastered', (r) => share(r.falselyReady)],
     ['Final: shown, truly not mastered', (r) => share(r.finalTooHigh)],
     ['Final: truly mastered, not shown (too low)', (r) => share(r.finalTooLow)],
+    ['Prepared students (all mastered) ready from the diagnostic alone', (r) => share(r.preparedSkipped)],
+    ['Prepared students who reach done within the cap', (r) => share(r.preparedDone)],
+    ['Ready from the diagnostic alone, but a level not mastered', (r) => share(r.falselyReadyAtDiagnostic)],
+    ['Diagnostic items asked per student (mean)', (r) => r.diagnosticItems.toFixed(1)],
     ['Median steps to done (students who finished)', (r) => (r.medianStepsToDone === null ? 'none' : String(r.medianStepsToDone))],
     ['Never done within the cap', (r) => share(r.neverDone)],
     ['Techniques met per student (mean)', (r) => r.techniqueVariety.toFixed(2)],
