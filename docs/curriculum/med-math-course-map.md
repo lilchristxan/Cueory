@@ -35,8 +35,9 @@ Ids use the prefix `MMU1`, `MMU2`, `MMU3` and `MMS` so they cannot clash with th
 - **Public label and machine id.** The ids above are the stable public labels. The adaptive content schema (module
   content, PR #1283) accepts only lowercase letters, digits and single dashes, so the machine id is the public label
   in lowercase, with nothing else changed. Example: `MMU1-M01-O01` becomes `mmu1-m01-o01` in the `lo` field, and
-  `MMU1-M01-L01` becomes `mmu1-m01-l01` as the lesson id. The rule is one-to-one in both directions, so authors write
-  the label and the batch tool lowercases it. Anchor ids are authored in the machine form directly (for example
+  `MMU1-M01-L01` becomes `mmu1-m01-l01` as the lesson id. The rule is one-to-one in both directions. The batch tool
+  does not convert today, so authors type the lowercase machine id in batch input; automatic lowercasing is only a
+  possible future feature. Anchor ids are authored in the machine form directly (for example
   `mmu1-m01-l01-a01`, following the same rule).
 
 | unit | modules | lessons | objectives |
