@@ -88,6 +88,10 @@ describe('module path: stages', () => {
 });
 
 describe('module path: calibration and the next step', () => {
+  const stepOf = (result: ReturnType<typeof nextStep>) => {
+    if (result.kind !== 'step') throw new Error(`expected a step, got ${result.kind}`);
+    return result;
+  };
   const diagnosed = (p: ModuleProgress): ModuleProgress => ({ ...p, watched: true, read: true, diagnosed: true });
 
   it('starts each concept at the lowest level the quiz did not show', () => {
@@ -100,18 +104,18 @@ describe('module path: calibration and the next step', () => {
 
   it('works on foundations first, puts a recent miss ahead, and says why', () => {
     let p = diagnosed(shownOn(emptyProgress(), ['remember'], ['sample-a']));
-    const first = nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0)!;
+    const first = stepOf(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0));
     expect(first).toMatchObject({ concept: 'sample-b', level: 'remember', technique: 'flashcards', reason: 'not practised yet' });
     p = answer(p, 'sample-b', 'remember', [true, false]);
     p = answer(p, 'sample-a', 'remember', [false]);
-    const second = nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0)!;
+    const second = stepOf(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0));
     expect(second.reason).toBe('you missed this recently');
     expect(second.level).toBe('remember');
   });
 
   it('only offers techniques that fit the level, and changes technique after two in a row', () => {
     const p = diagnosed(emptyProgress());
-    const step = nextStep(shape, p, items, { usedIds: [], recentTechniques: ['flashcards', 'flashcards'] }, () => 0)!;
+    const step = stepOf(nextStep(shape, p, items, { usedIds: [], recentTechniques: ['flashcards', 'flashcards'] }, () => 0));
     expect(step.level).toBe('remember');
     expect(step.technique).not.toBe('flashcards');
     expect(TECHNIQUES_FOR_LEVEL.remember).toContain(step.technique);
@@ -120,24 +124,45 @@ describe('module path: calibration and the next step', () => {
   it('never repeats the item just shown and prefers items not used this session', () => {
     const p = diagnosed(emptyProgress());
     const used = items.filter((item) => item.concept === 'sample-a' && item.level === 'remember').slice(0, 5).map((item) => item.id);
-    const step = nextStep(shape, p, items, { usedIds: used, recentTechniques: [] }, () => 0)!;
+    const step = stepOf(nextStep(shape, p, items, { usedIds: used, recentTechniques: [] }, () => 0));
     expect(used).not.toContain(step.id);
   });
 
   it('says "next level up" when a concept moves on, and stops when everything is shown', () => {
     let p = diagnosed(shownOn(emptyProgress(), ['remember']));
-    expect(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0)!.reason).toBe('next level up');
+    expect(stepOf(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0)).reason).toBe('next level up');
     p = shownOn(p, ['understand', 'apply']);
-    expect(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0)).toBeUndefined();
+    expect(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0)).toEqual({ kind: 'done' });
     // Going deeper has its own list of levels.
-    expect(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0, ['analyze', 'evaluate'])!.level).toBe('analyze');
+    expect(stepOf(nextStep(shape, p, items, { usedIds: [], recentTechniques: [] }, () => 0, ['analyze', 'evaluate'])).level).toBe('analyze');
   });
 
   it('skips a concept with no content at its level instead of stalling', () => {
     const p = diagnosed(emptyProgress());
     const onlyB = items.filter((item) => item.concept === 'sample-b');
-    expect(nextStep(shape, p, onlyB, { usedIds: [], recentTechniques: [] }, () => 0.99)!.concept).toBe('sample-b');
-    expect(nextStep(shape, p, [], { usedIds: [], recentTechniques: [] }, () => 0)).toBeUndefined();
+    expect(stepOf(nextStep(shape, p, onlyB, { usedIds: [], recentTechniques: [] }, () => 0.99)).concept).toBe('sample-b');
+    expect(nextStep(shape, p, [], { usedIds: [], recentTechniques: [] }, () => 0)).toEqual({ kind: 'no content', concepts: ['sample-a', 'sample-b'] });
+  });
+
+  it('a module whose only item was just shown reports "no content", never "done"', () => {
+    const one: ModuleShape = { concepts: ['sample-a'], practiceTechniques: [] };
+    const only: ModuleItem[] = [{ id: 'only', concept: 'sample-a', level: 'remember', technique: 'flashcards' }];
+    const p = answer(diagnosed(emptyProgress()), 'sample-a', 'remember', [true]);
+    expect(stageOf(one, p)).toBe('adaptive');
+    expect(nextStep(one, p, only, { usedIds: ['only'], recentTechniques: ['flashcards'] }, () => 0)).toEqual({ kind: 'no content', concepts: ['sample-a'] });
+    // The same item is offered again once something else has been shown in between.
+    expect(stepOf(nextStep(one, p, only, { usedIds: ['only', 'other'], recentTechniques: [] }, () => 0)).id).toBe('only');
+  });
+
+  it('changes technique after two in a row even when unused items remain in the tired one', () => {
+    const p = diagnosed(emptyProgress());
+    const pool = items.filter((item) => item.concept === 'sample-a' && item.level === 'remember');
+    const matching = pool.filter((item) => item.technique === 'matching').map((item) => item.id);
+    const labelIt = pool.filter((item) => item.technique === 'label it').map((item) => item.id);
+    const flash = pool.find((item) => item.technique === 'flashcards')!.id;
+    // Every non-flashcard item was used earlier; one unused flashcard remains; flashcards just ran twice.
+    const step = stepOf(nextStep(shape, p, pool, { usedIds: [...matching, ...labelIt, flash, 'x'], recentTechniques: ['flashcards', 'flashcards'] }, () => 0));
+    expect(step.technique).not.toBe('flashcards');
   });
 });
 

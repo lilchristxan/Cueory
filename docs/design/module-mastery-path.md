@@ -62,7 +62,9 @@ remember. A student who shows every concept through apply on the quiz goes strai
 4. Use the best-fitting technique, but never the same technique more than twice in a row when another fits.
 5. Tell the student why: "you missed this recently", "not practised yet", "one more to lock it in" or "next level up".
 
-When nothing is left at the ready levels, the student is ready. The 20-item session cap and spaced review from
+When every concept is shown at the ready levels the engine answers "done" and the student is ready. If concepts are
+still learning but the module has no item to offer for them (too little content, or its only item was just shown), it
+answers "no content" and names them; that is never treated as ready. The 20-item session cap and spaced review from
 adaptive-learning.md still apply around this.
 
 ## What the pages can say

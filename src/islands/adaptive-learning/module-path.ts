@@ -150,6 +150,16 @@ export function calibrate(shape: ModuleShape, progress: ModuleProgress, upTo: re
   return start;
 }
 
+/**
+ * What adaptive practice can do next: a step to take; nothing because every concept is shown at these levels
+ * ("done"); or nothing because the concepts still learning have no item to offer right now ("no content": the
+ * module is short of items there, or its only item was just shown). "no content" is never readiness.
+ */
+export type NextResult =
+  | ({ kind: 'step' } & NextStep)
+  | { kind: 'done' }
+  | { kind: 'no content'; concepts: readonly string[] };
+
 export interface NextStep {
   id: string;
   concept: string;
@@ -172,7 +182,7 @@ export const SAME_TECHNIQUE_RUN = 2;
 /**
  * Picks the next adaptive step: the concept with the most ground to cover first (a recent miss ahead of ties),
  * at the lowest level it has not shown, in a technique that fits that level, changing technique so practice
- * stays varied. Returns undefined when nothing is left to do at these levels.
+ * stays varied. See NextResult for what comes back when there is no step.
  */
 export function nextStep(
   shape: ModuleShape,
@@ -181,7 +191,7 @@ export function nextStep(
   history: StepHistory,
   random: () => number,
   upTo: readonly ThinkingLevel[] = READY_LEVELS,
-): NextStep | undefined {
+): NextResult {
   const start = calibrate(shape, progress, upTo);
   const lastId = history.usedIds.at(-1);
   const run = history.recentTechniques.slice(-SAME_TECHNIQUE_RUN);
@@ -204,10 +214,12 @@ export function nextStep(
     const fitting = TECHNIQUES_FOR_LEVEL[level];
     const pool = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique));
     if (pool.length === 0) continue;
-    const fresh = pool.filter((item) => !history.usedIds.includes(item.id));
-    const candidates = fresh.length > 0 ? fresh : pool;
-    const varied = candidates.filter((item) => item.technique !== tired);
-    const choices = varied.length > 0 ? varied : candidates;
+    // Variety first: drop the technique that has just run twice whenever another one fits, and only then prefer
+    // items not used this session.
+    const varied = pool.filter((item) => item.technique !== tired);
+    const candidates = varied.length > 0 ? varied : pool;
+    const fresh = candidates.filter((item) => !history.usedIds.includes(item.id));
+    const choices = fresh.length > 0 ? fresh : candidates;
     // Best-fitting technique first; ties broken by the caller's randomness.
     const best = Math.min(...choices.map((item) => fitting.indexOf(item.technique)));
     const top = choices.filter((item) => fitting.indexOf(item.technique) === best);
@@ -218,9 +230,9 @@ export function nextStep(
       : asked === 0
         ? (level === upTo[0] || level === 'remember' ? 'not practised yet' : 'next level up')
         : 'one more to lock it in';
-    return { id: pick.id, concept, level, technique: pick.technique, reason };
+    return { kind: 'step', id: pick.id, concept, level, technique: pick.technique, reason };
   }
-  return undefined;
+  return ranked.length === 0 ? { kind: 'done' } : { kind: 'no content', concepts: ranked.map((entry) => entry.concept) };
 }
 
 export interface ModuleSummary {
