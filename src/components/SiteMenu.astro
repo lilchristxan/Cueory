@@ -124,6 +124,7 @@ const current = currentHref(
 
 <script>
   import { isCloseKey, wrapFocus } from '../scripts/menu';
+  import { lockPageScroll } from '../scripts/scrolllock';
   import { cleanUrl, createSearchLoader, excerptParts, keepFocus, MAX_RESULTS, moveFocus, searchModuleUrl, statusText } from '../scripts/search';
 
   /** The parts of Pagefind's browser API the panel uses (https://pagefind.app/docs/api/). */
@@ -241,11 +242,13 @@ const current = currentHref(
   if (dialog && openButton && closeButton && typeof dialog.showModal === 'function') {
     let returnFocus = true;
     let opener: HTMLButtonElement = openButton;
+    let unlockScroll: (() => void) | undefined;
 
     for (const button of openButtons) {
       button.addEventListener('click', () => {
         returnFocus = true;
         opener = button;
+        unlockScroll = lockPageScroll(document.documentElement, document.body, window);
         dialog.showModal();
         // Focus starts on the close button. Left to itself, the browser focuses the first focusable thing in the panel,
         // and once the links are taller than the window the panel's own scrolling box counts as one: Chromium would
@@ -258,6 +261,8 @@ const current = currentHref(
     }
 
     dialog.addEventListener('close', () => {
+      unlockScroll?.();
+      unlockScroll = undefined;
       for (const button of openButtons) button.setAttribute('aria-expanded', 'false');
       // After a link to a spot on this page, focus follows the link instead of jumping back to the top.
       if (returnFocus) opener.focus({ preventScroll: true });
@@ -296,6 +301,10 @@ const current = currentHref(
     for (const link of dialog.querySelectorAll('a')) {
       link.addEventListener('click', () => {
         returnFocus = false;
+        // Put the page back before the browser follows the link: a link to a spot on this page (ways to study) must
+        // scroll after the lock is released, or the release would carry the page back to where it was.
+        unlockScroll?.();
+        unlockScroll = undefined;
         dialog.close();
       });
     }

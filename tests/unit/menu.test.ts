@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { menuLinks, menuSmallLinks } from '../../src/config/site';
 import { currentHref, groupMenuLinks, isCloseKey, wrapFocus } from '../../src/scripts/menu';
@@ -100,3 +101,15 @@ describe('Tab stays inside the open side panel', () => {
     expect(wrapFocus(-1, 0, false)).toBeUndefined();
   });
 });
+
+describe('the page behind the open side panel', () => {
+  it('locks background scroll when opened and unlocks on close', () => {
+    const source = readFileSync(new URL('../../src/components/SiteMenu.astro', import.meta.url), 'utf8');
+    expect(source).toContain("import { lockPageScroll } from '../scripts/scrolllock';");
+    expect(source).toMatch(/lockPageScroll\(document\.documentElement, document\.body, window\)/);
+    expect(source).toContain('unlockScroll?.();');
+    // A menu link releases the lock before the browser follows it, so a same-page link is not undone by the release.
+    expect(source).toMatch(/returnFocus = false;[\s\S]*?unlockScroll\?\.\(\);[\s\S]*?dialog\.close\(\);/);
+  });
+});
+
