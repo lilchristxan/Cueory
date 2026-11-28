@@ -38,7 +38,8 @@ describe('compact anatomy lab hydration props', () => {
     const page = readFileSync(new URL('../../src/pages/preview/anatomy-lab.astro', import.meta.url), 'utf8');
     const component = readFileSync(new URL('../../src/islands/AnatomyLab.tsx', import.meta.url), 'utf8');
     expect(page).toContain('labDataForBuild(files, fixtureJson,');
-    expect(page).toContain('systems={lab.systems}');
+    expect(page).toContain('systems={lab.systems.map(encodeAnatomySystem)}');
+    expect(page).toContain('fixture={lab.fixture && encodeAnatomySystem(lab.fixture)}');
     expect(page).not.toContain('wholeBody(');
     expect(component).toContain("systemsForView(baseSystems, phase === 'open'");
     // This is a source-contract regression; browser tests still have to verify the real viewer.

@@ -1,0 +1,1 @@
+status: wordpill marks, plain: the name is all white in Evening and all deep green in Light with no outline; the logo's w is deep green over an underline with no outline; the card deck on every game page sits in the middle of the window's height.
