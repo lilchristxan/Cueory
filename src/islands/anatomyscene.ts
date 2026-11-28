@@ -212,6 +212,8 @@ export interface LabScene {
   /** The visible model's box on screen, in CSS pixels, or null when nothing is in front of the camera. */
   extent(): Rect | null;
   orbit(yaw: number, pitch: number): void;
+  /** Slides the model across the view: below zero left, above zero right, as a share of the distance to it. */
+  pan(share: number): void;
   zoom(factor: number): void;
   resetView(): void;
   /** Looks at the model's center from `direction` (model frame, any length) at the starting distance. */
@@ -1085,6 +1087,19 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     requestRender();
   }
 
+  /** Slides the model left (below zero) or right across the view by a share of the distance to it. */
+  function pan(share: number) {
+    move = null;
+    const distance = camera.position.distanceTo(controls.target);
+    // The model goes right when the camera goes left, along the camera's own right-hand direction.
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+    const slide = right.multiplyScalar(-share * distance);
+    camera.position.add(slide);
+    controls.target.add(slide);
+    controls.update();
+    requestRender();
+  }
+
   function zoom(factor: number) {
     move = null;
     const offset = camera.position.clone().sub(controls.target);
@@ -1305,6 +1320,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       return extentWith(camera, canvas.clientWidth, canvas.clientHeight);
     },
     orbit,
+    pan,
     zoom,
     resetView,
     viewFrom,

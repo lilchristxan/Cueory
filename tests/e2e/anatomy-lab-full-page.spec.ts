@@ -222,4 +222,91 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     await page.getByRole('button', { name: 'show the body systems box' }).click();
     await expect(list).toBeVisible();
   });
+
+  test('the body systems box scrolls with the mouse wheel, and hidden boxes are round icon buttons', async ({ page }, testInfo) => {
+    test.skip(sizeOf(testInfo) !== 'desktop', 'the boxes sit beside the model only at the desktop width');
+    await markPanelsSeen(page);
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    const body = page.getByTestId('anatomy-tree-body');
+    await expect(body.locator('li').first()).toBeVisible({ timeout: 30_000 });
+    expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    const at = (await body.boundingBox())!;
+    await page.mouse.move(at.x + at.width / 2, at.y + at.height / 2);
+    await page.mouse.wheel(0, 400);
+    await expect.poll(() => body.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+
+    for (const [hide, show] of [['hide the body systems box', 'show the body systems box'], ['hide the controls', 'show the controls']] as const) {
+      await page.getByRole('button', { name: hide }).click();
+      const icon = page.getByRole('button', { name: show });
+      const size = (await icon.boundingBox())!;
+      expect(size.width, show).toBeGreaterThanOrEqual(44);
+      expect(Math.abs(size.width - size.height), show).toBeLessThan(1);
+      await expect(icon.locator('svg')).toBeVisible();
+    }
+  });
+
+  test('modifier shortcuts: zoom, move and turn by key and by wheel, and the ? pop-up lists them', async ({ page }, testInfo) => {
+    test.skip(sizeOf(testInfo) !== 'desktop', 'keyboard and wheel shortcuts need a keyboard and a mouse');
+    await openLab(page);
+    await page.getByRole('button', { name: 'labels', exact: true }).click();
+    const overlay = page.getByTestId('anatomy-labels');
+    await expect(overlay.locator(':scope > span').first()).toBeVisible();
+    // Where each label sits, and how spread out they are (a zoom spreads them).
+    const read = () => overlay.evaluateAll((overlays) => overlays.flatMap((frameEl) => {
+      const frame = frameEl.getBoundingClientRect();
+      return [...frameEl.querySelectorAll(':scope > span')].map((span) => {
+        const box = span.getBoundingClientRect();
+        return { name: span.textContent ?? '', x: Math.round(box.x - frame.x), y: Math.round(box.y - frame.y) };
+      });
+    }));
+    const key = (labels: Awaited<ReturnType<typeof read>>) => labels.map((l) => `${l.name}@${l.x},${l.y}`).sort().join('|');
+    const meanX = (labels: Awaited<ReturnType<typeof read>>) => labels.reduce((sum, l) => sum + l.x, 0) / labels.length;
+    const canvas = page.locator('canvas').first();
+    await canvas.focus();
+    const start = await read();
+
+    // Shift + left arrow moves the model left; Shift + right arrow moves it back.
+    await page.keyboard.press('Shift+ArrowLeft');
+    await expect.poll(async () => meanX(await read())).toBeLessThan(meanX(start));
+    await page.keyboard.press('Shift+ArrowRight');
+    await expect.poll(async () => key(await read())).toEqual(key(start));
+
+    // Alt + arrows turn and tip the body, and the opposite arrow undoes each.
+    for (const [there, back] of [['Alt+ArrowLeft', 'Alt+ArrowRight'], ['Alt+ArrowUp', 'Alt+ArrowDown']] as const) {
+      await page.keyboard.press(there);
+      await expect.poll(async () => key(await read())).not.toEqual(key(start));
+      await page.keyboard.press(back);
+      await expect.poll(async () => key(await read())).toEqual(key(start));
+    }
+
+    // Ctrl + up arrow zooms (the view changes) and Ctrl + down arrow zooms back out.
+    await page.keyboard.press('Control+ArrowUp');
+    await expect.poll(async () => key(await read())).not.toEqual(key(start));
+    await page.keyboard.press('Control+ArrowDown');
+    await expect.poll(async () => key(await read())).toEqual(key(start));
+
+    // The wheel with Shift held moves the model: backward left, forward right.
+    const box = (await canvas.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.keyboard.down('Shift');
+    await page.mouse.wheel(0, 100);
+    await expect.poll(async () => meanX(await read())).toBeLessThan(meanX(start));
+    await page.mouse.wheel(0, -100);
+    await expect.poll(async () => key(await read())).toEqual(key(start));
+    await page.keyboard.up('Shift');
+
+    // The wheel with Alt held turns the body, and the other way turns it back.
+    await page.keyboard.down('Alt');
+    await page.mouse.wheel(0, 100);
+    await expect.poll(async () => key(await read())).not.toEqual(key(start));
+    await page.mouse.wheel(0, -100);
+    await expect.poll(async () => key(await read())).toEqual(key(start));
+    await page.keyboard.up('Alt');
+
+    await page.getByRole('button', { name: 'keys' }).click();
+    const keys = page.getByRole('region', { name: 'keys for the 3D view' });
+    await expect(keys).toContainText('Shift with ← →');
+    await expect(keys).toContainText('turn the body clockwise or counter-clockwise');
+  });
 });

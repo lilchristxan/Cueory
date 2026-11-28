@@ -42,7 +42,13 @@ export default function AnatomyLabOpen({ systems: encodedSystems, fixture: encod
       {Lab ? <Lab {...props} systems={systems} fixture={fixture} autoOpen onExit={() => { setLab(null); setState('cover'); }} /> : (
         <AnatomyLabCover onOpen={open} busy={state === 'loading'} error={state === 'error'} note={note} />
       )}
-      <AnatomyTextRecall systems={textSystems} drafts={props.drafts} />
+      {/* Name practice that needs no 3D view: kept for devices that cannot draw 3D, folded away until asked for. */}
+      <details className="rounded-lg border border-line" data-testid="anatomy-text-practice">
+        <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm text-ink-soft">practise names without the 3D view</summary>
+        <div className="p-2">
+          <AnatomyTextRecall systems={textSystems} drafts={props.drafts} />
+        </div>
+      </details>
     </div>
   );
 }

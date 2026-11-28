@@ -1903,6 +1903,7 @@
   --lab-remote-clear-min: 5.5rem;  /* the same, with the controls hidden down to their title row */
   --lab-remote-clear: 24.5rem;     /* the view remote in the bottom right corner, plus its inset and a gap: where the right panel must stop */
   --lab-logo-width: 6rem;          /* the cueory logo in the middle of the lab's top bar */
+  --lab-keys-width: 30rem;         /* the ? pop-up: keys, shortcuts and credits */
   --lab-stage-min: 30rem;          /* the full-page lab's stage never gets shorter than this; the page scrolls instead */
   --lab-stage-height-small: max(24rem, 100dvh - 19rem);
   --lab-topbar-height: 4.5rem;

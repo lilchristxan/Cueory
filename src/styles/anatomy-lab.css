@@ -19,6 +19,11 @@
     background: var(--lab-stage-flat);
   }
   /* The bars around the stage (top bar, panel buttons, other tools, credits) stay brown on a black or a white stage. */
+  /* A box hidden down to its round icon button: the button's own brown disc, on a black or a white stage. */
+  .lab-min .lab-round {
+    background: var(--lab-panel-solid);
+    color: var(--lab-ivory);
+  }
   .lab-bar {
     background: var(--lab-panel-solid);
   }

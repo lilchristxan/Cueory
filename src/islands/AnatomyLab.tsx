@@ -1,3 +1,4 @@
+import { isApplePlatform, shortcutKeyAction, shortcutWheelAction, SHORTCUT_KEY_MAP, type Modifiers, type ShortcutAction } from './anatomyshortcuts';
 import {
   Fragment,
   useCallback,
@@ -215,6 +216,20 @@ type BulkDownloadPrompt =
   | { kind: 'saved-view'; systemKey: string; files: number; view: SavedViewRow; identity: StudyIdentitySnapshot };
 
 
+/** One Shift-arrow or Shift-wheel step slides the model by this share of the distance to it. */
+const PAN_SHARE = 0.08;
+
+/** The modifier keys held during a key press or a wheel step. */
+function heldModifiers(event: { shiftKey: boolean; altKey: boolean; ctrlKey: boolean; metaKey: boolean }): Modifiers {
+  return {
+    shift: event.shiftKey,
+    alt: event.altKey,
+    ctrl: event.ctrlKey,
+    meta: event.metaKey,
+    mac: isApplePlatform(navigator.platform ?? '', navigator.userAgent ?? ''),
+  };
+}
+
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
@@ -292,6 +307,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const activeSystemKeyRef = useRef(systemKey);
   activeSystemKeyRef.current = systemKey;
   const [load, setLoad] = useState<SystemLoad>({ state: 'loading' });
+  const loadStateRef = useRef(load.state);
+  loadStateRef.current = load.state;
   const [initialRetry, setInitialRetry] = useState(0);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [faded, setFaded] = useState<ReadonlySet<string>>(new Set());
@@ -516,7 +533,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     // The leader only draws where the card floats beside the model (desktop); below that the card sits under it.
     const heading = document.getElementById('anatomy-name-card');
     const card = heading?.closest('section');
-    const floating = !!card?.parentElement && getComputedStyle(card.parentElement).position === 'absolute';
+    const column = card?.closest<HTMLElement>('[data-testid="anatomy-inspector"]');
+    const floating = !!column && getComputedStyle(column).position === 'absolute';
     if (!heading || !card || !floating) { line.removeAttribute('data-on'); return; }
     const cardBox = card.getBoundingClientRect();
     const headingBox = heading.getBoundingClientRect();
@@ -1400,11 +1418,53 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     pointerRef.current = null;
   };
 
+  /** Carries out a modifier shortcut from a key or the wheel. */
+  const runShortcut = (action: ShortcutAction) => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+    if (action.kind === 'zoom') {
+      stopSpin();
+      scene.zoom(action.direction === 'in' ? ZOOM_IN : 1 / ZOOM_IN);
+    } else if (action.kind === 'pan') {
+      stopSpin();
+      scene.pan(action.direction === 'left' ? -PAN_SHARE : PAN_SHARE);
+    } else {
+      turn(action.yaw, action.pitch);
+    }
+  };
+  const runShortcutRef = useRef(runShortcut);
+  runShortcutRef.current = runShortcut;
+  // The wheel with a modifier held, over the 3D view. Heard before the view's own wheel zoom, and stopped there, so a
+  // step is never both a shortcut and a zoom; the plain wheel is left alone.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || phase !== 'open') return;
+    const onWheel = (event: WheelEvent) => {
+      if (loadStateRef.current !== 'ready') return;
+      // With Shift held some browsers report the wheel sideways.
+      const action = shortcutWheelAction(event.deltaY || event.deltaX, heldModifiers(event), STEP);
+      if (!action) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      runShortcutRef.current(action);
+    };
+    canvas.addEventListener('wheel', onWheel, { capture: true, passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel, { capture: true });
+  }, [phase]);
+
   const onCanvasKey = (e: ReactKeyboardEvent<HTMLCanvasElement>) => {
     const scene = sceneRef.current;
     // The old scene can exist while the newly selected GLB is still loading.
     // Keyboard camera controls must follow the same readiness gate as buttons.
-    if (!scene || load.state !== 'ready' || e.altKey || e.ctrlKey || e.metaKey) return;
+    if (!scene || load.state !== 'ready') return;
+    // A modifier held: the shortcuts (anatomyshortcuts.ts). Anything else with a modifier is the browser's own.
+    const shortcut = shortcutKeyAction(e.key, heldModifiers(e), STEP);
+    if (shortcut) {
+      runShortcut(shortcut);
+      e.preventDefault();
+      return;
+    }
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
     const action = canvasKeyAction(e.key, STEP, ZOOM_IN);
     if (!action) return;
     if (action.kind === 'orbit') turn(action.yaw, action.pitch);
@@ -2103,7 +2163,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               {allFolded ? 'open all groups' : 'close all groups'}
             </button>
           )}
-          <div className="lab-sheet space-y-4 lg:max-h-none lg:min-h-0 lg:flex-1">
+          <div className="lab-sheet space-y-4 lg:max-h-none lg:overflow-visible">
             {listedGroups.map((group) => (
               <div key={group.group ?? '—'}>
                 {group.group && (
@@ -2273,7 +2333,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               id="anatomy-keys"
               role="region"
               aria-label="keys for the 3D view"
-              className="lab-glass absolute top-20 right-3 left-3 z-30 space-y-2 p-4 text-sm text-ink sm:left-auto sm:w-80"
+              className="lab-glass lab-solid absolute top-20 right-3 left-3 z-30 max-h-(--lab-sheet-height) space-y-2 overflow-y-auto p-4 text-sm text-ink sm:left-auto sm:w-(--lab-keys-width)"
               onKeyDown={(event) => {
                 if (event.key === 'Escape') {
                   event.preventDefault();
@@ -2284,9 +2344,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             >
               <p className="text-ink-soft">select the 3D view first (tap it, or press Tab until it is outlined), then:</p>
               <dl className="space-y-1">
-                {KEY_MAP.map((row) => (
+                {[...KEY_MAP, ...SHORTCUT_KEY_MAP].map((row) => (
                   <div key={row.keys} className="flex gap-3">
-                    <dt className="w-24 shrink-0"><kbd className="rounded-sm border border-line bg-page px-1.5 font-body text-ink">{row.keys}</kbd></dt>
+                    <dt className="w-40 shrink-0"><kbd className="rounded-sm border border-line bg-page px-1.5 font-body text-ink">{row.keys}</kbd></dt>
                     <dd className="min-w-0">{row.does}</dd>
                   </div>
                 ))}
@@ -2474,11 +2534,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             ))}
           </div>
 
-          <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:bottom-5 lg:left-5 lg:z-10 lg:w-(--lab-rail-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-rail">
+          <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:bottom-5 lg:left-5 lg:z-10 lg:w-(--lab-rail-width) lg:flex-col lg:gap-3 ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-rail">
 
-            <section id="lab-panel-systems" className={`lab-glass mx-3 mb-3 hidden space-y-3 data-open:block lg:pointer-events-auto lg:m-0 lg:block ${treeMin ? 'py-1 pr-1 pl-4 lg:w-fit' : 'p-4'}`} data-open={panels.systems || undefined} aria-labelledby="lab-systems-heading">
+            <section id="lab-panel-systems" className={`mx-3 mb-3 hidden space-y-3 data-open:block lg:pointer-events-auto lg:m-0 ${treeMin ? 'lab-min lg:block lg:w-fit' : 'lab-glass p-4 lg:flex lg:max-h-full lg:min-h-0 lg:flex-col'}`} data-open={panels.systems || undefined} aria-labelledby="lab-systems-heading">
               <div className="flex items-center justify-between gap-3">
-                <h2 id="lab-systems-heading" className="lab-cap">body systems</h2>
+                <h2 id="lab-systems-heading" className={treeMin ? 'sr-only' : 'lab-cap'}>body systems</h2>
                 <button
                   type="button"
                   className="lab-btn lab-round shrink-0"
@@ -2486,11 +2546,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                   onClick={() => setTreeMin((min) => !min)}
                   data-testid="anatomy-tree-min"
                 >
-                  <span aria-hidden="true">{treeMin ? '+' : '−'}</span>
+                  {/* Hidden, the box is a bone in a circle (Christian, 2026-11-27): an icon for this box, not decoration. */}
+                  {treeMin ? <BoneIcon /> : <span aria-hidden="true">−</span>}
                   <span className="sr-only">{treeMin ? 'show the body systems box' : 'hide the body systems box'}</span>
                 </button>
               </div>
-              <div className="space-y-3" hidden={treeMin}>
+              {/* The box's body is what scrolls (a scroller that ignores the pointer cannot be wheeled or dragged). */}
+              <div className="space-y-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1" hidden={treeMin} data-testid="anatomy-tree-body">
               {systems.length > 1 && (
                 <div role="group" aria-label="body system" className="space-y-1">
                   {systems.map((s) => (
@@ -2591,13 +2653,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
 
           <section
             id="lab-panel-orientation"
-            className={`lab-glass mx-3 mb-3 hidden data-open:block lg:absolute lg:right-5 lg:bottom-5 lg:z-10 lg:m-0 lg:block ${remoteMin ? 'py-1 pr-1 pl-4 lg:w-fit' : 'p-4 lg:w-(--lab-inspector-width)'}`}
+            className={`mx-3 mb-3 hidden data-open:block lg:absolute lg:right-5 lg:bottom-5 lg:z-10 lg:m-0 lg:block ${remoteMin ? 'lab-min lg:w-fit' : 'lab-glass p-4 lg:w-(--lab-inspector-width)'}`}
             data-open={panels.orientation || undefined}
             aria-labelledby="lab-orientation-heading"
             data-testid="anatomy-remote"
           >
             <div className="flex items-center justify-between gap-3">
-              <h2 id="lab-orientation-heading" className="lab-cap">controls</h2>
+              <h2 id="lab-orientation-heading" className={remoteMin ? 'sr-only' : 'lab-cap'}>controls</h2>
               <button
                 type="button"
                 className="lab-btn lab-round shrink-0"
@@ -2605,7 +2667,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 onClick={() => setRemoteMin((min) => !min)}
                 data-testid="anatomy-remote-min"
               >
-                <span aria-hidden="true">{remoteMin ? '+' : '−'}</span>
+                {/* Hidden, the box is a remote control in a circle (Christian, 2026-11-27). */}
+                {remoteMin ? <RemoteIcon /> : <span aria-hidden="true">−</span>}
                 <span className="sr-only">{remoteMin ? 'show the controls' : 'hide the controls'}</span>
               </button>
             </div>
@@ -2695,7 +2758,9 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               </div>
             </div>
           </section>
-          <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:right-5 lg:z-10 lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${remoteMin ? 'lg:bottom-(--lab-remote-clear-min)' : 'lg:bottom-(--lab-remote-clear)'} ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-inspector" role="group" aria-label="selected structure and study" tabIndex={0}>
+          <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:right-5 lg:z-10 lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 ${remoteMin ? 'lg:bottom-(--lab-remote-clear-min)' : 'lg:bottom-(--lab-remote-clear)'} ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-inspector">
+            {/* The scroller is only as tall as its cards, so the empty space beside the model still turns the model. */}
+            <div className="contents lg:pointer-events-auto lg:flex lg:max-h-full lg:min-h-0 lg:flex-col lg:gap-3 lg:overflow-y-auto" role="group" aria-label="selected structure and study" tabIndex={0}>
           {selectedName && !quiz && !namesHidden && (
             <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
               <p className="lab-cap flex justify-between gap-3"><span>selected structure</span><span className="lab-id" data-testid="anatomy-card-id">{selected}</span></p>
@@ -2848,6 +2913,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               />
             )
           )}
+            </div>
           </div>
         </div>
 
@@ -3470,6 +3536,26 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </section>
           )}
     </div>
+  );
+}
+
+/** The hidden controls box: a remote control. Drawn with the text colour; the button around it carries the name. */
+function RemoteIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="7.5" y="2.5" width="9" height="19" rx="3" />
+      <circle cx="12" cy="7.5" r="1.9" />
+      <path d="M10.4 12.5h.01M13.6 12.5h.01M10.4 15.5h.01M13.6 15.5h.01M10.4 18.5h.01M13.6 18.5h.01" strokeWidth={2} />
+    </svg>
+  );
+}
+
+/** The hidden body systems box: a bone. Drawn with the text colour; the button around it carries the name. */
+function BoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path transform="rotate(-45 12 12)" d="M7.2 9.6a2.4 2.4 0 1 0-3.4 2.4 2.4 2.4 0 1 0 3.4 2.4h9.6a2.4 2.4 0 1 0 3.4-2.4 2.4 2.4 0 1 0-3.4-2.4z" />
+    </svg>
   );
 }
 
