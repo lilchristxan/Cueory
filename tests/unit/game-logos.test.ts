@@ -151,29 +151,35 @@ describe("wordpill's artwork (the game formerly called vialo; Christian's script
     for (const svg of [day, evening, icon]) {
       expect(svg).not.toMatch(/<text|font-family|<image/);
     }
-    // The logo is one outline; the name is its letters plus the two strokes of its underline.
-    expect(icon.match(/<path /g)).toHaveLength(1);
-    expect(day.match(/<path /g)).toHaveLength(3);
-    expect(evening.match(/<path /g)).toHaveLength(3);
+    // The logo and the name are each their letters plus one underline stroke.
+    expect(icon.match(/<path /g)).toHaveLength(2);
+    expect(day.match(/<path /g)).toHaveLength(2);
+    expect(evening.match(/<path /g)).toHaveLength(2);
   });
 
-  it('writes the name on its own, with no capsule: green with a thin white outline in Light, white with a thin green outline in Evening', () => {
+  it('writes the name on its own, with no capsule and no outline: plain deep green in Light, plain white in Evening', () => {
     const letters = (svg: string) => svg.match(/<path d="([^"]+)"/)![1];
     expect(letters(evening)).toBe(letters(day));
     expect(day).not.toContain('<rect');
     expect(evening).not.toContain('<rect');
-    expect(day).toContain('fill="#053321" stroke="#ffffff"');
-    expect(evening).toContain('fill="#ffffff" stroke="#0e5a3d"');
-    expect(day).toContain('paint-order="stroke"');
+    // Christian, 2026-11-27: all white on the dark page, with no green outline; no white outline on the light one.
+    expect(day).toContain('fill="#053321"/>');
+    expect(evening).toContain('fill="#ffffff"/>');
+    for (const svg of [day, evening]) expect(svg).not.toContain('paint-order');
+    expect(day).not.toContain('#ffffff');
+    expect(evening).not.toContain('#0e5a3d');
     // The name climbs to the right at a slight incline over an underline (Christian, 2026-11-27).
     for (const svg of [day, evening]) expect(svg).toContain('<g transform="rotate(-4 150 50)">');
   });
 
-  it('keeps the capsule for the logo: a white w with a thin bronze outline on the pale sky, inside a thin bronze rim', () => {
+  it('keeps the capsule for the logo: a plain deep green w over an underline, like the name, inside a thin bronze rim', () => {
     expect(icon.match(/<rect /g)).toHaveLength(1);
     expect(icon).toContain('<linearGradient id="wordpill-icon-sky"');
     expect(icon).toContain('stroke="#6b5243" stroke-width="1.5"');
-    expect(icon).toContain('fill="#ffffff" stroke="#6b5243"');
+    expect(icon).toContain('<g transform="rotate(-4 50 50)">');
+    expect(icon).toContain('fill="#053321"/>');
+    expect(icon).toContain('stroke="#053321" stroke-width="2.4"');
+    expect(icon).not.toContain('paint-order');
   });
 
   it('is the wordmark and icon on every surface: Evening art on the hub and game page, Daytime on the cream carousel', () => {

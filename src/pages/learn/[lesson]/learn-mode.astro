@@ -7,6 +7,8 @@ import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
 import LearnSession from '../../../islands/LearnSession';
+import AdaptiveStudySession from '../../../islands/AdaptiveStudySession';
+import { adaptiveLearnEnabled } from '../../../lessons/adaptive-gate';
 import { pathsFor, statusNotice, type CatalogLesson } from '../../../lessons/catalog';
 import { lessonCatalog } from '../../../lessons/load';
 
@@ -20,6 +22,7 @@ const deck = lesson.cards && await getEntry('cards', lesson.cards.id);
 if (!deck) throw new Error(`The card file for lesson ${lesson.id} is missing.`);
 const { title, cards, status } = deck.data;
 const cardsNotice = statusNotice(status, 'cards');
+const pilot = adaptiveLearnEnabled(deck.id, status);
 const learnCards = cards.map(({ front, back, blank }) => (blank ? { front, back, blank } : { front, back }));
 // Match the generated lesson hub's course count without restoring the deleted study-skills route.
 const olderLessons = (await lessonCatalog()).lessons.filter((candidate) => !candidate.curriculumId && candidate.name === lesson.name).length;
@@ -35,14 +38,18 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
       <InfoTip
         id="lesson-intro-info"
         label="learn mode"
-        text="see each card, choose its answer, then type it. anything you miss comes back until you know every card."
+        text={pilot
+          ? "try the sample cards and see when the next review is due. this session resets when you reload."
+          : "see each card, choose its answer, then type it. anything you miss comes back until you know every card."}
       />
     </div>
     {cardsNotice && <p class="mt-3 text-sm text-ink-soft">{cardsNotice}</p>}
 
     <div class="mt-10">
       {/* client:only: nothing is pre-rendered, so without JavaScript only the note below shows. */}
-      <LearnSession client:only="react" cards={learnCards} lessonHref={lesson.href} />
+      {pilot
+        ? <AdaptiveStudySession client:only="react" cards={cards} />
+        : <LearnSession client:only="react" cards={learnCards} lessonHref={lesson.href} />}
       <noscript>
         <p>learn mode needs JavaScript. you can read every card and its answer on the <a href={`${lesson.href}/cards`}>cards page</a>.</p>
       </noscript>

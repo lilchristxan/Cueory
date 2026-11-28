@@ -170,7 +170,7 @@
   --game-deck-card-height: 19.25rem;     /* 308px */
   --game-deck-card-radius: 1.25rem;      /* 20px */
   --game-deck-card-line: 0.09375rem;     /* 1.5px */
-  --game-deck-front-top: 23.25rem;       /* 372px from the frame's top edge */
+  --game-deck-front-top: calc(50vh - 4.875rem); /* the fan (back card's top to front card's bottom) sits in the middle of the window's height (Christian, 2026-11-27); 372px down in a 900px window, as before */
   --game-deck-front-hang: 4.875rem;      /* 78px of the front card hangs past the right edge (142px of it shows) */
   --game-deck-front-tilt: 15deg;
   --game-deck-step-up: 2.625rem;         /* 42px: each card behind sits this much higher... */
@@ -1142,14 +1142,14 @@
   --picc-sticker-ring-bead: 3px;        /* the same inside a 54 px bead */
   --picc-sticker-ring-bead-gap: 5px;
   --vialo-sticker-ring-scale: 2;        /* the board's "elsewhere" ring, scaled up to the sticker's bigger pills */
-  --vialo-sticker-ring-color: rgb(255 255 255 / 0.6); /* the light ring inside the sticker's "elsewhere" pill: the sticker keeps its own ring (its pills are still oxblood), whatever the live board uses */
+  --vialo-sticker-ring-color: rgb(255 255 255 / 0.6); /* the light ring inside the sticker's "elsewhere" pill: the sticker keeps its own light ring as the non-colour cue, whatever the live board uses */
   --vialo-sticker-pill-gloss: rgba(249, 245, 239, 0.9);
-  --vialo-sticker-here-light: rgb(63, 138, 104);
-  --vialo-sticker-here-mid: rgb(14, 90, 61);
-  --vialo-sticker-here-deep: rgb(5, 51, 33);
-  --vialo-sticker-elsewhere-light: rgb(160, 65, 58);
-  --vialo-sticker-elsewhere-mid: rgb(110, 32, 25);
-  --vialo-sticker-elsewhere-deep: rgb(74, 16, 13);
+  --vialo-sticker-here-light: var(--wordpill-here-light);       /* the sticker's pills use the board's current colours (Christian, 2026-11-27): light green in place */
+  --vialo-sticker-here-mid: var(--wordpill-here);
+  --vialo-sticker-here-deep: var(--wordpill-here-deep);
+  --vialo-sticker-elsewhere-light: var(--wordpill-elsewhere-light);  /* pink elsewhere in the word */
+  --vialo-sticker-elsewhere-mid: var(--wordpill-elsewhere);
+  --vialo-sticker-elsewhere-deep: var(--wordpill-elsewhere-deep);
   --vialo-sticker-absent-light: rgb(255, 255, 255);
   --vialo-sticker-absent-mid: rgb(249, 245, 239);
   --vialo-sticker-absent-deep: rgb(234, 220, 207);
