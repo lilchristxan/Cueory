@@ -45,9 +45,12 @@ test('marked labels resume with their marks, while an uncovered unmarked label b
   await expect(page.getByTestId('cover-1')).toHaveAccessibleName('label 1: roof');
   await expect(page.getByTestId('cover-2')).toHaveAccessibleName('label 2: chimney');
   await expect(page.getByTestId('cover-3')).toHaveAccessibleName('label 3, covered');
-  await expect(board(page).getByRole('group', { name: 'mark label 1', exact: true }).getByRole('button', { name: 'know it', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(board(page).getByRole('group', { name: 'mark label 2', exact: true }).getByRole('button', { name: 'still learning', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByTestId('labelit-session').locator('[tabindex="-1"]').first()).toBeFocused();
+  // One label shows its marks at a time: tap an uncovered label to see (or change) its mark.
+  await page.getByTestId('cover-1').click();
+  await expect(board(page).getByRole('group', { name: 'mark label 1', exact: true }).getByRole('button', { name: 'know it', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('cover-2').click();
+  await expect(board(page).getByRole('group', { name: 'mark label 2', exact: true }).getByRole('button', { name: 'still learning', exact: true })).toHaveAttribute('aria-pressed', 'true');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -84,18 +87,6 @@ test('later rounds preserve earlier know-it marks and current-round marks, then 
   await expect(board(page).getByText("that's every label for now.")).toBeVisible();
   await board(page).getByRole('button', { name: 'start over', exact: true }).click();
   expect(await saved(page)).toBeNull();
-});
-
-test('reveal all and cover all keep their behavior and covered marks do not return', async ({ page }) => {
-  await open(page);
-  await markLabel(page, 1, 'know it');
-  await board(page).getByRole('button', { name: 'reveal all', exact: true }).click();
-  await expect(page.getByTestId('labelit-status')).toHaveText('0 covered · know it: 1 · still learning: 0');
-  await board(page).getByRole('button', { name: 'cover all', exact: true }).click();
-  expect((await saved(page)).answers).toEqual({});
-  await page.reload();
-  await page.getByRole('button', { name: 'continue question 1', exact: true }).click();
-  await expect(page.getByTestId('labelit-status')).toHaveText('4 covered · know it: 0 · still learning: 0');
 });
 
 test('lifecycle refreshes the latest own marks, without saving newly revealed label text', async ({ page }) => {

@@ -702,6 +702,8 @@
 
 /* Pillo rules are a separate entry: always emit their shared theme variables. */
 @theme static {
+  /* Read by script only (label it editor), so it must be in a static block or Tailwind drops it. */
+  --picture-paper: #ffffff;     /* what a student's see-through picture is laid on before it is kept as a JPEG (label it editor); white in both themes, not a brand colour */
   /* ---------- Shared game settings (#734); static so the panel's own stylesheet can always use it ---------- */
   --border-game-settings: 1px;      /* the shared game settings button's rim and the lines between its rows (#734) */
 

@@ -4,38 +4,74 @@ import LessonComingSoon from '../../../components/LessonComingSoon.astro';
 import { lessonIsHeldBack } from '../../../lessons/holdback';
 import ContentLabel from '../../../components/ContentLabel.astro';
 import InfoTip from '../../../components/InfoTip.astro';
-import { LabelItFromUrl } from '../../../islands/LabelItBoard';
+import { LabelItStudio } from '../../../islands/LabelItBoard';
+import Wordmark from '../../../components/Wordmark.astro';
+import { site } from '../../../config/site';
+import { lessonCatalog } from '../../../lessons/load';
+import { studyModes } from '../../../config/modes';
 const hold = await lessonIsHeldBack('study-skills-01');
+// The other ways to study this lesson, for the menu beside the heading.
+const lesson = (await lessonCatalog()).lessons.find((candidate) => candidate.href === '/learn/study-skills');
+const otherModes = (lesson?.modes ?? [])
+  .filter((mode) => mode.href !== '/learn/study-skills/label-it')
+  .map((mode) => ({ href: mode.href, name: studyModes.find((known) => known.id === mode.id)?.name ?? mode.id }));
 ---
 
 {hold ? <LessonComingSoon /> : (
-<Layout title="label it: lesson 1" description="uncover a diagram's labels for lesson 1 of how to study for nursing school." variant="study">
-  <div class="mx-auto max-w-prose pt-8">
-    <p class="text-sm text-ink-soft">how to study for nursing school · lesson 1</p>
-    <div class="mt-2 flex flex-wrap items-center gap-x-1">
-      <h1 class="text-2xl">label it</h1>
-      <InfoTip
-        id="lesson-intro-info"
-        label="label it"
-        text="the labels on the drawing are covered. uncover them one at a time, or all at once, and mark each one."
-      />
+<Layout title="label it: lesson 1" description="uncover a diagram's labels for lesson 1 of how to study for nursing school." variant="study" bareHeader>
+  {/* A focused screen, as in Christian's approved draft (2026-11-26): the mode's menu on the left, the logo in the middle, close on the right. */}
+  <header class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-gutter pt-4 sm:pt-5" data-testid="label-it-bar" data-study-focus="label-it">
+    <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+      <h1 class="min-w-0 text-lg font-bold">label it</h1>
+      <details class="relative" data-testid="label-it-switch">
+        <summary aria-label="other ways to study this lesson" class="inline-flex size-(--tap-min) cursor-pointer list-none items-center justify-center rounded-pill text-ink">
+          <svg aria-hidden="true" viewBox="0 0 24 24" class="size-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </summary>
+        <ul class="absolute start-0 top-full z-10 min-w-48 rounded-xl border border-line bg-page p-2 shadow-card">
+          {otherModes.map((mode) => (
+            <li><a href={mode.href} class="flex min-h-(--tap-min) items-center rounded-lg px-3 no-underline hover:bg-surface">{mode.name}</a></li>
+          ))}
+        </ul>
+      </details>
     </div>
-    <p class="mt-3 text-sm text-ink-soft" data-testid="label-it-sample-note">
-      this is a sample with an everyday drawing. the lesson's own diagrams come later.
-    </p>
+    <a href="/" class="shrink-0 p-(--logo-clear) text-ink max-sm:order-first max-sm:flex max-sm:w-full max-sm:justify-center max-sm:py-0" aria-label={`${site.name} home`} data-testid="study-logo">
+      <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
+      <Wordmark class="hidden w-(--logo-width) sm:block" sizes="15rem" />
+    </a>
+    <div class="flex flex-1 items-center justify-end gap-3">
+      <a href="/learn/study-skills" aria-label="close label it" data-testid="label-it-close" class="press inline-flex size-(--tap-min) shrink-0 items-center justify-center rounded-pill border border-line text-ink no-underline">
+        <svg aria-hidden="true" viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6 6 18" />
+        </svg>
+      </a>
+    </div>
+  </header>
 
-    <div class="mt-10">
+  <div class="mx-auto max-w-3xl px-gutter pb-section">
+    <div class="mt-4">
       {/* client:only, and only the file's address as a prop: the labels load after the page, never in its HTML. */}
-      <LabelItFromUrl client:only="react" src="/learn/study-skills/label-it/study-skills-01.json" />
+      <LabelItStudio client:only="react" src="/learn/study-skills/label-it/study-skills-01.json" />
       <noscript>
         <p>label it needs JavaScript. you can still read the lesson on the <a href="/learn/study-skills">lesson page</a>.</p>
       </noscript>
     </div>
 
-    <p class="mt-section text-sm">
-      <a href="/learn/study-skills">back to the lesson</a>
-    </p>
-    <div class="mt-8">
+    {/* The quiet notes sit well below the card, so the first screen is only the bar, the progress and the picture. */}
+    <div class="mt-section space-y-2 text-sm text-ink-soft">
+      <p class="flex flex-wrap items-center gap-x-1">
+        <span>how to study for nursing school · lesson 1</span>
+        <InfoTip
+          id="lesson-intro-info"
+          label="label it"
+          text="the labels on the drawing are covered. uncover them one at a time and mark each one."
+        />
+      </p>
+      <p data-testid="label-it-sample-note">
+        this is a sample with an everyday drawing. the lesson's own diagrams come later.
+      </p>
+      <p><a href="/learn/study-skills">back to the lesson</a></p>
       <ContentLabel />
     </div>
   </div>

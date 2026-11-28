@@ -362,7 +362,11 @@ for (const path of [...new Set(pages)]) {
 
     const res = await page.goto(path);
     expect(res?.status()).toBe(200);
+    // A focused study screen (label it; Christian, 2026-11-26) has no site header and no notice strip: only its own bar.
+    const focused = /\/label-it$/.test(path);
     const notice = page.getByTestId('building-notice');
+    if (focused) await expect(notice).toHaveCount(0);
+    else {
     await expect(notice).toHaveText("we're still building. please support (opens in a new tab) our development. more coming soon!");
     const support = notice.getByRole('link', { name: /^support/ });
     await expect(support).toHaveAttribute('href', 'https://ko-fi.com/cueory');
@@ -372,6 +376,7 @@ for (const path of [...new Set(pages)]) {
       .toMatchObject({ weight: '700', line: 'underline' });
     expect((await support.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await expect(notice.locator('.building-strip-icon')).toHaveCount(2);
+    }
     await expect(page.locator('h1')).toHaveCount(1);
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
@@ -1522,17 +1527,18 @@ test.describe('label it at 320 px', () => {
     await expect(page.getByTestId('cover-1')).toBeFocused();
     await expect(live).toHaveText('label 1: roof.');
 
-    // "uncover" in the list hands focus to that label's "know it".
+    // One label at a time: mark the open one, then "reveal" hands focus to the next label's "know it".
+    await board.getByRole('group', { name: 'mark label 1' }).getByRole('button', { name: 'still learning' }).click();
     await board.getByRole('button', { name: 'uncover label 2' }).click();
     await expect(board.getByRole('group', { name: 'mark label 2' }).getByRole('button', { name: 'know it' })).toBeFocused();
     await page.keyboard.press('Enter');
-    await expect(live).toHaveText('chimney: know it. 3 left to mark.');
+    await expect(live).toHaveText('chimney: know it. 2 left to mark.');
 
-    // Tap: reveal all, then mark the rest; roof and door are still learning.
-    await board.getByRole('button', { name: 'reveal all' }).click();
-    for (const [n, mark] of [[1, 'still learning'], [3, 'know it'], [4, 'still learning']] as const) {
-      await board.getByRole('group', { name: `mark label ${n}` }).getByRole('button', { name: mark }).click();
-    }
+    // Tap: reveal and mark the rest; roof and door are still learning.
+    await board.getByRole('button', { name: 'uncover label 3' }).click();
+    await board.getByRole('group', { name: 'mark label 3' }).getByRole('button', { name: 'know it' }).click();
+    await axe();
+    await board.getByRole('button', { name: 'still learning label 4' }).click();
     await axe();
 
     await board.getByRole('button', { name: 'study the 2 still learning' }).click();
