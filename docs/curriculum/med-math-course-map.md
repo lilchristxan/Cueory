@@ -32,6 +32,12 @@ Ids use the prefix `MMU1`, `MMU2`, `MMU3` and `MMS` so they cannot clash with th
 - Id scheme: unit `MMU1`, module `MMU1-M01`, lesson `MMU1-M01-L01`, objective `MMU1-M01-O01`.
 - The same lesson list is in `med-math-course-map.csv`. Every lesson starts as `planned`.
 - Titles are skill names. Ids never change once published; new lessons go at the end of a module.
+- **Public label and machine id.** The ids above are the stable public labels. The adaptive content schema (module
+  content, PR #1283) accepts only lowercase letters, digits and single dashes, so the machine id is the public label
+  in lowercase, with nothing else changed. Example: `MMU1-M01-O01` becomes `mmu1-m01-o01` in the `lo` field, and
+  `MMU1-M01-L01` becomes `mmu1-m01-l01` as the lesson id. The rule is one-to-one in both directions, so authors write
+  the label and the batch tool lowercases it. Anchor ids are authored in the machine form directly (for example
+  `mmu1-m01-l01-a01`, following the same rule).
 
 | unit | modules | lessons | objectives |
 | --- | --- | --- | --- |
@@ -381,7 +387,7 @@ always open.
    from practice, the diagnostic or the deeper round. The exam shows the number right and a status per objective, never
    a score prediction.
 
-**Item plan carried by every item (authoring columns).** Every item carries: the targeted objective id (`lo`), the
+**Item plan carried by every item (authoring columns).** Every item carries: the targeted objective id (`lo`, in the lowercase machine form from section 2), the
 thinking level (`bloom`), the difficulty (`level`, 1 to 3), the technique, and the anchor (the video time range or
 reading section id that teaches it). Thinking level and difficulty are two columns and are never merged. A gap links
 the student back to the anchor. Missing anchor, missing diagnostic item or an item pointing to a missing objective
@@ -408,8 +414,11 @@ numbers live only in the private store and the database, and the browser never r
   application, analysis, evaluation), objectives shown out of all objectives in the course, plus the next module to
   open. These four tier totals cannot supply real-world application.
 - **Real-world application.** This is a separate dimension: a reviewed cumulative-case set where each case draws on
-  objectives from at least two modules (and, where it fits, the unsafe-order strand). Evidence for an objective that
-  appears in several cases is counted once (deduplicated). Until the set exists, the course page shows "case set not
+  objectives from at least two modules (and, where it fits, the unsafe-order strand). Coverage and evidence are
+  deduplicated separately. Coverage: an objective is covered once, however many approved cases exercise it. Evidence:
+  each distinct approved case is its own response, so two different cases on the same objective are one covered
+  objective and two responses; replaying the same response is still one response. Repeated practice and a later miss
+  are never hidden: the latest response always counts. Until the set exists, the course page shows "case set not
   built yet" for this dimension. Course readiness requires this dimension as well as every module, so a course can
   never be marked ready while the set is missing. All cases are `[from Christian's reviewed batch]`.
 - **Never a score.** Every roll-up is a count and a status word. Never a score, never a prediction of an exam or a
