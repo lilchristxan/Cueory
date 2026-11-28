@@ -181,7 +181,7 @@ const activeSteps = propHowSteps ?? currentConfig.defaultSteps;
 const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
 ---
 
-<div class="game-frame" data-game-look={game === 'vialo' ? 'wordpill' : undefined}>
+<div class="game-frame" data-game-look={game === 'vialo' ? 'wordpill' : key === 'suture' ? 'piccline' : undefined}>
   <div class="game-frame-layout">
     <!-- Left panel (full height above footer) -->
     <aside class="game-frame-sidebar" aria-label="Game details and stats">

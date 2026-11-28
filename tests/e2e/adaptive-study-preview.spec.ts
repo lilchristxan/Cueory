@@ -75,6 +75,28 @@ test('the optional exam date accepts a calendar day and rejects an impossible da
   await expect(page.getByRole('button', { name: 'show answer' })).toBeVisible();
 });
 
+test('correcting the exam date clears its error before the browser handles the input event', async ({ page }) => {
+  await markPanelsSeen(page);
+  await page.goto('/preview/adaptive-learning');
+  const exam = page.getByLabel('exam date (optional)');
+  const start = page.getByRole('button', { name: 'start sample session' });
+  await exam.fill('2027-02-29');
+  await start.click();
+  await expect(exam).toBeFocused();
+  await expect(exam).toHaveJSProperty('validationMessage', 'Enter a valid date as YYYY-MM-DD.');
+
+  // Firefox observes the field itself to decide whether its validation message should close.
+  await exam.evaluate((field: HTMLInputElement) => {
+    field.addEventListener('input', () => {
+      field.dataset.validAtInput = String(field.validity.valid);
+    }, { once: true });
+  });
+  await exam.fill('2028-02-29');
+  expect(await exam.getAttribute('data-valid-at-input')).toBe('true');
+  await start.click();
+  await expect(page.getByRole('button', { name: 'show answer' })).toBeVisible();
+});
+
 test('a backwards device clock keeps the sample session on the last accepted day', async ({ page }) => {
   await page.clock.setFixedTime(new Date(2028, 1, 28, 12));
   await markPanelsSeen(page);

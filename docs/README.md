@@ -24,6 +24,7 @@ Each link has a one-line summary and says whether Christian needs to read it. Gu
 - [Visuals kit](VISUALS.md) — See the plan for teaching pictures, sources, and approval checks. **Christian:** Read when approving visuals.
 - [Video lessons](VIDEO-LESSONS.md) — See how one board file from a teaching video becomes label it and the other ways to study. **Christian:** Read when planning a video lesson.
 - [Anatomy lab checks](ANATOMY-LAB-QA.md) — See the release checklist for anatomy models and interactions. **Christian:** Read before approving the anatomy lab.
+- [Opening accounts](ACCOUNTS-OPENING.md) — Follow the ordered checklist for opening sign-up on staging and then the live site. **Christian:** Read before opening accounts.
 - [Admin console plan](ADMIN-CONSOLE.md) — Review the proposed admin account, safety rules, and build phases. **Christian:** Read before approving admin features.
 - [Database backups](BACKUPS.md) — Compare proposed backup choices and recovery steps. **Christian:** Read before choosing a backup plan.
 - [Break suggestions plan](BREAKS.md) — Review the proposal for students to suggest breaks safely. **Christian:** Read if approving this feature.

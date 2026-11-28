@@ -17,7 +17,8 @@ async function openClosedLab(page: Page) {
   await page.goto(URL);
   await page.getByRole('button', { name: 'open the anatomy lab' }).click();
   await expect(page.getByTestId('anatomy-stage')).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('button', { name: 'labels', exact: true })).toBeEnabled({ timeout: 20_000 });
+  // The slider is on screen at every size and comes alive with the model (labels now sits in the controls box).
+  await expect(page.getByRole('slider', { name: /spread structures apart/ })).toBeEnabled({ timeout: 20_000 });
 }
 
 async function openLab(page: Page) {
@@ -66,7 +67,7 @@ test.describe('anatomy lab shell: look', () => {
 });
 
 test.describe('anatomy lab shell: orientation', () => {
-  test('three views carry Christian\'s words, with a picture of the loaded model each, plus free rotate', async ({ page }) => {
+  test('three views carry Christian\'s words, with a picture of the loaded model each, plus the play button', async ({ page }) => {
     await openLab(page);
     const views = page.getByRole('group', { name: 'preset views' });
     await expect(views.getByRole('button')).toHaveCount(3);
@@ -95,17 +96,19 @@ test.describe('anatomy lab shell: orientation', () => {
       expect(drawn, word).toBeGreaterThan(100);
     }
 
-    const free = page.getByRole('button', { name: 'free rotate', exact: true });
-    await expect(free).toHaveAttribute('aria-pressed', 'false');
-    await free.click();
-    await expect(free).toHaveAttribute('aria-pressed', 'true');
+    // The play button in the middle of the arrows turns the model by itself (it replaced "free rotate", Christian,
+    // 2026-11-27). The test shapes start still; a preset view, an arrow or reset stops the turning again.
+    const spin = page.getByRole('button', { name: 'turn the model by itself', exact: true });
+    await expect(spin).toHaveAttribute('aria-pressed', 'false');
+    await spin.click();
+    await expect(spin).toHaveAttribute('aria-pressed', 'true');
     await expect(views.getByRole('button', { name: 'anterior view', exact: true })).toHaveAttribute('aria-pressed', 'false');
     await views.getByRole('button', { name: 'lateral view', exact: true }).click();
     await expect(views.getByRole('button', { name: 'lateral view', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await expect(free).toHaveAttribute('aria-pressed', 'false');
-    // Turning with a button leaves the preset: free rotate is what is showing.
+    await expect(spin).toHaveAttribute('aria-pressed', 'false');
+    // Turning with a button leaves the preset.
     await page.getByRole('button', { name: 'turn left' }).click();
-    await expect(free).toHaveAttribute('aria-pressed', 'true');
+    await expect(views.getByRole('button', { name: 'lateral view', exact: true })).toHaveAttribute('aria-pressed', 'false');
     await page.getByRole('button', { name: 'reset view' }).click();
     await expect(views.getByRole('button', { name: 'anterior view', exact: true })).toHaveAttribute('aria-pressed', 'true');
   });
@@ -121,9 +124,9 @@ test.describe('anatomy lab shell: orientation', () => {
 });
 
 test.describe('anatomy lab shell: body systems and layers', () => {
-  test('each row has a filled or hollow dot AND the word on or off, matching its pressed state', async ({ page }) => {
+  test('each row has a filled or hollow dot AND an arrow, matching its pressed state', async ({ page }) => {
     await openLab(page);
-    const rows = page.getByRole('group', { name: 'body system' }).getByRole('button');
+    const rows = page.getByRole('group', { name: 'body system' }).locator(':scope > button'); // the system rows; the open system's structures are listed under its row
     expect(await rows.count()).toBeGreaterThan(1);
     const states = await rows.evaluateAll((buttons) => buttons.map((button) => ({
       pressed: button.getAttribute('aria-pressed'),
@@ -132,23 +135,27 @@ test.describe('anatomy lab shell: body systems and layers', () => {
     })));
     for (const state of states) {
       expect(state.dot).toBe(true);
-      expect(state.word).toBe(state.pressed === 'true' ? 'on' : 'off');
+      // Christian (2026-11-27): the words on / off were too much. The lit or hollow dot is the indicator, and a
+      // second shape, the arrow, points down on the open system and sideways on the others: never colour alone.
+      expect(state.word).toBe(state.pressed === 'true' ? '▾' : '▸');
     }
     expect(states.filter((state) => state.pressed === 'true')).toHaveLength(1);
-    // The word is drawn on the screen, not only in the markup.
+    // The arrow is drawn on the screen, not only in the markup.
     await expect(rows.first().locator('.lab-state')).toBeVisible();
-    await expect(rows.first().locator('.lab-state')).toHaveText('on');
+    await expect(rows.first().locator('.lab-state')).toHaveText('▾');
   });
 });
 
 test.describe('anatomy lab shell: bottom bar', () => {
   test('labels, spread structures apart and more are there, and the slider moves the structures', async ({ page }) => {
     await openLab(page);
+    // The bottom bar is the slider alone (Christian, 2026-11-27); labels and more sit in the top bar.
     const bar = page.getByRole('group', { name: 'bottom bar' });
-    const labels = bar.getByRole('button', { name: 'labels', exact: true });
+    const labels = page.getByRole('button', { name: 'labels', exact: true });
     await expect(labels).toBeEnabled();
-    await expect(bar.getByText('spread structures apart · 0%')).toBeVisible();
-    for (const control of [labels, bar.getByRole('button', { name: 'more', exact: true })]) {
+    await expect(bar.getByRole('button')).toHaveCount(0);
+    await expect(bar.getByText('spread structures apart · 0%')).toBeAttached();
+    for (const control of [labels, page.getByRole('button', { name: 'more', exact: true })]) {
       const box = (await control.boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
       expect(box.width).toBeGreaterThanOrEqual(44);
@@ -170,11 +177,11 @@ test.describe('anatomy lab shell: bottom bar', () => {
     const slider = bar.getByRole('slider', { name: /spread structures apart/ });
     await slider.focus();
     for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowRight');
-    await expect(bar.getByText('spread structures apart · 50%')).toBeVisible();
+    await expect(bar.getByText('spread structures apart · 50%')).toBeAttached();
     await expect(slider).toHaveAttribute('aria-valuetext', '50%');
     await expect.poll(spots).not.toEqual(together);
     for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowLeft');
-    await expect(bar.getByText('spread structures apart · 0%')).toBeVisible();
+    await expect(bar.getByText('spread structures apart · 0%')).toBeAttached();
     await expect.poll(spots).toEqual(together);
   });
 
@@ -219,7 +226,7 @@ test.describe('anatomy lab shell: layout', () => {
 
   test('desktop shows the panels beside the model; phone and tablet fold them into drawers on 44 px buttons', async ({ page }, info) => {
     await openClosedLab(page);
-    const orientation = page.getByRole('region', { name: 'orientation' });
+    const orientation = page.getByRole('region', { name: 'controls' });
     const systems = page.getByRole('region', { name: 'body systems' });
     const dock = page.getByRole('group', { name: 'panels' });
     if (sizeOf(info) === 'desktop') {
@@ -229,16 +236,23 @@ test.describe('anatomy lab shell: layout', () => {
       await expect(page.getByRole('region', { name: 'structures' })).toBeVisible();
       // The panels sit over the stage's two edges, never over the middle where the model stands.
       const stage = (await page.getByTestId('anatomy-stage').boundingBox())!;
-      const left = (await orientation.boundingBox())!;
-      const right = (await page.getByRole('region', { name: 'structures' }).boundingBox())!;
+      const left = (await systems.boundingBox())!;
       expect(left.x + left.width).toBeLessThan(stage.x + stage.width / 2);
-      expect(right.x).toBeGreaterThan(stage.x + stage.width / 2);
+      // One tree (Christian, 2026-11-27): the open system's structures are listed inside the body systems panel.
+      await expect(systems.getByRole('region', { name: 'structures' })).toBeVisible();
+      // The orientation panel is the view's remote control: it sits in the stage's bottom right corner.
+      const remote = (await orientation.boundingBox())!;
+      expect(remote.x).toBeGreaterThan(stage.x + stage.width / 2);
+      expect(stage.x + stage.width - (remote.x + remote.width)).toBeLessThan(32);
+      expect(stage.y + stage.height - (remote.y + remote.height)).toBeLessThan(32);
     } else {
       await expect(dock).toBeVisible();
       await expect(orientation).toBeHidden();
       await expect(systems).toBeHidden();
       await expect(page.getByRole('region', { name: 'structures' })).toBeHidden();
-      for (const name of ['orientation', 'body systems', 'structures']) {
+      // The structures are listed inside the body systems panel now, so there are two drawers, not three.
+      await expect(dock.getByRole('button', { name: 'structures', exact: true })).toHaveCount(0);
+      for (const name of ['controls', 'body systems']) {
         const button = dock.getByRole('button', { name, exact: true });
         const box = (await button.boundingBox())!;
         expect(box.height, name).toBeGreaterThanOrEqual(44);
@@ -251,7 +265,7 @@ test.describe('anatomy lab shell: layout', () => {
       await expect(systems).toBeVisible();
       await expect(page.getByRole('region', { name: 'structures' })).toBeVisible();
       // And they close again.
-      await dock.getByRole('button', { name: 'orientation', exact: true }).click();
+      await dock.getByRole('button', { name: 'controls', exact: true }).click();
       await expect(orientation).toBeHidden();
       // The model stays above the panels, still tappable.
       const stage = (await page.getByTestId('anatomy-stage').boundingBox())!;

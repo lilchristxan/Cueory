@@ -1,0 +1,1 @@
+status: in review: the module path rules (video and reading, practice, diagnostic quiz, adaptive practice to "ready", optional deeper round, module exam, course rollup) and the momentum rules (short sets, earned moments, forgiving streak, good place to stop). Pure rules with unit tests; no screen, storage or database yet. Design: docs/design/module-mastery-path.md.

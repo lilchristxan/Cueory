@@ -22,3 +22,22 @@ test('with JavaScript off the old address shows a plain link to the new one', as
   await expect(page.getByTestId('old-vialo-link')).toHaveAttribute('href', '/play/wordpill');
   await context.close();
 });
+
+// Leaving early is the point: the old address must not start any island chunk, or the browser has to cancel it (Firefox
+// reports that as NS_BINDING_ABORTED) and the visitor downloads code for a page they never see.
+test('/play/vialo leaves before it requests any script chunk, and nothing fails', async ({ page }) => {
+  const chunksFromOldDocument: string[] = [];
+  const failed: string[] = [];
+  let leftOldAddress = false;
+  page.on('framenavigated', (frame) => { if (frame === page.mainFrame() && /\/play\/wordpill$/.test(frame.url())) leftOldAddress = true; });
+  page.on('request', (request) => {
+    if (!leftOldAddress && new URL(request.url()).pathname.startsWith('/_astro/')) chunksFromOldDocument.push(request.url());
+  });
+  page.on('requestfailed', (request) => failed.push(request.url() + ' ' + (request.failure()?.errorText ?? '')));
+  await page.goto('/play/vialo');
+  await expect(page).toHaveURL(/\/play\/wordpill$/);
+  await expect(page.getByTestId('vialo')).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  expect(chunksFromOldDocument).toEqual([]);
+  expect(failed).toEqual([]);
+});
