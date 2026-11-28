@@ -87,4 +87,11 @@ describe('game help text (#736)', () => {
   it('keeps the sudoku pause sentence the pause test reads', () => {
     expect(GAME_HELP.triage.play).toContain('pause hides every number, the original ones too, until you press play. leaving the page pauses it for you.');
   });
+
+  it('keeps every rule of the piccline board in its help, since the board no longer prints them', () => {
+    const text = GAME_HELP.suture.play.join(' ');
+    for (const part of ['each letter belongs to exactly one answer', 'the thread', 'drag across the letters', 'tapping the last letter again also submits', 'arrows move', 'a teal line joins', 'question marks', 'earn a cue']) {
+      expect(text).toContain(part);
+    }
+  });
 });
