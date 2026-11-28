@@ -256,6 +256,24 @@ test.describe('daily games: pillo settings and finish screen (Task 719)', () => 
     await expect(page.getByTestId('pulse-status')).toContainText('5 of 6 guesses left');
   });
 
+  test('an accepted first guess keeps the chosen hard mode locked after a same-day reload', async ({ page }) => {
+    const gear = page.getByTestId('pulse').getByRole('button', { name: 'pillo settings' });
+    const settings = page.getByRole('dialog', { name: 'pillo settings' });
+    const hard = settings.getByRole('switch', { name: /hard mode/ });
+    await gear.click();
+    await hard.click();
+    await page.keyboard.press('Escape');
+    await field(page).fill('crane');
+    await field(page).press('Enter');
+    await expect(page.getByRole('list', { name: 'your guesses' }).getByRole('listitem')).toHaveCount(1);
+
+    await page.reload();
+    await expect(page.getByTestId('pulse')).toBeVisible();
+    await gear.click();
+    await expect(hard).toHaveAttribute('aria-checked', 'true');
+    await expect(hard).toHaveAttribute('aria-disabled', 'true');
+  });
+
   test('on-screen keyboard only removes the typing field, and high contrast still passes axe', async ({ page }) => {
     await page.getByRole('button', { name: 'pillo settings' }).click();
     const settings = page.getByRole('dialog', { name: 'pillo settings' });
