@@ -54,7 +54,7 @@ In spaced practice, call a card mastered only after two correct reviews on separ
 
 Both groups use the same Cueory mastery rule for this measurement. Requiring all cards to meet the 80% recall threshold at once favors schedules that review more frequently. The table illustrates that trade-off and cannot establish better learning or predict an exam result. These runs use no exam date; the calendar and exam rules have separate tests.
 
-To reproduce once the engine branch lands, use the installed dependencies:
+To reproduce on a checkout of staging, use the installed dependencies:
 
 ```sh
 mkdir -p work/adaptive
@@ -64,17 +64,19 @@ node work/adaptive/simulation.cjs
 
 ## Progress log
 
-- `task-adaptive/design` (#1256) — proposed model, release boundaries and research references.
-- `task-adaptive/engine` (#1257) — pure engine, module tests and fixed-seed simulation.
-- `task-adaptive/progress` (#1258) — versioned on-device study progress and migration.
-- `task-adaptive/sample-preview` (#1266) — locked sample preview, backwards-clock recovery and the measured route budget.
+- [#1256](https://github.com/lilchristxan/Cueory/pull/1256) — design draft with the model, release boundaries and research references.
+- [#1257](https://github.com/lilchristxan/Cueory/pull/1257) — shipped to staging with the pure engine, module tests and fixed-seed simulation.
+- [#1258](https://github.com/lilchristxan/Cueory/pull/1258) — draft record format and migration for on-device study progress.
+- [#1266](https://github.com/lilchristxan/Cueory/pull/1266) — shipped the locked sample preview, backwards-clock recovery and measured route budget to staging.
+- [#1275](https://github.com/lilchristxan/Cueory/pull/1275) — shipped the Learn connection to staging with the switch off. The existing see, choose and type flow stays active. Explicit opt-in is limited to the labeled study-skills deck in builds that allow samples.
 
 ## Staging trial approval
 
-Christian approved trying the 20-item session cap and the proposed spaced mastery rule on staging. The storage and release decisions below are separate.
+Christian approved trying the 20-item session cap and the proposed spaced mastery rule on staging. The hidden preview already uses both. Study progress and the exam date stay in the open page and clear on reload.
 
 ## Needs Christian
 
 - Should the exam plan include an optional lighter day before the exam? The pilot uses its usual session cap.
-- If signed-in sync becomes necessary, decide what state should be shared between devices and whether the existing review rows can represent it. A new storage field, policy, or export or privacy change needs a separate approved design. The pilot needs none of these.
-- Whether to enable the first default-off integration after trying the labeled sample deck remains a separate release decision.
+- Before connecting device storage, decide how saved adaptive progress should appear in download and reset, and confirm how the privacy page should describe it. The storage draft defines the format and migration only.
+- If signed-in sync becomes necessary, decide what state should be shared between devices and whether the existing review rows can represent it. A new database field or policy needs a separate approved design.
+- Decide whether to turn on the Learn switch for the labeled sample on locked staging. The existing Learn experience remains the default.
