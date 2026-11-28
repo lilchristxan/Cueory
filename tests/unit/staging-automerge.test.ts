@@ -247,6 +247,8 @@ describe('held paths', () => {
     'src/islands/flagsubmit.ts',
     'src/islands/flagitem.ts', // publishes the selected database item/version to the report form
     'src/islands/flaginbox.ts', // private/admin comment rendering
+    'src/islands/flagreceipts.ts', // protects persistent report notices from a previous account
+    'src/islands/flagreceipts-test-helper.ts', // future helper with same security-critical stem
     'src/islands/FlagForm.tsx', // authenticated report submission UI
     'src/islands/FlagMount.tsx', // sign-in state and report transport
     'src/islands/ProgressPanel.tsx', // account exam-plan and personal progress
@@ -265,6 +267,26 @@ describe('held paths', () => {
       const decision = decide(input({ mode, files: [{ filename: path }] }));
       expect(decision.action).toBe('label');
       expect(decision.reasons.join(' ')).toContain(path);
+    }
+  });
+
+  it('labels future edits to the anatomy flag receipt owner gate even with passing checks', () => {
+    const sensitive = 'src/islands/flagreceipts.ts';
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      expect(isHeldPath(sensitive, mode)).toBe(true);
+      const decision = decide(input({ mode, files: [{ filename: sensitive }] }));
+      expect(decision.action).toBe('label');
+      expect(decision.reasons.join(' ')).toContain(sensitive);
+
+      // A rename must not evade the founder hold when the old path is moved
+      // to a name normally eligible for the staging auto-merge bot.
+      const rename = [{ filename: 'src/islands/cards.ts', previous_filename: sensitive }];
+      expect(heldPaths(rename, mode)).toEqual([sensitive]);
+      expect(decide(input({ mode, files: rename })).action).toBe('label');
+    }
+    // Do not block ordinary, unrelated Anatomy Lab list rendering.
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      expect(isHeldPath('src/islands/anatomy-list-window.ts', mode)).toBe(false);
     }
   });
 

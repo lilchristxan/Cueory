@@ -136,6 +136,7 @@ const SENSITIVE_AUTH_ISLAND_STEMS = [
   'account', 'admin', 'auth', 'checkanswer', 'deleteaccount', 'displayname',
   'examplan', 'exportdata', 'exportload', 'flagconnect', 'flagform', 'flaginbox',
   'flagmount', 'flagsend', 'flagsubmit', 'flagitem',
+  'flagreceipts', // Per-account anatomy report receipt ownership and stale-result isolation.
   'guestimport', 'mfa', 'oauth',
   'onboarding', 'password', 'pkce', 'progresspanel', 'publishedquestions',
   'questionsplayer', 'questionsremote', 'recovery', 'resetpassword',
