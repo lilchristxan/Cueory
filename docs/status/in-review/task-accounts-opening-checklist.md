@@ -1,0 +1,1 @@
+status: in review: docs/ACCOUNTS-OPENING.md, the one checklist for opening accounts (staging database checked: 20 changes applied, RLS on all 14 tables, 0 rows; cueory-prod is paused), seeing study data, and the trade-offs of making the repository private. Docs only.
