@@ -8,6 +8,7 @@
 // Design: docs/design/module-mastery-path.md.
 
 import { dayNumber, type StudyClock } from './calendar';
+import { predictedRecall, recordAnswer, RECALL_TARGET, type CardMemory } from './memory';
 
 /** Thinking levels, lowest first (Bloom's revised taxonomy, without "create"). */
 export const THINKING_LEVELS = ['remember', 'understand', 'apply', 'analyze', 'evaluate'] as const;
@@ -28,23 +29,37 @@ export const TECHNIQUES_FOR_LEVEL: Readonly<Record<ThinkingLevel, readonly Techn
 
 export type Stage = 'input' | 'practice' | 'diagnostic' | 'adaptive' | 'ready' | 'deeper' | 'exam' | 'complete';
 
-/** One recorded answer. Only right or wrong is kept, never the question or the student's words. */
+/** One recorded answer. Only right or wrong and how it was given are kept, never the question or the student's words. */
 export interface AnswerRecord {
   correct: boolean;
-  /** How much this answer shows, after technique and guessing are taken into account (see EVIDENCE_WEIGHT). */
+  /** How much this answer shows after technique, cue, guessing and repeats (see EVIDENCE_WEIGHT). */
   weight: number;
   /** The calendar day it was recorded, as a day number (calendar.ts dayNumber); absent when no clock was given. */
   day?: number;
   /** A single miss right after a strong run of right answers (see SLIP_RUN). It counts for less. */
   slip: boolean;
+  /** True for an answer the student gave here. False for credit transferred down from a higher level (see TRANSFER_SHARE). */
+  direct: boolean;
+  /** A right answer on an item never seen before at this level, with no cue and no timeout (a first-try success). */
+  fresh: boolean;
+  /** The item answered again. It adds nothing to the evidence either way (retention, not understanding, is what it shows). */
+  repeat: boolean;
+  /** How it was asked, and whether a cue was used or the tachyyy timer ran out (a timeout is a miss). */
+  technique?: Technique;
+  cued: boolean;
+  timedOut: boolean;
 }
 
 /** What a student has shown on one concept at one thinking level. */
 export interface LevelEvidence {
   right: number;
   wrong: number;
-  /** The most recent answers (up to RECENT_WINDOW), oldest first. Status is judged on these, so old misses fade. */
+  /** The most recent records (up to RECENT_WINDOW), oldest first. Status is judged on these, so old misses fade. */
   recent: readonly AnswerRecord[];
+  /** Ids of every item answered here, so a repeated item is never counted as independent evidence. */
+  seen: readonly string[];
+  /** Memory state (memory.ts) of each answered item with a clock, used to see when the level's cards fade. */
+  cards: Readonly<Record<string, CardMemory>>;
 }
 
 export type ConceptLevels = Partial<Record<ThinkingLevel, LevelEvidence>>;
@@ -80,34 +95,46 @@ export interface ModuleShape {
   practiceTechniques: readonly Technique[];
 }
 
-/** A level is "shown" only when the last this-many answers there are all right. */
+/** A level can reach "sufficient" only when the last this-many direct answers there are all right. */
 export const SHOWN_AFTER = 2;
-/** How many recent answers status is judged on. */
-export const RECENT_WINDOW = 6;
-/** Smoothed weighted share right needed across the recent answers, so 2 of 2 counts and 2 of 4 does not. */
-export const SHOWN_SHARE = 0.7;
-/**
- * Weighted evidence from right answers in the recent window needed before a level can be "shown". Two ordinary
- * right answers (weight 1 each) reach it; no single answer does, because the heaviest weight is 1.5. UNVERIFIED.
- */
-export const SHOWN_WEIGHT = 2;
-/** Weights are fractions (a two-option answer is worth a third), so sums are compared with this much tolerance. */
+/** How many recent records status is judged on (UNVERIFIED; the brief does not fix a window, so old misses can fade). */
+export const RECENT_WINDOW = 20;
+/** Brief #1281 section 2: "sufficient" needs the 10th percentile of the posterior to be at least this. */
+export const SUFFICIENT_LOWER_BOUND = 0.7;
+/** The lower-bound percentile the brief uses: 10th. */
+export const LOWER_BOUND_PERCENTILE = 0.1;
+/** Brief #1281 section 2: "sufficient" needs at least this much direct weighted evidence. */
+export const SUFFICIENT_EVIDENCE = 3;
+/** "strong" needs the same lower bound to reach this. UNVERIFIED (the brief names the word, not the number). */
+export const STRONG_LOWER_BOUND = 0.8;
+/** Below this posterior mean an unsufficient level is a "gap" rather than "developing". UNVERIFIED. */
+export const GAP_BELOW_MEAN = 0.5;
+/** Brief #1281 section 2: a higher-tier right answer gives each lower tier this share of its own weight as credit. */
+export const TRANSFER_SHARE = 0.5;
+/** Brief #1281 section 2: using a cue halves the credit of a right answer. */
+export const CUE_SHARE = 0.5;
+/** How many transferred-credit records are kept per level, apart from the direct ones, so credit cannot crowd out direct evidence. UNVERIFIED. */
+export const TRANSFER_WINDOW = 6;
+/** Weights are fractions, so sums are compared with this much tolerance. */
 const WEIGHT_TOLERANCE = 1e-9;
 
 /**
- * How much one answer shows, by technique. ALL VALUES ARE UNVERIFIED STARTING VALUES, to be tuned with the simulation
- * and real use (docs/design/module-mastery-path.md). Recognition (picking from choices shown) shows less than
- * production (pulling the answer out of memory), and a worked case shows most.
+ * How much one answer shows, by technique. Flashcard flips and matching 0.5, label it and fill in the blank 0.75,
+ * learning questions 1.0 are the defaults of brief #1281 section 2 (themselves "unverified, tune by simulation").
+ * Case questions at 1.25 is UNVERIFIED: the brief has no case technique, so it takes the practice exam item value.
  */
 export const EVIDENCE_WEIGHT: Readonly<Record<Technique, number>> = {
-  flashcards: 1, // self-recalled
-  'label it': 1, // typed
-  'fill in the blank': 1,
-  matching: 0.5, // recognition
-  'learning questions': 0.6, // recognition
-  'case questions': 1.5, // worked case
+  flashcards: 0.5, // brief
+  'label it': 0.75, // brief
+  'fill in the blank': 0.75, // brief
+  matching: 0.5, // brief
+  'learning questions': 1, // brief
+  'case questions': 1.25, // UNVERIFIED
 };
-/** Weight of an answer whose technique is not given. */
+/** Where an answer came from, when that changes what it shows (brief: diagnostic items 1.0, practice exam items 1.25). */
+export const SOURCE_WEIGHT = { diagnostic: 1, 'practice exam': 1.25 } as const;
+export type AnswerSource = keyof typeof SOURCE_WEIGHT;
+/** Weight of an answer whose technique is not given. UNVERIFIED. */
 export const DEFAULT_EVIDENCE_WEIGHT = 1;
 /** Techniques where the answer is chosen from options shown, so a right answer can be a guess. */
 export const RECOGNITION_TECHNIQUES: readonly Technique[] = ['matching', 'learning questions'];
@@ -117,7 +144,10 @@ export const DEFAULT_OPTIONS = 4;
 export const SLIP_RUN = 4;
 /** A slip counts as this share of a normal miss, so recovery is quick. UNVERIFIED. */
 export const SLIP_MISS_SHARE = 0.5;
-/** A "shown" level whose newest answer is more than this many days old becomes "review due". UNVERIFIED. */
+/**
+ * Fallback only where a level has no card memory (answers recorded without an item id or clock): a level whose newest
+ * direct answer is older than this many days drops one status. UNVERIFIED.
+ */
 export const STALE_AFTER_DAYS = 14;
 /** The levels a student must show on every concept before the practice test is offered. */
 export const READY_LEVELS: readonly ThinkingLevel[] = ['remember', 'understand', 'apply'];
@@ -131,81 +161,264 @@ export function emptyProgress(): ModuleProgress {
 /** What is known about one answer besides right or wrong. All of it is optional. */
 export interface AnswerDetail {
   technique?: Technique;
+  /** Set for diagnostic and practice exam items, which show more than ordinary practice. */
+  source?: AnswerSource;
   /** How many options a recognition item showed. Fewer options make a right answer easier to guess. */
   options?: number;
-  /** When it was answered; needed for review-due to work. */
+  /** The item answered. Without it an answer cannot be told apart from a repeat, so give it whenever there is one. */
+  itemId?: string;
+  /** A cue (hint) was used: a right answer then counts half. */
+  cued?: boolean;
+  /** The tachyyy timer ran out: counts as a miss whatever was answered. */
+  timedOut?: boolean;
+  /** When it was answered; needed for retention (card memory) to work. */
   clock?: StudyClock;
 }
 
 /**
  * How much an answer shows. A right answer on a recognition item is scaled by how hard it is to guess: with the
  * default four options the factor is 1; with two options it is two thirds; more than four never counts extra.
- * A miss always counts at the technique's full weight.
+ * A cue halves a right answer. A miss always counts at full weight.
  */
 export function evidenceWeight(correct: boolean, detail: AnswerDetail = {}): number {
-  const base = detail.technique ? EVIDENCE_WEIGHT[detail.technique] : DEFAULT_EVIDENCE_WEIGHT;
-  if (!correct || !detail.technique || !RECOGNITION_TECHNIQUES.includes(detail.technique)) return base;
-  const options = Math.max(2, Math.floor(detail.options ?? DEFAULT_OPTIONS));
-  const factor = Math.min(1, (1 - 1 / options) / (1 - 1 / DEFAULT_OPTIONS));
-  return base * factor;
+  const base = detail.source ? SOURCE_WEIGHT[detail.source] : detail.technique ? EVIDENCE_WEIGHT[detail.technique] : DEFAULT_EVIDENCE_WEIGHT;
+  if (!correct) return base;
+  let weight = detail.cued ? base * CUE_SHARE : base;
+  if (detail.technique && RECOGNITION_TECHNIQUES.includes(detail.technique)) {
+    const options = Math.max(2, Math.floor(detail.options ?? DEFAULT_OPTIONS));
+    weight *= Math.min(1, (1 - 1 / options) / (1 - 1 / DEFAULT_OPTIONS));
+  }
+  return weight;
 }
 
-export function recordLevelAnswer(previous: LevelEvidence | undefined, correct: boolean, detail: AnswerDetail = {}): LevelEvidence {
+const isDirect = (record: AnswerRecord): boolean => record.direct;
+
+export function recordLevelAnswer(previous: LevelEvidence | undefined, answered: boolean, detail: AnswerDetail = {}): LevelEvidence {
+  const correct = answered && !detail.timedOut;
   const before = previous?.recent ?? [];
+  const repeat = detail.itemId !== undefined && (previous?.seen ?? []).includes(detail.itemId);
   let streak = 0;
-  for (let i = before.length - 1; i >= 0 && before[i]!.correct; i--) streak++;
+  const direct = before.filter(isDirect);
+  for (let i = direct.length - 1; i >= 0 && direct[i]!.correct; i--) streak++;
+  const cued = detail.cued === true;
   const record: AnswerRecord = {
     correct,
-    weight: evidenceWeight(correct, detail),
+    weight: repeat ? 0 : evidenceWeight(correct, detail),
     ...(detail.clock ? { day: dayNumber(detail.clock.day) } : {}),
     slip: !correct && streak >= SLIP_RUN,
+    direct: true,
+    fresh: correct && !repeat && !cued,
+    repeat,
+    ...(detail.technique ? { technique: detail.technique } : {}),
+    cued,
+    timedOut: detail.timedOut === true,
   };
+  const cards = { ...(previous?.cards ?? {}) };
+  if (detail.itemId !== undefined && detail.clock) {
+    // Cued or timed-out right answers do not strengthen memory.
+    cards[detail.itemId] = recordAnswer(cards[detail.itemId], correct && !cued, detail.clock);
+  }
   return {
     right: (previous?.right ?? 0) + (correct ? 1 : 0),
     wrong: (previous?.wrong ?? 0) + (correct ? 0 : 1),
-    recent: [...before, record].slice(-RECENT_WINDOW),
+    // A repeated item is not independent evidence either way, so it takes no place in the window. It still feeds the
+    // item's memory, which is how forgetting an item shows (see levelAssessment).
+    recent: repeat ? before : trimmed([...before, record]),
+    seen: detail.itemId !== undefined && !repeat ? [...(previous?.seen ?? []), detail.itemId] : previous?.seen ?? [],
+    cards,
   };
 }
 
-/** Records one answer on a concept at a level and returns new progress (the old one is left untouched). */
+/** Keeps the latest RECENT_WINDOW direct records and the latest TRANSFER_WINDOW transferred ones, in order. */
+function trimmed(records: readonly AnswerRecord[]): readonly AnswerRecord[] {
+  const directCut = records.filter(isDirect).length - RECENT_WINDOW;
+  const transferCut = records.filter((record) => !record.direct).length - TRANSFER_WINDOW;
+  let direct = 0;
+  let transfer = 0;
+  return records.filter((record) => (record.direct ? direct++ >= directCut : transfer++ >= transferCut));
+}
+
+/** Credit passed down from a right answer at a higher level. It is kept apart from direct evidence (see levelAssessment). */
+function addTransfer(previous: LevelEvidence | undefined, weight: number, day: number | undefined): LevelEvidence {
+  const record: AnswerRecord = {
+    correct: true, weight, ...(day !== undefined ? { day } : {}), slip: false,
+    direct: false, fresh: false, repeat: false, cued: false, timedOut: false,
+  };
+  return {
+    right: previous?.right ?? 0,
+    wrong: previous?.wrong ?? 0,
+    recent: trimmed([...(previous?.recent ?? []), record]),
+    seen: previous?.seen ?? [],
+    cards: previous?.cards ?? {},
+  };
+}
+
+/**
+ * Records one answer on a concept at a level and returns new progress (the old one is left untouched). A right
+ * answer also gives every lower level of the same concept TRANSFER_SHARE of its weight as transferred credit; a miss
+ * gives nothing downward.
+ */
 export function recordModuleAnswer(progress: ModuleProgress, concept: string, level: ThinkingLevel, correct: boolean, detail: AnswerDetail = {}): ModuleProgress {
   const concepts = new Map(progress.concepts);
   const levels = { ...(concepts.get(concept) ?? {}) };
+  const previousLast = levels[level]?.recent.at(-1);
   levels[level] = recordLevelAnswer(levels[level], correct, detail);
+  const record = levels[level]!.recent.at(-1)!;
+  if (record !== previousLast && record.correct && record.weight > 0 && !record.repeat) {
+    for (const lower of THINKING_LEVELS.slice(0, THINKING_LEVELS.indexOf(level))) {
+      levels[lower] = addTransfer(levels[lower], record.weight * TRANSFER_SHARE, record.day);
+    }
+  }
   concepts.set(concept, levels);
   return { ...progress, concepts };
 }
 
-export type LevelStatus = 'not started' | 'learning' | 'shown' | 'review due';
+/** Brief #1281 status words, lowest first. "sufficient" and "strong" both count as shown. */
+export const LEVEL_STATUSES = ['not started', 'gap', 'developing', 'sufficient', 'strong'] as const;
+export type LevelStatus = (typeof LEVEL_STATUSES)[number];
+
+/** A level counts toward readiness once it is sufficient or strong. */
+export const isShown = (status: LevelStatus): boolean => status === 'sufficient' || status === 'strong';
+
+function logGamma(x: number): number {
+  const c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+  let y = x;
+  const t = x + 5.5 - (x + 0.5) * Math.log(x + 5.5);
+  let series = 1.000000000190015;
+  for (const coefficient of c) series += coefficient / ++y;
+  return -t + Math.log((2.5066282746310005 * series) / x);
+}
+
+function betaContinuedFraction(x: number, a: number, b: number): number {
+  const tiny = 1e-30;
+  let c = 1;
+  let d = 1 - ((a + b) * x) / (a + 1);
+  d = 1 / (Math.abs(d) < tiny ? tiny : d);
+  let h = d;
+  for (let m = 1; m <= 200; m++) {
+    const m2 = 2 * m;
+    let term = (m * (b - m) * x) / ((a + m2 - 1) * (a + m2));
+    d = 1 + term * d; d = 1 / (Math.abs(d) < tiny ? tiny : d);
+    c = 1 + term / c; if (Math.abs(c) < tiny) c = tiny;
+    h *= d * c;
+    term = (-(a + m) * (a + b + m) * x) / ((a + m2) * (a + m2 + 1));
+    d = 1 + term * d; d = 1 / (Math.abs(d) < tiny ? tiny : d);
+    c = 1 + term / c; if (Math.abs(c) < tiny) c = tiny;
+    const delta = d * c;
+    h *= delta;
+    if (Math.abs(delta - 1) < 1e-12) break;
+  }
+  return h;
+}
+
+/** P(rate < x) for a Beta(a, b) belief: the regularised incomplete beta function. */
+export function betaCdf(x: number, a: number, b: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const front = Math.exp(logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+  return x < (a + 1) / (a + b + 2) ? (front * betaContinuedFraction(x, a, b)) / a : 1 - (front * betaContinuedFraction(1 - x, b, a)) / b;
+}
+
+/** What the evidence adds up to: a Beta(1,1) prior plus weighted right and missed counts (brief #1281 section 2). */
+export interface Posterior {
+  /** 1 + weighted right answers, direct and transferred. */
+  alpha: number;
+  /** 1 + weighted missed answers (a slip counts half). */
+  beta: number;
+  /** Weighted evidence the student gave directly here (right and missed). Transferred credit is not in it. */
+  directWeight: number;
+  /** At least one first-try right answer on an item not seen before, with no cue. Direct evidence only. */
+  hasFresh: boolean;
+  /** The last SHOWN_AFTER direct answers are all right. */
+  lastRight: boolean;
+}
+
+export function posterior(evidence: LevelEvidence | undefined): Posterior {
+  let right = 0;
+  let missed = 0;
+  let directWeight = 0;
+  let hasFresh = false;
+  for (const record of evidence?.recent ?? []) {
+    if (record.correct) right += record.weight;
+    else missed += record.weight * (record.slip ? SLIP_MISS_SHARE : 1);
+    if (record.direct) directWeight += record.weight;
+    if (record.fresh) hasFresh = true;
+  }
+  const direct = (evidence?.recent ?? []).filter(isDirect);
+  return {
+    alpha: 1 + right, beta: 1 + missed, directWeight, hasFresh,
+    lastRight: direct.length >= SHOWN_AFTER && direct.slice(-SHOWN_AFTER).every((record) => record.correct),
+  };
+}
+
+/** The 10th percentile of the belief (brief #1281). Internal and for tests: never shown to a student as a percentage. */
+export function credibleLowerBound(alpha: number, beta: number): number {
+  let low = 0;
+  let high = 1;
+  for (let i = 0; i < 40; i++) {
+    const mid = (low + high) / 2;
+    if (betaCdf(mid, alpha, beta) > LOWER_BOUND_PERCENTILE) high = mid; else low = mid;
+  }
+  return low;
+}
+
+export interface LevelAssessment {
+  /** What the evidence alone says. */
+  earned: LevelStatus;
+  /** What it says once fading is counted: one status lower when the level's cards have faded. */
+  status: LevelStatus;
+  /** True when fading lowered the status, so the level is due for review. */
+  due: boolean;
+}
+
+/** True when the cards behind a level have faded below the recall target (brief: "below 80% recall"). */
+function faded(evidence: LevelEvidence, today: StudyClock): boolean {
+  const memories = Object.values(evidence.cards);
+  if (memories.length > 0) {
+    const recall = memories.reduce((sum, memory) => sum + predictedRecall(memory, today), 0) / memories.length;
+    return recall < RECALL_TARGET;
+  }
+  const newest = evidence.recent.filter(isDirect).at(-1)?.day;
+  return newest !== undefined && dayNumber(today.day) - newest > STALE_AFTER_DAYS;
+}
 
 /**
- * Judges a level on weighted recent evidence. It is "shown" when the last two answers are right, the weighted right
- * answers in the window add up to at least SHOWN_WEIGHT, and the smoothed weighted share right is at least
- * SHOWN_SHARE. A slip (one miss after a strong run) counts as half a miss. If `today` is given and the newest
- * answer is more than STALE_AFTER_DAYS old, a shown level becomes "review due".
+ * Judges a level on weighted evidence. From the posterior (Beta(1,1) plus weighted right and missed counts):
+ * "sufficient" needs at least SUFFICIENT_EVIDENCE of direct weighted evidence, a first-try right answer on an item
+ * not seen before, the last two direct answers right, and a 10th percentile of at least 0.70. "strong" needs the
+ * lower bound to reach STRONG_LOWER_BOUND as well. Otherwise "gap" (posterior mean under GAP_BELOW_MEAN) or
+ * "developing". Credit transferred from higher levels counts toward the belief but never toward the direct
+ * evidence, the first-try answer or the last two answers, so it alone can never make a level sufficient.
+ * With `today`, a level whose cards have faded below 80% predicted recall drops one status until it is reviewed.
  */
-export function levelStatus(evidence: LevelEvidence | undefined, today?: StudyClock): LevelStatus {
-  if (!evidence || evidence.right + evidence.wrong === 0) return 'not started';
-  const recent = evidence.recent;
-  let rightWeight = 0;
-  let total = 0;
-  for (const answer of recent) {
-    if (answer.correct) rightWeight += answer.weight;
-    total += answer.correct ? answer.weight : answer.weight * (answer.slip ? SLIP_MISS_SHARE : 1);
+export function levelAssessment(evidence: LevelEvidence | undefined, today?: StudyClock): LevelAssessment {
+  if (!evidence || (evidence.right + evidence.wrong === 0 && evidence.recent.length === 0)) {
+    return { earned: 'not started', status: 'not started', due: false };
   }
-  const share = (rightWeight + 1) / (total + 2);
-  const lastRight = recent.length >= SHOWN_AFTER && recent.slice(-SHOWN_AFTER).every((answer) => answer.correct);
-  if (!(lastRight && rightWeight + WEIGHT_TOLERANCE >= SHOWN_WEIGHT && share + WEIGHT_TOLERANCE >= SHOWN_SHARE)) return 'learning';
-  const newest = recent.at(-1)?.day;
-  if (today && newest !== undefined && dayNumber(today.day) - newest > STALE_AFTER_DAYS) return 'review due';
-  return 'shown';
+  const p = posterior(evidence);
+  let earned: LevelStatus;
+  if (
+    p.directWeight + WEIGHT_TOLERANCE >= SUFFICIENT_EVIDENCE && p.hasFresh && p.lastRight &&
+    betaCdf(SUFFICIENT_LOWER_BOUND, p.alpha, p.beta) <= LOWER_BOUND_PERCENTILE + WEIGHT_TOLERANCE
+  ) {
+    earned = betaCdf(STRONG_LOWER_BOUND, p.alpha, p.beta) <= LOWER_BOUND_PERCENTILE + WEIGHT_TOLERANCE ? 'strong' : 'sufficient';
+  } else {
+    earned = p.alpha / (p.alpha + p.beta) < GAP_BELOW_MEAN ? 'gap' : 'developing';
+  }
+  if (!today || !faded(evidence, today)) return { earned, status: earned, due: false };
+  const lowered = LEVEL_STATUSES[Math.max(1, LEVEL_STATUSES.indexOf(earned) - 1)]!;
+  return { earned, status: lowered, due: lowered !== earned };
+}
+
+export function levelStatus(evidence: LevelEvidence | undefined, today?: StudyClock): LevelStatus {
+  return levelAssessment(evidence, today).status;
 }
 
 /** The highest level a student has shown on a concept with every level under it shown too; undefined if none. */
 export function shownThrough(levels: ConceptLevels | undefined, today?: StudyClock): ThinkingLevel | undefined {
   let top: ThinkingLevel | undefined;
   for (const level of THINKING_LEVELS) {
-    if (levelStatus(levels?.[level], today) !== 'shown') break;
+    if (!isShown(levelStatus(levels?.[level], today))) break;
     top = level;
   }
   return top;
@@ -213,7 +426,7 @@ export function shownThrough(levels: ConceptLevels | undefined, today?: StudyClo
 
 function allShown(shape: ModuleShape, progress: ModuleProgress, levels: readonly ThinkingLevel[], today?: StudyClock): boolean {
   return shape.concepts.length > 0 &&
-    shape.concepts.every((concept) => levels.every((level) => levelStatus(progress.concepts.get(concept)?.[level], today) === 'shown'));
+    shape.concepts.every((concept) => levels.every((level) => isShown(levelStatus(progress.concepts.get(concept)?.[level], today))));
 }
 
 /** Where the student is in the module, from what they have done so far. Stages are suggestions, never locks. */
@@ -236,7 +449,7 @@ export function calibrate(shape: ModuleShape, progress: ModuleProgress, upTo: re
   const start = new Map<string, ThinkingLevel | undefined>();
   for (const concept of shape.concepts) {
     const levels = progress.concepts.get(concept);
-    start.set(concept, upTo.find((level) => levelStatus(levels?.[level], today) !== 'shown'));
+    start.set(concept, upTo.find((level) => !isShown(levelStatus(levels?.[level], today))));
   }
   return start;
 }
@@ -265,8 +478,12 @@ export interface StepHistory {
   usedIds: readonly string[];
   /** Techniques of the most recent steps, most recent last. */
   recentTechniques: readonly Technique[];
+  /** Concepts of the most recent steps, most recent last. Optional; when given, no concept runs more than twice in a row. */
+  recentConcepts?: readonly string[];
 }
 
+/** Brief #1281 section 3: no more than this many items from the same concept in a row, while another concept needs work. */
+export const SAME_CONCEPT_RUN = 2;
 /** No technique is offered more than this many times in a row when another one fits. */
 export const SAME_TECHNIQUE_RUN = 2;
 
@@ -294,8 +511,8 @@ export function nextStep(
       const level = start.get(concept);
       if (!level) return undefined;
       const evidence = progress.concepts.get(concept)?.[level];
-      const missedLast = evidence?.recent.at(-1)?.correct === false;
-      const due = levelStatus(evidence, today) === 'review due';
+      const missedLast = evidence?.recent.filter(isDirect).at(-1)?.correct === false;
+      const due = levelAssessment(evidence, today).due;
       const levelIndex = THINKING_LEVELS.indexOf(level);
       // Review that is due first (so the loop keeps re-locating the student), then lower levels (foundations before
       // application), a recent miss first within a level, then module order.
@@ -304,9 +521,25 @@ export function nextStep(
     .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
     .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.rank[2] - b.rank[2] || a.rank[3] - b.rank[3]);
 
+  // Interleave: a concept that has just had two steps in a row waits behind the others that need work.
+  const runConcepts = (history.recentConcepts ?? []).slice(-SAME_CONCEPT_RUN);
+  const streakConcept = runConcepts.length === SAME_CONCEPT_RUN && runConcepts.every((c) => c === runConcepts[0]) ? runConcepts[0] : undefined;
+  if (streakConcept !== undefined && ranked.some((entry) => entry.concept !== streakConcept)) {
+    ranked.splice(0, ranked.length, ...ranked.filter((entry) => entry.concept !== streakConcept), ...ranked.filter((entry) => entry.concept === streakConcept));
+  }
+
   for (const { concept, level, evidence, due } of ranked) {
     const fitting = TECHNIQUES_FOR_LEVEL[level];
-    const pool = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique));
+    const all = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique));
+    // A level that is due is reviewed with items already answered there, the most faded first, so the review is
+    // what brings it back; new items come once nothing there is left to review.
+    const cards = evidence?.cards ?? {};
+    const reviewable = due && today ? all.filter((item) => cards[item.id] !== undefined) : [];
+    if (reviewable.length > 0) {
+      const weakest = reviewable.reduce((a, b) => (predictedRecall(cards[a.id]!, today!) <= predictedRecall(cards[b.id]!, today!) ? a : b));
+      return { kind: 'step', id: weakest.id, concept, level, technique: weakest.technique, reason: 'due for review' };
+    }
+    const pool = all;
     if (pool.length === 0) continue;
     // Variety first: drop the technique that has just run twice whenever another one fits, and only then prefer
     // items not used this session.
@@ -321,7 +554,7 @@ export function nextStep(
     const asked = (evidence?.right ?? 0) + (evidence?.wrong ?? 0);
     const reason: NextStep['reason'] = due
       ? 'due for review'
-      : evidence?.recent.at(-1)?.correct === false
+      : evidence?.recent.filter(isDirect).at(-1)?.correct === false
       ? 'you missed this recently'
       : asked === 0
         ? (level === upTo[0] || level === 'remember' ? 'not practised yet' : 'next level up')
@@ -342,13 +575,13 @@ export interface ModuleSummary {
 }
 
 export function summarize(shape: ModuleShape, progress: ModuleProgress, today?: StudyClock): ModuleSummary {
-  const levels = Object.fromEntries(THINKING_LEVELS.map((level) => [level, { 'not started': 0, learning: 0, shown: 0, 'review due': 0 }])) as
+  const levels = Object.fromEntries(THINKING_LEVELS.map((level) => [level, { 'not started': 0, gap: 0, developing: 0, sufficient: 0, strong: 0 }])) as
     Record<ThinkingLevel, Record<LevelStatus, number>>;
   const toStrengthen: string[] = [];
   for (const concept of shape.concepts) {
     const evidence = progress.concepts.get(concept);
     for (const level of THINKING_LEVELS) levels[level][levelStatus(evidence?.[level], today)] += 1;
-    if (!READY_LEVELS.every((level) => levelStatus(evidence?.[level], today) === 'shown')) toStrengthen.push(concept);
+    if (!READY_LEVELS.every((level) => isShown(levelStatus(evidence?.[level], today)))) toStrengthen.push(concept);
   }
   return { stage: stageOf(shape, progress, today), levels, toStrengthen };
 }
@@ -373,7 +606,7 @@ export function summarizeCourse(modules: readonly { id: string; shape: ModuleSha
     stages[summary.stage] += 1;
     if (!next && summary.stage !== 'complete') next = module.id;
     for (const level of THINKING_LEVELS) {
-      levels[level].shown += summary.levels[level].shown;
+      levels[level].shown += summary.levels[level].sufficient + summary.levels[level].strong;
       levels[level].of += module.shape.concepts.length;
     }
   }

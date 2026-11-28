@@ -10,8 +10,8 @@
  */
 import { calendarDay, DAY_MS, dayNumber, type StudyClock } from '../src/islands/adaptive-learning/calendar';
 import {
-  emptyProgress, levelStatus, nextStep, READY_LEVELS, recordModuleAnswer, RECOGNITION_TECHNIQUES, TECHNIQUES_FOR_LEVEL,
-  type LevelEvidence, type ModuleItem, type ModuleProgress, type ModuleShape, type NextResult, type Technique, type ThinkingLevel,
+  emptyProgress, isShown, levelStatus, nextStep, READY_LEVELS, recordModuleAnswer, RECOGNITION_TECHNIQUES, TECHNIQUES_FOR_LEVEL,
+  type AnswerRecord, type LevelEvidence, type ModuleItem, type ModuleProgress, type ModuleShape, type NextResult, type Technique, type ThinkingLevel,
 } from '../src/islands/adaptive-learning/module-path';
 
 export type RuleName = 'old' | 'new';
@@ -19,28 +19,44 @@ export type RuleName = 'old' | 'new';
 export interface SimulationOptions {
   students: number;
   seed: number;
+  /** New rule only: false switches off the retention drop (the rule is then judged on evidence alone). Default true. */
+  retention?: boolean;
 }
+
+/** A count with its denominator, so a share is never reported without what it is a share of. */
+export interface Count { n: number; of: number }
 
 export interface RuleReport {
   rule: RuleName;
+  retention: boolean;
   students: number;
-  /** Levels first marked shown that the student truly had not mastered, as a share of all such marks. */
-  placedTooHigh: number;
-  /** Levels marked shown at the finish that the student truly has not mastered (forgotten or never learned). */
-  shownButNotMasteredAtFinish: number;
-  /** Truly mastered levels that are not shown at the finish, as a share of truly mastered levels. */
-  placedTooLow: number;
+  /** Right after the diagnostic, before any adaptive practice: placed shown but truly not mastered (levels). */
+  diagnosticTooHigh: Count;
+  /** Right after the diagnostic: truly mastered but not placed shown (levels). */
+  diagnosticTooLow: Count;
+  /** Right after the diagnostic: placed developing or higher but truly not mastered (levels). */
+  diagnosticDevelopingTooHigh: Count;
+  /** Right after the diagnostic: truly mastered but placed at gap or not started (levels). */
+  diagnosticMasteredAtGap: Count;
+  /** At the moment each level first became shown during practice: truly not mastered (levels). */
+  placedTooHigh: Count;
+  /** At the moment the path said "done" (ready): students with at least one level truly not mastered. */
+  falselyReady: Count;
+  /** After the finish (done or the cap): shown but truly not mastered (levels). */
+  finalTooHigh: Count;
+  /** After the finish: truly mastered but not shown (levels). */
+  finalTooLow: Count;
   /** Median steps among students who reached "done". */
   medianStepsToDone: number | null;
-  /** Share of students who never reached "done" within the cap. */
-  neverDone: number;
+  /** Students who never reached "done" within the cap. */
+  neverDone: Count;
   /** Mean number of different techniques a student met in the adaptive steps. */
   techniqueVariety: number;
 }
 
 // Unverified modelling assumptions.
 export const CONCEPTS = 6;
-export const STEP_CAP = 150;
+export const STEP_CAP = 600;
 export const STEPS_PER_DAY = 10;
 const SLIP_RATE = 0.08; // a mastered level answered wrong anyway
 const PRODUCTION_GUESS = 0.05;
@@ -52,6 +68,8 @@ const FORGET_PER_DAY = 0.005; // chance per day that a concept slips down one le
 const BREAK_CHANCE = 0.5; // share of students who take one long break
 const OPTIONS_CYCLE = [3, 4, 4, 5];
 const DIAGNOSTIC_PER_LEVEL = 2;
+/** Items the synthetic module has for each concept, level and technique. Assumption: real modules may have fewer. */
+export const ITEMS_PER_TECHNIQUE = 12;
 
 /** Small deterministic generator (mulberry32). */
 export function seededRandom(seed: number): () => number {
@@ -69,7 +87,7 @@ const conceptIds = Array.from({ length: CONCEPTS }, (_, index) => `sample-${Stri
 export const SHAPE: ModuleShape = { concepts: conceptIds, practiceTechniques: [] };
 export const ITEMS: readonly ModuleItem[] = conceptIds.flatMap((concept) =>
   READY_LEVELS.flatMap((level) => TECHNIQUES_FOR_LEVEL[level].flatMap((technique) =>
-    [1, 2, 3].map((n) => ({ id: `${concept}:${level}:${technique}:${n}`, concept, level, technique })))));
+    Array.from({ length: ITEMS_PER_TECHNIQUE }, (_, n) => n + 1).map((n) => ({ id: `${concept}:${level}:${technique}:${n}`, concept, level, technique })))));
 const optionsOf = (id: string): number => OPTIONS_CYCLE[[...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % OPTIONS_CYCLE.length]!;
 
 const levelNumber = (level: ThinkingLevel): number => READY_LEVELS.indexOf(level) + 1;
@@ -94,34 +112,49 @@ export function baselineStatus(results: readonly boolean[]): 'not started' | 'le
   return recent.length >= 2 && recent.slice(-2).every(Boolean) && share >= 0.7 ? 'shown' : 'learning';
 }
 
-/** Shows the engine's own next-step picker what the baseline thinks, by building progress that says exactly that. */
+/** The baseline's own placement: shown, or (like the new rule's gap line) learning with a share right under half. */
+function baselineRank(results: readonly boolean[]): 0 | 1 | 2 {
+  const status = baselineStatus(results);
+  if (status === 'shown') return 2;
+  if (status === 'not started') return 0;
+  return (results.slice(-6).filter(Boolean).length + 1) / (Math.min(6, results.length) + 2) >= 0.5 ? 1 : 0;
+}
+
+const synthetic = (correct: boolean): AnswerRecord => ({
+  correct, weight: 1, slip: false, direct: true, fresh: correct, repeat: false, cued: false, timedOut: false,
+});
+
+/** Shows the engine's own next-step picker what the baseline thinks, by building evidence that says exactly that. */
 function baselineProgress(results: ReadonlyMap<string, boolean[]>): ModuleProgress {
-  let progress = emptyProgress();
+  const concepts = new Map<string, Partial<Record<ThinkingLevel, LevelEvidence>>>();
   for (const [key, list] of results) {
     const [concept, level] = key.split('|') as [string, ThinkingLevel];
     const status = baselineStatus(list);
-    const view = status === 'shown' ? [true, true] : status === 'learning' ? [list.at(-1) ?? true] : [];
-    for (const correct of view) progress = recordModuleAnswer(progress, concept, level, correct);
+    const view = status === 'shown' ? Array.from({ length: 8 }, () => true) : status === 'learning' ? [list.at(-1) ?? true] : [];
+    const entry = concepts.get(concept) ?? {};
+    entry[level] = { right: view.filter(Boolean).length, wrong: view.filter((c) => !c).length, recent: view.map(synthetic), seen: [], cards: {} };
+    concepts.set(concept, entry);
   }
-  return progress;
+  return { ...emptyProgress(), concepts };
 }
 
 function clockFor(day: number, first: number): StudyClock {
   return { day: calendarDay(first + day), now: (first + day + 0.5) * DAY_MS };
 }
 
+interface Tally { n: number; of: number }
 interface StudentRun {
   stepsToDone: number | undefined;
-  placedHigh: number;
-  placedTotal: number;
-  shownNotMastered: number;
-  shownTotal: number;
-  masteredNotShown: number;
-  masteredTotal: number;
+  diagnostic: Record<'high' | 'low' | 'developingHigh' | 'masteredGap', Tally>;
+  placed: Tally;
+  ready: Tally;
+  final: Record<'high' | 'low', Tally>;
   techniques: number;
 }
+const tally = (): Tally => ({ n: 0, of: 0 });
+const add = (target: Tally, hit: boolean, counted = true): void => { if (counted) target.of += 1; if (counted && hit) target.n += 1; };
 
-function runStudent(rule: RuleName, seed: number): StudentRun {
+function runStudent(rule: RuleName, seed: number, retention: boolean): StudentRun {
   const random = seededRandom(seed); // the same seed gives both rules the same student and the same luck stream
   const draw = seededRandom(seed ^ 0x9e3779b9);
   const first = dayNumber('2028-01-01');
@@ -133,19 +166,29 @@ function runStudent(rule: RuleName, seed: number): StudentRun {
   const results = new Map<string, boolean[]>();
   let day = 0;
   const wasShown = new Set<string>();
-  const run: StudentRun = { stepsToDone: undefined, placedHigh: 0, placedTotal: 0, shownNotMastered: 0, shownTotal: 0, masteredNotShown: 0, masteredTotal: 0, techniques: 0 };
+  const run: StudentRun = {
+    stepsToDone: undefined,
+    diagnostic: { high: tally(), low: tally(), developingHigh: tally(), masteredGap: tally() },
+    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, techniques: 0,
+  };
 
-  const isShown = (concept: string, level: ThinkingLevel, today: StudyClock): boolean => rule === 'new'
-    ? levelStatus(progress.concepts.get(concept)?.[level], today) === 'shown'
-    : baselineStatus(results.get(`${concept}|${level}`) ?? []) === 'shown';
+  // 0 = gap or not started, 1 = developing, 2 = shown (sufficient or strong).
+  const rank = (concept: string, level: ThinkingLevel, today: StudyClock): 0 | 1 | 2 => {
+    if (rule === 'old') return baselineRank(results.get(`${concept}|${level}`) ?? []);
+    const status = levelStatus(progress.concepts.get(concept)?.[level], retention ? today : undefined);
+    return isShown(status) ? 2 : status === 'developing' ? 1 : 0;
+  };
+  const mastered = (concept: string, level: ThinkingLevel): boolean => trueLevel.get(concept)! >= levelNumber(level);
 
-  const ask = (item: ModuleItem): void => {
+  const ask = (item: ModuleItem, source?: 'diagnostic'): void => {
     const today = clockFor(day, first);
     const options = optionsOf(item.id);
     const level = trueLevel.get(item.concept)!;
     const correct = draw() < chanceRight(level, item.level, item.technique, options);
     if (rule === 'new') {
-      progress = recordModuleAnswer(progress, item.concept, item.level, correct, { technique: item.technique, options, clock: today });
+      progress = recordModuleAnswer(progress, item.concept, item.level, correct, {
+        technique: item.technique, options, itemId: item.id, clock: today, ...(source ? { source } : {}),
+      });
     } else {
       const key = `${item.concept}|${item.level}`;
       results.set(key, [...(results.get(key) ?? []), correct]);
@@ -154,10 +197,9 @@ function runStudent(rule: RuleName, seed: number): StudentRun {
     if (levelNumber(item.level) === level + 1 && draw() < LEARN_CHANCE) trueLevel.set(item.concept, level + 1);
     // Judge the placement at the moment a level first becomes shown.
     const key = `${item.concept}|${item.level}`;
-    if (!wasShown.has(key) && isShown(item.concept, item.level, today)) {
+    if (!wasShown.has(key) && rank(item.concept, item.level, today) === 2) {
       wasShown.add(key);
-      run.placedTotal += 1;
-      if (trueLevel.get(item.concept)! < levelNumber(item.level)) run.placedHigh += 1;
+      add(run.placed, !mastered(item.concept, item.level));
     }
   };
 
@@ -167,26 +209,45 @@ function runStudent(rule: RuleName, seed: number): StudentRun {
       const fitting = TECHNIQUES_FOR_LEVEL[level];
       for (let n = 0; n < DIAGNOSTIC_PER_LEVEL; n++) {
         const technique = fitting[(n + conceptIds.indexOf(concept)) % fitting.length]!;
-        ask(ITEMS.find((item) => item.concept === concept && item.level === level && item.technique === technique && item.id.endsWith(`:${n + 1}`))!);
+        ask(ITEMS.find((item) => item.concept === concept && item.level === level && item.technique === technique && item.id.endsWith(`:${n + 1}`))!, 'diagnostic');
       }
+    }
+  }
+  // Placement right after the diagnostic, before any adaptive practice has had a chance to correct it.
+  const afterDiagnostic = clockFor(day, first);
+  for (const concept of conceptIds) {
+    for (const level of READY_LEVELS) {
+      const placed = rank(concept, level, afterDiagnostic);
+      const truly = mastered(concept, level);
+      add(run.diagnostic.high, !truly, placed === 2);
+      add(run.diagnostic.low, placed !== 2, truly);
+      add(run.diagnostic.developingHigh, !truly, placed >= 1);
+      add(run.diagnostic.masteredGap, placed === 0, truly);
     }
   }
 
   const usedIds: string[] = [];
   const recentTechniques: Technique[] = [];
+  const recentConcepts: string[] = [];
   const seen = new Set<Technique>();
   let steps = 0;
   const next = (today: StudyClock): NextResult => nextStep(
-    SHAPE, rule === 'new' ? progress : baselineProgress(results), ITEMS, { usedIds, recentTechniques }, random, READY_LEVELS, rule === 'new' ? today : undefined);
+    SHAPE, rule === 'new' ? progress : baselineProgress(results), ITEMS, { usedIds, recentTechniques, recentConcepts }, random, READY_LEVELS, rule === 'new' && retention ? today : undefined);
 
   for (;;) {
     const today = clockFor(day, first);
     const result = next(today);
-    if (result.kind === 'done') { run.stepsToDone = steps; break; }
+    if (result.kind === 'done') {
+      run.stepsToDone = steps;
+      // The moment of readiness: is every level truly mastered right now?
+      add(run.ready, conceptIds.some((concept) => READY_LEVELS.some((level) => !mastered(concept, level))));
+      break;
+    }
     if (result.kind === 'no content' || steps >= STEP_CAP) break;
     ask(ITEMS.find((item) => item.id === result.id)!);
     usedIds.push(result.id);
     recentTechniques.push(result.technique);
+    recentConcepts.push(result.concept);
     seen.add(result.technique);
     steps += 1;
     if (steps % STEPS_PER_DAY === 0) {
@@ -203,55 +264,68 @@ function runStudent(rule: RuleName, seed: number): StudentRun {
   const finish = clockFor(day, first);
   for (const concept of conceptIds) {
     for (const level of READY_LEVELS) {
-      const mastered = trueLevel.get(concept)! >= levelNumber(level);
-      const shown = isShown(concept, level, finish);
-      if (shown) { run.shownTotal += 1; if (!mastered) run.shownNotMastered += 1; }
-      if (mastered) { run.masteredTotal += 1; if (!shown) run.masteredNotShown += 1; }
+      const truly = mastered(concept, level);
+      const shown = rank(concept, level, finish) === 2;
+      add(run.final.high, !truly, shown);
+      add(run.final.low, !shown, truly);
     }
   }
   run.techniques = seen.size;
   return run;
 }
 
-export function simulate(rule: RuleName, { students, seed }: SimulationOptions): RuleReport {
-  const runs = Array.from({ length: students }, (_, index) => runStudent(rule, seed * 100_003 + index + 1));
-  const sum = (pick: (run: StudentRun) => number): number => runs.reduce((total, run) => total + pick(run), 0);
-  const ratio = (a: number, b: number): number => (b === 0 ? 0 : a / b);
+export function simulate(rule: RuleName, { students, seed, retention = true }: SimulationOptions): RuleReport {
+  const runs = Array.from({ length: students }, (_, index) => runStudent(rule, seed * 100_003 + index + 1, retention));
+  const total = (pick: (run: StudentRun) => Tally): Count => ({
+    n: runs.reduce((sum, run) => sum + pick(run).n, 0),
+    of: runs.reduce((sum, run) => sum + pick(run).of, 0),
+  });
   const done = runs.flatMap((run) => (run.stepsToDone === undefined ? [] : [run.stepsToDone])).sort((a, b) => a - b);
   return {
     rule,
+    retention: rule === 'new' ? retention : false,
     students,
-    placedTooHigh: ratio(sum((run) => run.placedHigh), sum((run) => run.placedTotal)),
-    shownButNotMasteredAtFinish: ratio(sum((run) => run.shownNotMastered), sum((run) => run.shownTotal)),
-    placedTooLow: ratio(sum((run) => run.masteredNotShown), sum((run) => run.masteredTotal)),
+    diagnosticTooHigh: total((run) => run.diagnostic.high),
+    diagnosticTooLow: total((run) => run.diagnostic.low),
+    diagnosticDevelopingTooHigh: total((run) => run.diagnostic.developingHigh),
+    diagnosticMasteredAtGap: total((run) => run.diagnostic.masteredGap),
+    placedTooHigh: total((run) => run.placed),
+    falselyReady: total((run) => run.ready),
+    finalTooHigh: total((run) => run.final.high),
+    finalTooLow: total((run) => run.final.low),
     medianStepsToDone: done.length === 0 ? null : done[Math.floor((done.length - 1) / 2)]!,
-    neverDone: 1 - done.length / students,
-    techniqueVariety: sum((run) => run.techniques) / students,
+    neverDone: { n: students - done.length, of: students },
+    techniqueVariety: runs.reduce((sum, run) => sum + run.techniques, 0) / students,
   };
 }
 
+const label = (r: RuleReport): string => (r.rule === 'old' ? 'Old rule' : r.retention ? 'New rule' : 'New rule, no retention drop');
+
 export function markdownTable(reports: readonly RuleReport[]): string {
-  const percent = (value: number): string => `${(value * 100).toFixed(1)}%`;
+  const share = ({ n, of }: Count): string => (of === 0 ? `0 of 0` : `${((n / of) * 100).toFixed(1)}% (${n} of ${of})`);
   const rows: [string, (report: RuleReport) => string][] = [
-    ['Marked shown, truly not mastered (placed too high)', (r) => percent(r.placedTooHigh)],
-    ['Shown at the finish, truly not mastered', (r) => percent(r.shownButNotMasteredAtFinish)],
-    ['Truly mastered, not shown at the finish (placed too low)', (r) => percent(r.placedTooLow)],
+    ['After the diagnostic: placed shown, truly not mastered (too high)', (r) => share(r.diagnosticTooHigh)],
+    ['After the diagnostic: placed developing or higher, truly not mastered', (r) => share(r.diagnosticDevelopingTooHigh)],
+    ['After the diagnostic: truly mastered, not placed shown (too low)', (r) => share(r.diagnosticTooLow)],
+    ['After the diagnostic: truly mastered, placed at gap', (r) => share(r.diagnosticMasteredAtGap)],
+    ['During practice: level first marked shown, truly not mastered', (r) => share(r.placedTooHigh)],
+    ['At the moment of "ready": students with a level truly not mastered', (r) => share(r.falselyReady)],
+    ['Final: shown, truly not mastered', (r) => share(r.finalTooHigh)],
+    ['Final: truly mastered, not shown (too low)', (r) => share(r.finalTooLow)],
     ['Median steps to done (students who finished)', (r) => (r.medianStepsToDone === null ? 'none' : String(r.medianStepsToDone))],
-    ['Never done within the cap', (r) => percent(r.neverDone)],
+    ['Never done within the cap', (r) => share(r.neverDone)],
     ['Techniques met per student (mean)', (r) => r.techniqueVariety.toFixed(2)],
   ];
-  const head = `| Measure (unverified model) | ${reports.map((r) => (r.rule === 'old' ? 'Old rule' : 'New rule')).join(' | ')} |`;
+  const head = `| Measure (unverified model; levels or students counted) | ${reports.map(label).join(' | ')} |`;
   const rule = `| --- | ${reports.map(() => '---:').join(' | ')} |`;
   return [head, rule, ...rows.map(([label, value]) => `| ${label} | ${reports.map(value).join(' | ')} |`)].join('\n');
 }
 
 // Print the table when run directly (not when imported by the unit test).
 if (/simulate-module-path\.(ts|mjs|js)$/.test(process.argv[1] ?? '')) {
-  const options = { students: 2_000, seed: 7 };
-  const reports = (['old', 'new'] as const).map((rule) => simulate(rule, options));
+  const options = { students: 300, seed: 7 };
+  const reports = [simulate('old', options), simulate('new', options), simulate('new', { ...options, retention: false })];
   console.log(`${options.students} synthetic students, ${CONCEPTS} concepts, step cap ${STEP_CAP}, seed ${options.seed}\n`);
   console.log(markdownTable(reports));
 }
 
-// Keep the type import used for readers of the file.
-export type { LevelEvidence };

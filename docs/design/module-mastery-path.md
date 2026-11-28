@@ -42,54 +42,80 @@ Each technique suits some levels better than others, and the engine only offers 
 ## What counts as "shown"
 
 Christian's direction (2026-11-28): use every learning method to find where a student really is, and keep the loop
-going until they are advanced. So the engine does not just count answers; it weighs them. For each concept at each
-level it keeps the last six answers, each with how much it shows and the day it was given. Every number below is an
-**unverified starting value**, to be tuned with the simulation and real use.
+going until they are advanced. So the engine weighs evidence instead of counting answers. Where a number comes from
+brief #1281 (section 2) it is marked **brief**; every other number is an **unverified** starting value, to be tuned
+with the simulation and real use. Nothing here is ever shown to a student as a percentage (D-36): students see the
+status word, an icon and the evidence count.
 
-A level is **shown** when all of these hold:
+For each concept at each level the engine keeps the last 20 direct answers (unverified window) with how each was
+given. It forms a belief that starts as Beta(1,1) and adds the weighted right answers and the weighted misses
+(brief). The five **status words** (brief) are:
 
-- the last two answers there are right (one lucky answer never counts);
-- the right answers in the last six add up to at least 2 points of evidence;
-- the smoothed, weighted share right across the last six is at least 70%.
+| Status | Rule |
+| --- | --- |
+| not started | nothing answered here yet |
+| gap | not sufficient, and the belief's mean is under one half (unverified) |
+| developing | not sufficient, mean at least one half |
+| **sufficient** | all of: the 10th percentile of the belief is at least 0.70 (brief); at least 3 of direct weighted evidence (brief); at least one first-try right answer on an item not seen before, with no cue (brief); the last two direct answers right |
+| strong | sufficient, and the 10th percentile is at least 0.80 (unverified) |
 
-If a level was shown but the newest answer there is more than 14 days old, it becomes **review due** (see
-Staleness). Otherwise it is **learning** (or **not started**). Old misses fade as new answers replace them.
+Sufficient and strong both count as shown for readiness. Six ordinary right answers (learning questions, weight 1)
+reach sufficient and ten reach strong; flashcard flips need eleven and nineteen because each counts half.
 
-### How much one answer shows (unverified)
+### How much one answer shows
 
-| Technique | Kind | Points per right answer |
-| --- | --- | ---: |
-| flashcards (self-recall) | production | 1.0 |
-| label it (typed) | production | 1.0 |
-| fill in the blank | production | 1.0 |
-| matching | recognition | 0.5 |
-| learning questions | recognition | 0.6 |
-| case questions | worked case | 1.5 |
+| Technique | Points per right answer | Source |
+| --- | ---: | --- |
+| flashcards (self-recall), matching | 0.5 | brief |
+| label it, fill in the blank | 0.75 | brief |
+| learning questions, diagnostic items | 1.0 | brief |
+| practice exam items | 1.25 | brief |
+| case questions | 1.25 | unverified (the brief has no case technique) |
+| no technique given | 1.0 | unverified |
 
-Reason: pulling an answer out of memory shows more than picking it from choices on screen, and applying it in a case
-shows most. In words: two flashcards in a row are enough; matching needs four right in a row; two right cases are
-plenty, but one never is. A miss counts at the technique's full points.
+A cue halves a right answer (brief). A timeout counts as a miss (brief). A miss counts at the technique's full
+points.
+
+### Independent evidence
+
+Each answer records the item, whether it was a first try on an item not seen before at that level, the format, and
+whether a cue or timeout was involved. Answering the same item again adds nothing to the evidence in either direction:
+two self-ratings of one flashcard never make a level sufficient. The repeat still feeds that card's memory, which is
+how forgetting an item shows (see Retention). Callers should always pass the item id; an answer without one cannot be
+told apart from a repeat and is treated as a new item.
 
 ### Guessing (unverified)
 
 A right answer on a recognition item (matching, learning questions) is scaled by how hard it is to guess. With four
 options, the assumed default, it counts in full. With three options it counts 89%, and with two options 67%. More than
-four options never counts extra. Items can state their option count; if they do not, four is assumed.
+four options never counts extra. Items can state their option count.
 
 ### Slips (unverified)
 
-If a student gets one answer wrong right after four or more right in a row, that miss is called a **slip**. It still
-drops the level to learning, because the last two answers must be right, but it counts as half a miss, so two right
-answers afterwards bring the level back. A real run of misses, or a miss early on, needs more right answers to
-recover.
+If a student gets one answer wrong right after four or more right in a row, that miss is a **slip**. It still stops
+the level being sufficient, because the last two answers must be right, but it counts as half a miss in the belief, so
+a couple of right answers bring the level back. A real run of misses, or a miss early on, takes many more.
 
-### Staleness (unverified)
+### Transfer (brief)
 
-Each answer carries the calendar day it was given. When a shown level's newest answer is more than 14 days old, the
-level becomes **review due**. Review due is not "ready": the module drops back to adaptive practice, and the next
-step puts due review ahead of new material, with the reason "due for review". One right answer on the review shows
-the level again; a miss makes it learning. This keeps the loop re-locating the student instead of trusting old
-evidence forever.
+A right answer at a higher level gives every lower level of the same concept half of its weight as **transferred
+credit**. It counts in the belief but is kept apart from direct evidence: it cannot supply the 3 units of direct
+evidence, the first-try answer or the last two answers, so transferred credit alone can never make a level
+sufficient and can never unlock the practice exam. A miss gives nothing downward, and a repeated item gives no
+credit. Only the latest 6 transferred records are kept (unverified), so credit cannot crowd out direct evidence.
+
+### Retention (brief; replaces a fixed number of days)
+
+Retention stays with the memory model in `memory.ts`. Each answered item has a card memory at the supplied clock.
+When the average predicted recall of a level's cards falls under 80% (brief), the level **drops one status** until it
+is reviewed, and the next step is a review: it picks a card already answered at that level, the most faded first, and
+says "due for review". Averaging over the level's cards is an unverified reading of "an LO's cards fall below 80%".
+Only where a level has no card memory (answers recorded without an item id) a fixed fallback applies: a newest
+direct answer more than 14 days old drops one status (unverified).
+
+### Interleaving (brief)
+
+When the next step would be the same concept for a third time in a row, another concept that needs work goes first.
 
 ## The diagnostic and calibration
 
@@ -155,26 +181,48 @@ only from his reviewed batches; this repository holds labeled samples only.
 
 ## Simulation: old rule against new rule
 
-`scripts/simulate-module-path.ts` runs 2,000 synthetic students (6 sample concepts each, seed 7, step cap 150). Each
-has a hidden true level per concept (none, remember, understand, apply), answers with probabilities that depend on
-that level, the technique (recognition can be guessed) and a slip rate, learns a little from practice, forgets a
-little over time and half of them take one long break. The path is a diagnostic of six items per concept, then
-adaptive steps until "done" or the cap. "Old" is the equal-weight rule that never forgets (kept in the script only).
-Every probability in the model is an unverified assumption, so read the table as a comparison, not a measurement.
+`scripts/simulate-module-path.ts` runs synthetic students (6 sample concepts each, 12 items per technique and level).
+Each has a hidden true level per concept (none, remember, understand, apply), answers with probabilities that depend
+on that level, the technique (recognition can be guessed) and a slip rate, learns a little from practice, forgets a
+little over time and half of them take one long break; a day holds 10 steps. The path is a diagnostic of six items
+per concept, then adaptive steps until "done" or the cap of 600. "Old" is the equal-weight rule that never forgets
+(kept in the script only). The third column is the new rule with the retention drop switched off, to show which gate
+holds students back. Every probability in the model is an unverified assumption, so read the table as a comparison,
+not a measurement. Counts come with their denominators.
 
-| Measure (unverified model) | Old rule | New rule |
-| --- | ---: | ---: |
-| Marked shown, truly not mastered (placed too high) | 5.5% | 3.6% |
-| Shown at the finish, truly not mastered | 9.6% | 4.6% |
-| Truly mastered, not shown at the finish (placed too low) | 2.1% | 6.6% |
-| Median steps to done (students who finished) | 87 | 109 |
-| Never done within the cap | 50.1% | 43.3% |
-| Techniques met per student (mean) | 5.63 | 5.93 |
+The table below is from 300 students, seed 7 (the first four rows are measured right after the diagnostic, before any
+adaptive practice, so they say whether the diagnostic itself placed learners too high or too low; the "ready" row is
+measured at the moment the path says done; the "final" rows after the finish).
 
-In words: the new rule trusts a level less often when it should not (and catches forgetting after a break), at the
-price of asking for more evidence, so mastered levels are sometimes held back and finishing takes more steps. Whether
-that trade is right is Christian's call once real students use it. Run it with esbuild and Node, as for
-`simulate-adaptive-learning.ts`.
+| Measure (unverified model; levels or students counted) | Old rule | New rule | New rule, no retention drop |
+| --- | ---: | ---: | ---: |
+| After the diagnostic: placed shown, truly not mastered (too high) | 6.9% (175 of 2535) | 0 of 0 | 0 of 0 |
+| After the diagnostic: placed developing or higher, truly not mastered | 28.9% (1185 of 4102) | 23.9% (902 of 3775) | 23.9% (902 of 3775) |
+| After the diagnostic: truly mastered, not placed shown (too low) | 21.3% (638 of 2998) | 100.0% (2998 of 2998) | 100.0% (2998 of 2998) |
+| After the diagnostic: truly mastered, placed at gap | 2.7% (81 of 2998) | 4.2% (125 of 2998) | 4.2% (125 of 2998) |
+| During practice: level first marked shown, truly not mastered | 7.2% (373 of 5206) | 0.0% (0 of 1723) | 0.1% (4 of 3686) |
+| At the moment of "ready": students with a level truly not mastered | 66.0% (132 of 200) | 0 of 0 | 8.3% (1 of 12) |
+| Final: shown, truly not mastered | 13.3% (695 of 5206) | 0.2% (1 of 617) | 7.5% (276 of 3686) |
+| Final: truly mastered, not shown (too low) | 0.2% (7 of 4518) | 82.4% (2883 of 3499) | 18.5% (774 of 4184) |
+| Median steps to done (students who finished) | 99 | none | 242 |
+| Never done within the cap | 33.3% (100 of 300) | 100.0% (300 of 300) | 96.0% (288 of 300) |
+| Techniques met per student (mean) | 5.52 | 5.15 | 5.73 |
+
+
+What it says, in words:
+
+- The new rule is much more careful about calling a level shown: during practice almost no level is marked shown
+  that the student has not mastered, and the old rule's students are called ready while a level is truly not
+  mastered in two cases out of three.
+- It is far too strict at these starting values. After the diagnostic no level is yet sufficient (six items per
+  concept cannot reach the 0.70 lower bound), so the diagnostic can only separate gap from developing. Over 600
+  steps no simulated student reached done at all, and with the retention drop off only 4% did. The two gates that
+  hold students back are the lower bound of 0.70 combined with half-weight flashcards and matching (many answers),
+  and the retention drop (a card answered once has a 3-day half-life, so a level is below 80% recall the day after
+  it was practised, which keeps the readiness gate from ever holding for all levels at once).
+- These are Christian's and the brief's starting values, not the engine's final ones. Tuning candidates: a lower
+  bound near 0.60 for sufficient, fewer evidence units for matching, or reading the 80% line over the cards still
+  being reviewed. Each needs his say, because the brief fixes them.
 
 ## What is built, and what is next
 
@@ -187,7 +235,7 @@ Built in this change (pure rules with unit tests, no screen yet):
 
 Next, in order:
 
-1. Tune the unverified values above against real use.
+1. Tune the starting values above against real use; the simulation says the brief's defaults are slow to reach ready.
 2. A hidden sample preview on locked staging that walks one labeled sample module through all seven stages.
 3. The content columns in the Excel template and the seed-file check.
 4. Database tables for module evidence and the course rollup, with row-level security, export and delete.

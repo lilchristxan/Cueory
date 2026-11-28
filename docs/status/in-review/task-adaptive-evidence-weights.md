@@ -1,1 +1,1 @@
-status: in review: module path evidence weights (technique weights, guessing, slips, review due) with an old-against-new simulation; all values unverified.
+status: in review: module path evidence weights per brief #1281 (five status words, first-try and independent evidence, transfer credit, card-memory retention drop) with an old-against-new simulation; starting values unverified.
