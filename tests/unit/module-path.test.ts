@@ -509,6 +509,7 @@ describe('module path: retention uses the card memory (memory.ts) at the supplie
     for (let i = 0; i < 20; i++) p = recordModuleAnswer(p, 'sample-a', 'remember', true, { clock: clockOn(0), technique: 'learning questions' });
     const level = p.concepts.get('sample-a')!.remember!;
     expect(level.right).toBe(20);
+    expect(level.recent).toHaveLength(0);
     expect(Object.keys(level.cards)).toHaveLength(0);
     expect(posterior(level)).toMatchObject({ alpha: 1, beta: 1, directWeight: 0, hasFresh: false });
     expect(levelAssessment(level, clockOn(400))).toMatchObject({ status: 'developing', due: false, overdue: 0 });
@@ -559,7 +560,7 @@ describe('module path: retention uses the card memory (memory.ts) at the supplie
 
   it('records the day without changing the old progress', () => {
     const before = emptyProgress();
-    const after = recordModuleAnswer(before, 'sample-a', 'remember', true, { clock: clockOn(3) });
+    const after = recordModuleAnswer(before, 'sample-a', 'remember', true, { clock: clockOn(3), itemId: 'sample-card-day' });
     expect(after.concepts.get('sample-a')!.remember!.recent[0]!.day).toBe(FIRST_DAY + 3);
     expect(before.concepts.size).toBe(0);
   });
@@ -802,6 +803,32 @@ describe('module path: second review round', () => {
     expect(nextStep(one, p, [...two, { id: 'sample-lq-3', concept: 'sample-a', level: 'apply', technique: 'learning questions' }], { usedIds: [], recentTechniques: [] }, () => 0, ['apply'])).toMatchObject({ kind: 'step', id: 'sample-lq-3' });
     // An overdue review is still offered from the answered items.
     expect(nextStep(one, p, two, { usedIds: [], recentTechniques: [] }, () => 0, ['apply'], clockOn(6))).toMatchObject({ kind: 'step', reason: 'due for review' });
+  });
+
+  it('review of an overdue level is offered even when the concept is working on another, exhausted level', () => {
+    let p: ModuleProgress = { ...emptyProgress(), diagnosed: true };
+    for (let i = 0; i < 6; i++) p = at(p, true, `sample-card-${i}`, 0);
+    p = at(p, false, 'sample-card-0', 3); // a failed apply review
+    p = at(p, true, 'sample-understand-1', 3, 'sample-a', 'understand'); // understand: one item, now exhausted
+    const pool: ModuleItem[] = [
+      { id: 'sample-understand-1', concept: 'sample-a', level: 'understand', technique: 'fill in the blank' },
+      ...applyItems.slice(0, 6),
+    ];
+    const level = p.concepts.get('sample-a')!.apply!;
+    expect(levelAssessment(level, clockOn(3)).overdue).toBeGreaterThan(0);
+    const step = nextStep(one, p, pool, { usedIds: [], recentTechniques: [] }, () => 0, undefined, clockOn(3));
+    expect(step).toMatchObject({ kind: 'step', concept: 'sample-a', level: 'apply', reason: 'due for review', id: 'sample-card-0' });
+  });
+
+  it('history-only answers can never erase earned readiness by filling the window', () => {
+    let p = six();
+    expect(isShown(levelStatus(p.concepts.get('sample-a')!.apply))).toBe(true);
+    for (let i = 0; i < 25; i++) p = recordModuleAnswer(p, 'sample-a', 'apply', true, { clock: clockOn(0), technique: 'learning questions' });
+    const level = p.concepts.get('sample-a')!.apply!;
+    expect(level.right).toBe(31);
+    expect(level.seen).toHaveLength(6);
+    expect(posterior(level)).toMatchObject({ alpha: 7, beta: 1 });
+    expect(isShown(levelStatus(level))).toBe(true);
   });
 
   function distinctRun(n: number): ModuleProgress {

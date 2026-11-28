@@ -264,7 +264,9 @@ export function recordLevelAnswer(previous: LevelEvidence | undefined, answered:
     wrong: (previous?.wrong ?? 0) + (correct ? 0 : 1),
     // A repeated item is not independent evidence either way, so it takes no place in the window. It still feeds the
     // item's memory, which is how forgetting an item shows (see levelAssessment).
-    recent: repeat ? before : trimmed([...before, record]),
+    // Answers without an item id are history (the right and wrong totals) only: they take no slot, so they can never
+    // push identified evidence out of the window.
+    recent: repeat || !identified ? before : trimmed([...before, record]),
     seen: identified && !repeat ? [...(previous?.seen ?? []), detail.itemId!] : previous?.seen ?? [],
     cards,
     lastEventAt: events,
@@ -306,8 +308,8 @@ export function recordModuleAnswer(progress: ModuleProgress, concept: string, le
   const levels = { ...(concepts.get(concept) ?? {}) };
   const previousLast = levels[level]?.recent.at(-1);
   levels[level] = recordLevelAnswer(levels[level], correct, detail);
-  const record = levels[level]!.recent.at(-1)!;
-  if (record !== previousLast && record.correct && record.weight > 0 && !record.repeat && record.identified) {
+  const record = levels[level]!.recent.at(-1);
+  if (record && record !== previousLast && record.correct && record.weight > 0 && !record.repeat && record.identified) {
     for (const lower of THINKING_LEVELS.slice(0, THINKING_LEVELS.indexOf(level))) {
       levels[lower] = addTransfer(levels[lower], record.weight * TRANSFER_SHARE, record.day);
     }
@@ -647,11 +649,12 @@ export function nextStep(
   const exhausted: { concept: string; level: ThinkingLevel }[] = [];
   // Levels that are shown, not lowered, but hold overdue cards. They never block "done" (they come back on it as
   // `reviewDue`) and never crowd out new material, but when the remaining work has nothing to offer they are reviewed.
-  const optionalReviews = ranked.length === 0 || !today ? [] : shape.concepts.flatMap((concept) => {
-    if (start.get(concept) !== undefined) return [];
-    const level = upTo.find((candidate) => levelAssessment(progress.concepts.get(concept)?.[candidate], today).overdue > 0);
-    return level ? [{ concept, level, evidence: progress.concepts.get(concept)![level]! }] : [];
-  });
+  const optionalReviews = ranked.length === 0 || !today ? [] : shape.concepts.flatMap((concept) =>
+    // Collected independently of the calibrated start: a concept can be working on one level while another holds overdue cards.
+    upTo.flatMap((level) => {
+      const evidence = progress.concepts.get(concept)?.[level];
+      return evidence && level !== start.get(concept) && levelAssessment(evidence, today).overdue > 0 ? [{ concept, level, evidence }] : [];
+    }));
   for (const { concept, level, evidence, overdue } of ranked) {
     const fitting = TECHNIQUES_FOR_LEVEL[level];
     const all = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique));

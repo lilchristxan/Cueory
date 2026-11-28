@@ -226,7 +226,7 @@ probability in the model is an unverified assumption, so read the table as a com
 denominators. The first four rows are measured right after the diagnostic, before any adaptive practice; the "ready"
 row at the moment the path says done; the "final" rows after the finish. Three different groups are reported
 separately: students **prepared at the start**, students who **mastered everything by exit**, and the **learners among
-those who acquired mastery during practice**.
+those who acquired mastery during practice** (not mastered at the end of the diagnostic, mastered at exit).
 
 | Measure (unverified model; levels or students counted) | Old rule | New rule (default, fast track off) | New rule, fast track on |
 | --- | ---: | ---: | ---: |
@@ -236,28 +236,27 @@ those who acquired mastery during practice**.
 | After the diagnostic: truly mastered, placed at gap | 12.5% (244 of 1945) | 12.5% (244 of 1945) | 12.5% (244 of 1945) |
 | During practice: level first marked shown, truly not mastered | 11.0% (292 of 2659) | 0.1% (1 of 1471) | 0.1% (1 of 1099) |
 | At the moment of "ready": students with a level truly not mastered | 27.9% (31 of 111) | 6.5% (4 of 62) | 7.4% (5 of 68) |
-| Final: shown, truly not mastered | 18.6% (494 of 2659) | 1.1% (14 of 1303) | 1.4% (13 of 945) |
-| Final: truly mastered, not shown (too low) | 5.1% (116 of 2281) | 44.5% (1032 of 2321) | 59.8% (1388 of 2320) |
+| Final: shown, truly not mastered | 18.6% (494 of 2659) | 1.1% (14 of 1302) | 1.4% (13 of 945) |
+| Final: truly mastered, not shown (too low) | 5.1% (116 of 2281) | 44.5% (1033 of 2321) | 59.8% (1388 of 2320) |
 | Prepared students (all mastered) ready from the diagnostic alone | 0.0% (0 of 64) | 0.0% (0 of 64) | 48.4% (31 of 64) |
 | Prepared students who reach done within the cap | 100.0% (64 of 64) | 76.6% (49 of 64) | 85.9% (55 of 64) |
 | Mastered every gate level at exit (of all students) | 26.7% (80 of 300) | 26.7% (80 of 300) | 26.7% (80 of 300) |
 |   of those, declared done | 100.0% (80 of 80) | 72.5% (58 of 80) | 78.8% (63 of 80) |
-|   of those who were not prepared at the start (acquired mastery during practice), declared done | 100.0% (17 of 17) | 54.5% (12 of 22) | 52.4% (11 of 21) |
+|   of those who had not mastered everything after the diagnostic (acquired during practice), declared done | 100.0% (17 of 17) | 54.5% (12 of 22) | 52.4% (11 of 21) |
 | Ready from the diagnostic alone, but a level not mastered | 0 of 0 | 0 of 0 | 3.1% (1 of 32) |
 | Diagnostic items asked per student (mean) | 10.1 | 10.1 | 10.1 |
 | Median steps to done (students who finished) | 25 | 375 | 222 |
 | Never done within the cap | 63.0% (189 of 300) | 79.3% (238 of 300) | 77.3% (232 of 300) |
 | Techniques met per student (mean) | 3.73 | 3.81 | 3.38 |
 
-
 **Targets and result** (300 students, seed 7, UNVERIFIED model; fast track off unless stated):
 
 | Target | Result |
 | --- | --- |
 | A prepared student can be ready from the diagnostic | only with the opt-in: 31 of 64 prepared (48%); the engine test covers the perfect path |
-| Most students who truly master the material reach done | 58 of 80 (72.5%) who mastered everything by exit; 49 of 64 (76.6%) of the prepared group; 12 of 22 (54.5%) of those who acquired mastery during practice |
+| Most students who truly master the material reach done | 58 of 80 (72.5%) who mastered everything by exit; 49 of 64 (76.6%) of the prepared group; 12 of 22 (54.5%) of those who had not mastered everything after the diagnostic but did by exit |
 | Falsely ready at the moment of done stays low | 4 of 62 (6.5%); old rule 31 of 111 (27.9%) |
-| Final shown-but-not-mastered well below the old rule's | 1.1% (14 of 1303); old rule 18.6% |
+| Final shown-but-not-mastered well below the old rule's | 1.1% (14 of 1302); old rule 18.6% |
 
 The 54.5% for learners who acquire mastery during practice is the weak point: they learn partway through, and the
 evidence and retention gates take time to catch up with them. The 79% "never done" students are mostly students who

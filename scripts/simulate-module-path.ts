@@ -63,7 +63,7 @@ export interface RuleReport {
   masteredAtExit: Count;
   /** Of those, how many the path declared done. */
   masteredAtExitDone: Count;
-  /** Of those not prepared at the start (mastery acquired during practice), how many the path declared done. */
+  /** Of those who had not mastered everything at the end of the diagnostic (so mastery was acquired during practice), how many the path declared done. */
   acquiredDone: Count;
   /** Students declared ready by the diagnostic alone who had a level truly not mastered. */
   falselyReadyAtDiagnostic: Count;
@@ -171,6 +171,7 @@ interface StudentRun {
   ready: Tally;
   final: Record<'high' | 'low', Tally>;
   prepared: boolean;
+  masteredAfterDiagnostic: boolean;
   masteredAtExit: boolean;
   skipped: boolean;
   skippedWrong: boolean;
@@ -196,7 +197,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
   const run: StudentRun = {
     stepsToDone: undefined,
     diagnostic: { high: tally(), low: tally(), developingHigh: tally(), masteredGap: tally() },
-    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, prepared: false, masteredAtExit: false, skipped: false, skippedWrong: false, diagnosticItems: 0, techniques: 0,
+    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, prepared: false, masteredAfterDiagnostic: false, masteredAtExit: false, skipped: false, skippedWrong: false, diagnosticItems: 0, techniques: 0,
   };
 
   // 0 = gap or not started, 1 = developing, 2 = shown (sufficient or strong).
@@ -243,6 +244,8 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
     }
   });
   run.prepared = prepared;
+  // Observed mastery at the boundary between the diagnostic and adaptive practice (learning during the diagnostic counts).
+  run.masteredAfterDiagnostic = conceptIds.every((concept) => GATE_LEVELS.every((level) => mastered(concept, level)));
   // Placement right after the diagnostic, before any adaptive practice has had a chance to correct it.
   const afterDiagnostic = clockFor(day, first);
   for (const concept of conceptIds) {
@@ -333,7 +336,7 @@ export function simulate(rule: RuleName, { students, seed, retention = true, ste
     preparedDone: { n: runs.filter((r) => r.prepared && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.prepared).length },
     masteredAtExit: { n: runs.filter((r) => r.masteredAtExit).length, of: students },
     masteredAtExitDone: { n: runs.filter((r) => r.masteredAtExit && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.masteredAtExit).length },
-    acquiredDone: { n: runs.filter((r) => r.masteredAtExit && !r.prepared && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.masteredAtExit && !r.prepared).length },
+    acquiredDone: { n: runs.filter((r) => r.masteredAtExit && !r.masteredAfterDiagnostic && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.masteredAtExit && !r.masteredAfterDiagnostic).length },
     falselyReadyAtDiagnostic: { n: runs.filter((r) => r.skippedWrong).length, of: runs.filter((r) => r.skipped).length },
     diagnosticItems: runs.reduce((sum, run) => sum + run.diagnosticItems, 0) / students,
     techniqueVariety: runs.reduce((sum, run) => sum + run.techniques, 0) / students,
@@ -357,7 +360,7 @@ export function markdownTable(reports: readonly RuleReport[]): string {
     ['Prepared students who reach done within the cap', (r) => share(r.preparedDone)],
     ['Mastered every gate level at exit (of all students)', (r) => share(r.masteredAtExit)],
     ['  of those, declared done', (r) => share(r.masteredAtExitDone)],
-    ['  of those who were not prepared at the start (acquired mastery during practice), declared done', (r) => share(r.acquiredDone)],
+    ['  of those who had not mastered everything after the diagnostic (acquired during practice), declared done', (r) => share(r.acquiredDone)],
     ['Ready from the diagnostic alone, but a level not mastered', (r) => share(r.falselyReadyAtDiagnostic)],
     ['Diagnostic items asked per student (mean)', (r) => r.diagnosticItems.toFixed(1)],
     ['Median steps to done (students who finished)', (r) => (r.medianStepsToDone === null ? 'none' : String(r.medianStepsToDone))],

@@ -52,6 +52,13 @@ describe('module path simulation', () => {
     }
   });
 
+  it('learners who acquire mastery are those not mastered at the end of the diagnostic: none when no practice is allowed', () => {
+    const none = simulate('new', { ...options, stepCap: 0 });
+    // Mastery at exit equals mastery after the diagnostic when there is no practice, so nobody acquires it.
+    expect(none.acquiredDone.of).toBe(0);
+    expect(none.masteredAtExit.n).toBeGreaterThan(0);
+  });
+
   it('is deterministic for a fixed seed, and the seed matters', () => {
     expect(simulate('new', options)).toEqual(next);
     expect(simulate('new', { ...options, fastTrack: true })).toEqual(fast);
@@ -65,7 +72,7 @@ describe('module path simulation', () => {
     expect(table).toContain('Old rule');
     expect(table).toContain('fast track off');
     expect(table).toContain('fast track on');
-    expect(table).toContain('acquired mastery during practice');
+    expect(table).toContain('acquired during practice');
     expect(table).toContain('At the moment of "ready"');
     expect(table).not.toMatch(/predict|chance of passing|exam score/i);
   });
