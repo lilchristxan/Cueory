@@ -1,0 +1,26 @@
+---
+/**
+ * A campaign link, such as /from/tiktok (src/config/campaigns.ts). It is a normal page so it carries the site's
+ * Content-Security-Policy tag and is counted by the cookieless page-visit statistics; then a bundled script
+ * (src/scripts/campaignlink.ts) sends the visitor to the home page. There is a plain link for anyone without JavaScript.
+ * noindex, canonical to the home page: these addresses are for sharing, not for search.
+ */
+import Layout from '../../layouts/Layout.astro';
+import { CAMPAIGN_DESTINATION, campaignSources } from '../../config/campaigns';
+
+export function getStaticPaths() {
+  return campaignSources.map((source) => ({ params: { source } }));
+}
+
+const { source } = Astro.params;
+---
+<Layout title={`welcome to cueory (${source} link)`} description={`this short ${source} link takes you to cueory's home page, a free study site for nursing students.`} noindex promo={false}>
+  <article class="mx-auto max-w-prose p-6 text-center" data-testid="campaign-link">
+    <h1 class="display text-title">welcome to cueory</h1>
+    <p class="mt-4">taking you to the home page. <a class="underline" href={CAMPAIGN_DESTINATION} data-testid="campaign-link-home">go to cueory</a>.</p>
+  </article>
+</Layout>
+<script>
+  import { forwardCampaignVisitor } from '../../scripts/campaignlink';
+  forwardCampaignVisitor(window);
+</script>

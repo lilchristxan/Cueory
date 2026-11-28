@@ -1,0 +1,2 @@
+status: draft: campaign links such as /from/tiktok, counted by the cookieless page-visit statistics and then forwarded to the home page; waits for Christian to approve six JavaScript budget lines and one privacy-page sentence
+decision: D-pending (Christian, 2026-11-27): where visitors come from is tracked with short campaign addresses (/from/<source>) and the existing Cloudflare Web Analytics, with no cookies and no campaign tags, because Web Analytics does not log query strings
