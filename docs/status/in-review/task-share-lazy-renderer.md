@@ -1,0 +1,1 @@
+status: hello-cards JS budget: the story-card renderer now loads only when a visitor taps share (src/islands/storyimage.ts), taking play/hello-cards.html from 101250 to 100365 gzip bytes on a drafts build; the 100570 limit is unchanged. Draft, post-launch, not to merge before 20 November.
