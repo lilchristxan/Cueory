@@ -31,8 +31,8 @@ describe('design doc simulation block', () => {
 
   it('the prose figures agree with the table', () => {
     // The targets table quotes figures from the block: they must appear in it.
-    for (const figure of ['71 of 122', '52 of 64', '9 of 80', '34 of 2219', '62 of 516']) expect(quoted).toContain(figure);
-    expect(doc).toContain('71 of 122 (58.2%)');
-    expect(doc).toContain('9 of 80 (11.3%)');
+    for (const figure of ['70 of 133', '53 of 64', '10 of 80', '39 of 2282', '66 of 559']) expect(quoted).toContain(figure);
+    expect(doc).toContain('70 of 133 (52.6%)');
+    expect(doc).toContain('10 of 80 (12.5%)');
   });
 });

@@ -74,6 +74,8 @@ export interface RuleReport {
   falselyReadyAtDiagnostic: Count;
   /** Mean number of diagnostic items a student was asked (the authored policy asks 6 to 12 for six concepts). */
   diagnosticItems: number;
+  /** The lowest true level any concept had at any point after the input stage; never below REMEMBER_FLOOR. */
+  lowestTrueLevel: number;
   /** Mean number of different techniques a student met in the adaptive steps. */
   techniqueVariety: number;
 }
@@ -88,6 +90,8 @@ const CASE_GUESS = 0.1;
 const RECOGNITION_EXTRA = 0.05; // on top of 1 / options
 const NEAR_BONUS = 0.15; // partly knowing the next level up
 const LEARN_CHANCE = 0.12; // per answer at the level just above the true level
+/** The video and reading stage has been done, so neither the starting draw nor forgetting goes below "remember". */
+export const REMEMBER_FLOOR = 1;
 const FORGET_PER_DAY = 0.005; // chance per day that a concept slips down one level
 const BREAK_CHANCE = 0.5; // share of students who take one long break
 const OPTIONS_CYCLE = [3, 4, 4, 5];
@@ -182,6 +186,7 @@ interface StudentRun {
   skipped: boolean;
   skippedWrong: boolean;
   diagnosticItems: number;
+  lowestTrueLevel: number;
   techniques: number;
 }
 const tally = (): Tally => ({ n: 0, of: 0 });
@@ -195,7 +200,7 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
   // Every student has done the input stage (video and reading) before the diagnostic, which teaches the terms: nobody
   // starts below "remember". The product offers no remember-level step in the adaptive path (it picks understand and
   // apply items only), so a student who knows nothing could otherwise never learn anything here.
-  const trueLevel = new Map(conceptIds.map((concept) => [concept, prepared ? 3 : Math.max(1, Math.floor(random() * 4))]));
+  const trueLevel = new Map(conceptIds.map((concept) => [concept, prepared ? 3 : Math.max(REMEMBER_FLOOR, Math.floor(random() * 4))]));
   const breakAt = random() < BREAK_CHANCE ? 3 + Math.floor(random() * 5) : -1;
   const breakDays = 20 + Math.floor(random() * 30);
 
@@ -207,8 +212,9 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
     stepsToDone: undefined,
     stop: 'cap',
     diagnostic: { high: tally(), low: tally(), developingHigh: tally(), masteredGap: tally() },
-    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, prepared: false, masteredAfterDiagnostic: false, masteredAtExit: false, skipped: false, skippedWrong: false, diagnosticItems: 0, techniques: 0,
+    placed: tally(), ready: tally(), final: { high: tally(), low: tally() }, prepared: false, masteredAfterDiagnostic: false, masteredAtExit: false, skipped: false, skippedWrong: false, diagnosticItems: 0, lowestTrueLevel: 3, techniques: 0,
   };
+  run.lowestTrueLevel = Math.min(...trueLevel.values());
 
   // 0 = gap or not started, 1 = developing, 2 = shown (sufficient or strong).
   const rank = (concept: string, level: ThinkingLevel, today: StudyClock): 0 | 1 | 2 => {
@@ -301,7 +307,8 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
       const gap = steps / STEPS_PER_DAY === breakAt ? breakDays : 1;
       for (let d = 0; d < gap; d++) {
         for (const concept of conceptIds) {
-          if (trueLevel.get(concept)! > 0 && draw() < FORGET_PER_DAY) trueLevel.set(concept, trueLevel.get(concept)! - 1);
+          if (trueLevel.get(concept)! > REMEMBER_FLOOR && draw() < FORGET_PER_DAY) trueLevel.set(concept, trueLevel.get(concept)! - 1);
+          run.lowestTrueLevel = Math.min(run.lowestTrueLevel, trueLevel.get(concept)!);
         }
       }
       day += gap;
@@ -353,6 +360,7 @@ export function simulate(rule: RuleName, { students, seed, retention = true, ste
     acquiredDone: { n: runs.filter((r) => r.masteredAtExit && !r.masteredAfterDiagnostic && r.stepsToDone !== undefined).length, of: runs.filter((r) => r.masteredAtExit && !r.masteredAfterDiagnostic).length },
     falselyReadyAtDiagnostic: { n: runs.filter((r) => r.skippedWrong).length, of: runs.filter((r) => r.skipped).length },
     diagnosticItems: runs.reduce((sum, run) => sum + run.diagnosticItems, 0) / students,
+    lowestTrueLevel: Math.min(...runs.map((run) => run.lowestTrueLevel)),
     techniqueVariety: runs.reduce((sum, run) => sum + run.techniques, 0) / students,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { markdownTable, seededRandom, simulate, type Count } from '../../scripts/simulate-module-path';
+import { markdownTable, REMEMBER_FLOOR, seededRandom, simulate, type Count } from '../../scripts/simulate-module-path';
 
 // A small fixed-seed run on synthetic students; every number is an unverified modelling assumption.
 const options = { students: 40, seed: 11, stepCap: 150 };
@@ -65,6 +65,11 @@ describe('module path simulation', () => {
     expect(simulate('old', options)).toEqual(old);
     expect(simulate('new', { ...options, seed: 12 })).not.toEqual(next);
     expect(seededRandom(5)()).toBe(seededRandom(5)());
+  });
+
+  it('no simulated concept is ever below the remember floor after the input stage, even with a long break', () => {
+    for (const report of [old, next, fast]) expect(report.lowestTrueLevel).toBeGreaterThanOrEqual(REMEMBER_FLOOR);
+    expect(simulate('new', { students: 40, seed: 700031, stepCap: 600 }).lowestTrueLevel).toBeGreaterThanOrEqual(REMEMBER_FLOOR);
   });
 
   it('prints a table with all rules and never a score or a prediction', () => {
