@@ -311,6 +311,23 @@
     opacity: 0.6;
     cursor: default;
   }
+  /* A chosen structure's tick: a box that holds a check mark when chosen. The word "chosen" and aria-pressed say it too. */
+  .lab-tick {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--spacing) * 5);
+    height: calc(var(--spacing) * 5);
+    border-radius: var(--lab-radius-row);
+    border: calc(var(--lab-edge) * 1.5) solid var(--lab-sand);
+    color: var(--lab-charcoal);
+    line-height: 1;
+  }
+  .lab-tick[data-on='true'] {
+    background: var(--lab-copper-glow);
+    border-color: var(--lab-copper-glow);
+  }
   .lab-state {
     margin-left: auto;
     font-size: var(--lab-caption-size);

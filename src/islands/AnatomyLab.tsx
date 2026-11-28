@@ -26,6 +26,8 @@ import {
   backspace as roundBackspace, currentTarget, hintLetter, nextQuestion,
   roundFinished, setFirstLetters, setNearby, showAnswer, skipQuestion, startRound, typeLetter, type StudyRound,
 } from './anatomyround';
+import { AnatomyFocusPanel } from './AnatomyFocusPanel';
+import { fadedByFocus, focusFromQuery, labelItHref, toggleFocus, toggleFocusGroup } from './anatomyfocus';
 import { StudyCells, StudyEntryPanel, StudyRoundSide, usesTouch, type StudyChoice } from './AnatomyStudyRound';
 import { site } from '../config/site';
 import { createAnatomyStudy, createReviewQueueRequestGuard, createSavedViewsRequestGuard, createStudyIdentityGuard, queueFromQuizMisses, type AnatomyStudyClient, type ReviewQueueRow, type SavedViewRow, type StudyIdentitySnapshot } from './anatomystudy';
@@ -462,6 +464,13 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   // A group folded shut with its heading's arrow lists no rows, so the groups after it come up without scrolling.
   // A search opens every group again: a match must never hide inside a folded group.
   const [foldedGroups, setFoldedGroups] = useState<ReadonlySet<string>>(new Set());
+  // Choose what to focus on (anatomyfocus.ts): the structures picked for label it, and whether picking is on.
+  const [picks, setPicks] = useState<string[]>([]);
+  const [focusMode, setFocusMode] = useState(false);
+  const [focusFull, setFocusFull] = useState(false);
+  const focusReadyRef = useRef(false);
+  const knownIds = useMemo(() => new Set(systems.flatMap((s) => s.structures.map((x) => x.id))), [systems]);
+  const pickSet = useMemo(() => new Set(picks), [picks]);
   const systemKeyForFolds = system?.key;
   useEffect(() => setFoldedGroups(new Set()), [systemKeyForFolds]);
   const searching = query.trim() !== '';
@@ -901,8 +910,22 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   }, [revealedTarget, hidden, selected]);
 
   useEffect(() => {
-    if (load.state === 'ready') sceneRef.current?.setAppearance({ hidden, selected, faded });
-  }, [hidden, selected, faded, load]);
+    if (load.state !== 'ready') return;
+    // Choosing what to focus on fades everything not chosen; it does not touch the student's own faded set or its undo.
+    const shownFaded = focusMode && system ? new Set([...faded, ...fadedByFocus(system.structures.map((s) => s.id), picks)]) : faded;
+    sceneRef.current?.setAppearance({ hidden, selected, faded: shownFaded });
+  }, [hidden, selected, faded, load, focusMode, picks, system]);
+
+  // The choice comes from the address (a link from label it), once the ids are known.
+  useEffect(() => {
+    if (focusReadyRef.current || knownIds.size === 0) return;
+    focusReadyRef.current = true;
+    const linked = focusFromQuery(window.location.search, knownIds);
+    if (linked.length > 0) {
+      setPicks(linked);
+      setFocusMode(true);
+    }
+  }, [knownIds]);
 
   // A linked system that only exists once the lab is open (the whole body) is chosen as soon as it appears.
   useEffect(() => {
@@ -1400,6 +1423,15 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     (id: string | null) => {
       // "name it" asks about the highlighted structure: a tap must not move the highlight (or announce a name).
       if (recall || round) return;
+      if (focusMode && !quiz) {
+        if (!id) return;
+        const next = toggleFocus(picks, id);
+        setPicks(next.ids);
+        setFocusFull(next.full);
+        setSelected(id);
+        setAnnounce(`${names.get(id) ?? id} ${next.ids.includes(id) ? 'chosen' : 'not chosen'}. ${next.ids.length} chosen.`);
+        return;
+      }
       if (quiz && quiz.target) {
         if (!id) return;
         // Once the answer is shown or found, further clicks must not move the highlight off the target.
@@ -1414,7 +1446,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       setSelected((current) => (id === null ? null : current === id ? current : id));
       if (id) setAnnounce(`selected ${names.get(id) ?? id}`);
     },
-    [quiz, recall, round, names, recordMiss],
+    [quiz, recall, round, names, recordMiss, focusMode, picks],
   );
 
   const onPointerDown = (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -2216,6 +2248,27 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                     )}
                   </h4>
                 )}
+                {focusMode && group.group && !group.folded && (() => {
+                  const ids = (groups.find((g) => g.group === group.group)?.items ?? []).filter((i) => foundSet.has(i.id)).map((i) => i.id);
+                  const all = ids.length > 0 && ids.every((id) => pickSet.has(id));
+                  return (
+                    <button
+                      type="button"
+                      className="lab-btn mt-1"
+                      aria-pressed={all}
+                      disabled={!ready || ids.length === 0}
+                      data-testid="anatomy-focus-group"
+                      onClick={() => {
+                        const next = toggleFocusGroup(picks, ids);
+                        setPicks(next.ids);
+                        setFocusFull(next.full);
+                        setAnnounce(`${group.group}: ${next.ids.length} chosen.`);
+                      }}
+                    >
+                      {all ? 'unchoose the group' : `choose all ${ids.length} in this group`}
+                    </button>
+                  );
+                })()}
                 <ul className="mt-1 space-y-1" hidden={group.folded}>
                   {group.items.map((item) => {
                     const inModel = foundSet.has(item.id);
@@ -2245,13 +2298,15 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                         )}
                         <button
                           type="button"
-                          aria-pressed={selected === item.id}
+                          aria-pressed={focusMode ? pickSet.has(item.id) : selected === item.id}
                           disabled={!ready || !inModel}
                           onClick={() => pickStructure(item.id)}
                           className="lab-row min-w-0 flex-1"
                         >
+                          {focusMode && <span className="lab-tick" data-on={pickSet.has(item.id)} aria-hidden="true">{pickSet.has(item.id) ? '✓' : ''}</span>}
                           {item.text}
-                          {selected === item.id && <span className="lab-state" aria-hidden="true">selected</span>}
+                          {focusMode && pickSet.has(item.id) && <span className="lab-state" aria-hidden="true">chosen</span>}
+                          {!focusMode && selected === item.id && <span className="lab-state" aria-hidden="true">selected</span>}
                           {isHidden && inModel && <span> (hidden)</span>}
                           {isFaded && inModel && <span> {FADED_MARK}</span>}
                           {ready && !inModel && loadNote && <span> ({loadNote})</span>}
@@ -2794,6 +2849,16 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:right-5 lg:z-10 lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 ${remoteMin ? 'lg:bottom-(--lab-remote-clear-min)' : 'lg:bottom-(--lab-remote-clear)'} ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-inspector">
             {/* The scroller is only as tall as its cards, so the empty space beside the model still turns the model. */}
             <div className="contents lg:pointer-events-auto lg:flex lg:max-h-full lg:min-h-0 lg:flex-col lg:gap-3 lg:overflow-y-auto" role="group" aria-label="selected structure and study" tabIndex={0}>
+          {!quiz && !namesHidden && !round && (
+            <AnatomyFocusPanel
+              on={focusMode}
+              onToggle={() => { setFocusMode((on) => !on); setFocusFull(false); }}
+              count={picks.length}
+              href={picks.length > 0 ? labelItHref(picks, knownIds) : null}
+              onClear={() => { setPicks([]); setFocusFull(false); setAnnounce('cleared. none chosen.'); }}
+              full={focusFull}
+            />
+          )}
           {selectedName && !quiz && !namesHidden && (
             <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
               {/* Name and system only (Christian, 2026-11-27); the source id stays for screen readers and the flag form. */}

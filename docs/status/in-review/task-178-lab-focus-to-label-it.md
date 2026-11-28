@@ -1,0 +1,1 @@
+status: the anatomy lab has a "choose what to focus on" panel: tick structures in the list or tap them on the model, the rest fade, and one link carries the chosen ids to label it (?focus=…); the lab opens the same set from that address. Remembering the last set on the device waits for a privacy sentence (christian to approve).
