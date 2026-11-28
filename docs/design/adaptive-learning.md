@@ -65,7 +65,9 @@ We reran the same 2,000 seeds with the same deck, attendance, answer draws, sess
 | Before | 90.11% | 5.70 | 24.13 | 27.90% |
 | With short reviews following a miss | 90.13% | 5.74 | 23.83 | 2.60% |
 
-The modeled recall difference was 0.02 percentage points with slightly more practice. The much larger change in whole-deck mastery counts how often every card met Cueory's rule on the same day. A student trial with delayed recall at comparable practice effort would be needed to establish a learning benefit. The simulation measures no biological changes.
+The modeled recall difference was 0.02 percentage points with slightly more practice. The much larger change in whole-deck mastery counts how often every card met Cueory's rule on the same day.
+
+We also matched the number of answers for each learner on each attended day. Both schedules got as many slots as the smaller eligible queue allowed, up to the same 20-answer cap. Each schedule used exactly 510,300 answers. At the seven-day follow-up, modeled recall was **89.89% before and 89.69% with short reviews**. Earlier checks can take a slot that would have gone to another card. These two simulations give different answers about the trade-off. Use delayed recall and practice effort in a student trial before rolling this out. Neither simulation measures neuroplasticity.
 
 To reproduce either version from its checkout, use the installed dependencies:
 
@@ -73,6 +75,8 @@ To reproduce either version from its checkout, use the installed dependencies:
 mkdir -p work/adaptive
 ./node_modules/.bin/esbuild scripts/simulate-adaptive-learning.ts --bundle --platform=node --outfile=work/adaptive/simulation.cjs
 node work/adaptive/simulation.cjs
+# On the version with short reviews, compare the two adaptive policies at equal practice counts.
+node work/adaptive/simulation.cjs --matched-work
 ```
 
 ## Progress log
