@@ -91,6 +91,8 @@ export const SHOWN_SHARE = 0.7;
  * right answers (weight 1 each) reach it; no single answer does, because the heaviest weight is 1.5. UNVERIFIED.
  */
 export const SHOWN_WEIGHT = 2;
+/** Weights are fractions (a two-option answer is worth a third), so sums are compared with this much tolerance. */
+const WEIGHT_TOLERANCE = 1e-9;
 
 /**
  * How much one answer shows, by technique. ALL VALUES ARE UNVERIFIED STARTING VALUES, to be tuned with the simulation
@@ -193,7 +195,7 @@ export function levelStatus(evidence: LevelEvidence | undefined, today?: StudyCl
   }
   const share = (rightWeight + 1) / (total + 2);
   const lastRight = recent.length >= SHOWN_AFTER && recent.slice(-SHOWN_AFTER).every((answer) => answer.correct);
-  if (!(lastRight && rightWeight >= SHOWN_WEIGHT && share >= SHOWN_SHARE)) return 'learning';
+  if (!(lastRight && rightWeight + WEIGHT_TOLERANCE >= SHOWN_WEIGHT && share + WEIGHT_TOLERANCE >= SHOWN_SHARE)) return 'learning';
   const newest = recent.at(-1)?.day;
   if (today && newest !== undefined && dayNumber(today.day) - newest > STALE_AFTER_DAYS) return 'review due';
   return 'shown';

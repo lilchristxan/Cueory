@@ -240,6 +240,11 @@ describe('module path: evidence weight by technique', () => {
 describe('module path: guessing', () => {
   const technique: Technique = 'learning questions';
 
+  it('six right two-option matching answers in a row reach shown despite fraction rounding', () => {
+    const p = answer(emptyProgress(), 'sample-a', 'remember', [true, true, true, true, true, true], { technique: 'matching', options: 2 });
+    expect(statusOf(p, 'remember')).toBe('shown');
+  });
+
   it('a right answer is weaker evidence the fewer options there were', () => {
     expect(evidenceWeight(true, { technique, options: 2 })).toBeLessThan(evidenceWeight(true, { technique, options: 3 }));
     expect(evidenceWeight(true, { technique, options: 3 })).toBeLessThan(evidenceWeight(true, { technique, options: 4 }));
