@@ -43,9 +43,12 @@ const feetForward = (step: number): ShortcutAction => ({ kind: 'orbit', yaw: 0, 
 
 /** What a key press with a modifier held does; null when it is not one of the shortcuts. */
 export function shortcutKeyAction(key: string, m: Modifiers, step: number): ShortcutAction | null {
-  if (mainKeyHeld(m) && !m.alt && !m.shift) {
-    if (key === '+' || key === '=' || key === 'ArrowUp') return { kind: 'zoom', direction: 'in' };
-    if (key === '-' || key === '_' || key === 'ArrowDown') return { kind: 'zoom', direction: 'out' };
+  // Shift is allowed with the + and − characters themselves: on many keyboards (a US one, say) + is Shift with =.
+  const plus = key === '+' || key === '=';
+  const minus = key === '-' || key === '_';
+  if (mainKeyHeld(m) && !m.alt) {
+    if (plus || (key === 'ArrowUp' && !m.shift)) return { kind: 'zoom', direction: 'in' };
+    if (minus || (key === 'ArrowDown' && !m.shift)) return { kind: 'zoom', direction: 'out' };
     return null;
   }
   if (m.ctrl || m.meta) return null;
@@ -75,6 +78,11 @@ export function shortcutWheelAction(delta: number, m: Modifiers, step: number): 
   if (m.shift && !m.alt) return { kind: 'pan', direction: forward ? 'right' : 'left' };
   if (m.alt && !m.shift) return forward ? counterClockwise(step) : clockwise(step);
   return null;
+}
+
+/** True when Shift is only there to type the + or − character, so the plain zoom keys still apply. */
+export function shiftTypesZoomKey(key: string, m: Modifiers): boolean {
+  return m.shift && !m.alt && !m.ctrl && !m.meta && (key === '+' || key === '_');
 }
 
 /** True on Apple devices, where Command is the main modifier. */

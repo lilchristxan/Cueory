@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isApplePlatform, shortcutKeyAction, shortcutWheelAction, SHORTCUT_KEY_MAP, type Modifiers } from '../../src/islands/anatomyshortcuts';
+import { isApplePlatform, shiftTypesZoomKey, shortcutKeyAction, shortcutWheelAction, SHORTCUT_KEY_MAP, type Modifiers } from '../../src/islands/anatomyshortcuts';
 
 const none: Modifiers = { shift: false, alt: false, ctrl: false, meta: false, mac: false };
 const win = (held: Partial<Modifiers>): Modifiers => ({ ...none, ...held });
@@ -15,6 +15,20 @@ describe('anatomy lab shortcuts: keys', () => {
     // The other platform's key is not the main modifier.
     expect(shortcutKeyAction('+', mac({ ctrl: true }), STEP)).toBeNull();
     expect(shortcutKeyAction('+', win({ meta: true }), STEP)).toBeNull();
+  });
+
+  it('Shift is allowed when it only types + or − (a US keyboard needs it for +)', () => {
+    for (const m of [win({ ctrl: true, shift: true }), mac({ meta: true, shift: true })]) {
+      expect(shortcutKeyAction('+', m, STEP)).toEqual({ kind: 'zoom', direction: 'in' });
+      expect(shortcutKeyAction('_', m, STEP)).toEqual({ kind: 'zoom', direction: 'out' });
+      // Shift with the main key and an arrow is still nobody's shortcut.
+      expect(shortcutKeyAction('ArrowUp', m, STEP)).toBeNull();
+    }
+    expect(shiftTypesZoomKey('+', win({ shift: true }))).toBe(true);
+    expect(shiftTypesZoomKey('_', win({ shift: true }))).toBe(true);
+    expect(shiftTypesZoomKey('ArrowLeft', win({ shift: true }))).toBe(false);
+    expect(shiftTypesZoomKey('+', win({ shift: true, alt: true }))).toBe(false);
+    expect(shiftTypesZoomKey('+', none)).toBe(false);
   });
 
   it('Shift with the left and right arrows moves the model', () => {

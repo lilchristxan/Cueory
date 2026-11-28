@@ -1,5 +1,5 @@
 import { conventionalTint, TINT_TOKEN } from './anatomycolours';
-import { isApplePlatform, shortcutKeyAction, shortcutWheelAction, SHORTCUT_KEY_MAP, type Modifiers, type ShortcutAction } from './anatomyshortcuts';
+import { isApplePlatform, shiftTypesZoomKey, shortcutKeyAction, shortcutWheelAction, SHORTCUT_KEY_MAP, type Modifiers, type ShortcutAction } from './anatomyshortcuts';
 import {
   Fragment,
   type ReactNode,
@@ -1498,7 +1498,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
       e.preventDefault();
       return;
     }
-    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || (e.shiftKey && !shiftTypesZoomKey(e.key, heldModifiers(e)))) return;
     const action = canvasKeyAction(e.key, STEP, ZOOM_IN);
     if (!action) return;
     if (action.kind === 'orbit') turn(action.yaw, action.pitch);
