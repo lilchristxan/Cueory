@@ -1,0 +1,24 @@
+---
+import { getEntry } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import AdaptiveStudySession from '../../islands/AdaptiveStudySession';
+import { isDraftStatus, sampleLessonShown } from '../../lessons/draftgate';
+
+const record = sampleLessonShown() ? await getEntry('cards', 'study-skills-01') : undefined;
+const sample = record && isDraftStatus(record.data.status) ? record.data.cards : undefined;
+---
+
+<Layout
+  title="adaptive learning preview"
+  description="Try a sample adaptive study session and see when each card is due for review."
+  variant="study"
+  noindex
+  promo={false}
+>
+  <div class="mx-auto max-w-prose space-y-6 pt-8">
+    <h1 class="text-2xl">adaptive learning preview</h1>
+    <p>labeled sample cards only. your answers and exam date stay in this page until you reload.</p>
+    {sample && <AdaptiveStudySession client:only="react" cards={sample} allowPreviewAdvance />}
+    <noscript><p>this sample needs JavaScript to show and schedule cards.</p></noscript>
+  </div>
+</Layout>

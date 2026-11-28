@@ -10,6 +10,8 @@ import LearnSession from '../../../islands/LearnSession';
 import StudySettings from '../../../islands/StudySettings';
 import Wordmark from '../../../components/Wordmark.astro';
 import { site } from '../../../config/site';
+import AdaptiveStudySession from '../../../islands/AdaptiveStudySession';
+import { adaptiveLearnEnabled } from '../../../lessons/adaptive-gate';
 import { pathsFor, statusNotice, type CatalogLesson } from '../../../lessons/catalog';
 import { lessonCatalog } from '../../../lessons/load';
 import { studyModes } from '../../../config/modes';
@@ -24,6 +26,7 @@ const deck = lesson.cards && await getEntry('cards', lesson.cards.id);
 if (!deck) throw new Error(`The card file for lesson ${lesson.id} is missing.`);
 const { title, cards, status } = deck.data;
 const cardsNotice = statusNotice(status, 'cards');
+const pilot = adaptiveLearnEnabled(deck.id, status);
 const learnCards = cards.map(({ front, back, blank }) => (blank ? { front, back, blank } : { front, back }));
 // Match the generated lesson hub's course count without restoring the deleted study-skills route.
 const olderLessons = (await lessonCatalog()).lessons.filter((candidate) => !candidate.curriculumId && candidate.name === lesson.name).length;
@@ -78,7 +81,9 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
   <div class="mx-auto max-w-3xl px-gutter pb-section">
     <div class="mt-4">
       {/* client:only: nothing is pre-rendered, so without JavaScript only the note below shows. */}
-      <LearnSession client:only="react" cards={learnCards} lessonHref={lesson.href} />
+      {pilot
+        ? <AdaptiveStudySession client:only="react" cards={cards} />
+        : <LearnSession client:only="react" cards={learnCards} lessonHref={lesson.href} />}
       <noscript>
         <p>learn mode needs JavaScript. you can read every card and its answer on the <a href={`${lesson.href}/cards`}>cards page</a>.</p>
       </noscript>
@@ -86,14 +91,16 @@ const context = !lesson.curriculumId && olderLessons > 1 ? `${lesson.context} of
 
     {/* The quiet notes sit well below the card, so the first screen is only the bar, the progress and the card. */}
     <div class="mt-section space-y-2 text-sm text-ink-soft">
-      <p class="flex flex-wrap items-center gap-x-1">
-        <span>{context}</span>
+      <div class="flex flex-wrap items-center gap-x-1">
+        <p>{context}</p>
         <InfoTip
           id="lesson-intro-info"
           label="learn mode"
-          text="see each card, choose its answer, then type it. anything you miss comes back until you know every card."
+          text={pilot
+            ? "try the sample cards and see when the next review is due. this session resets when you reload."
+            : "see each card, choose its answer, then type it. anything you miss comes back until you know every card."}
         />
-      </p>
+      </div>
       {cardsNotice && <p>{cardsNotice}</p>}
       <p>anything you miss comes back a little later, until you know every card. nothing is saved yet.</p>
       <ContentLabel />

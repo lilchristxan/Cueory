@@ -32,6 +32,9 @@ async function measure(page: Page) {
     const text = [...range.getClientRects()].map((r) => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom }));
     return {
       area: box(document.querySelector('.game-frame-main')),
+      // The board is centred in the play area's content box: on desktop that is midway between the side panel and the
+      // fanned cards (Christian, 2026-11-27), so it is not always the middle of the whole area.
+      contentCx: (() => { const main = document.querySelector('.game-frame-main')!; const r = main.getBoundingClientRect(); const c = getComputedStyle(main); return (r.left + Number.parseFloat(c.paddingLeft) + r.right - Number.parseFloat(c.paddingRight)) / 2; })(),
       pack: box(document.querySelector('.vialo-pack')),
       keysCx: (keyLeft + keyRight) / 2,
       gear: box(document.querySelector('[data-testid="game-frame-gear"]')),
@@ -58,8 +61,8 @@ for (const [width, height] of sizes) {
       await expect(page.getByTestId('game-frame-gear')).toBeVisible();
       const m = await measure(page);
 
-      expect(Math.abs(m.pack.cx - m.area.cx), 'pack centre vs play area centre').toBeLessThanOrEqual(1);
-      expect(Math.abs(m.keysCx - m.area.cx), 'keyboard centre vs play area centre').toBeLessThanOrEqual(1);
+      expect(Math.abs(m.pack.cx - m.contentCx), 'pack centre vs play area content centre').toBeLessThanOrEqual(1);
+      expect(Math.abs(m.keysCx - m.contentCx), 'keyboard centre vs play area content centre').toBeLessThanOrEqual(1);
       expect(Math.abs(m.pack.cx - m.keysCx), 'pack centre vs keyboard centre').toBeLessThanOrEqual(1);
 
       // Same size (44 px tap targets), same top, one centre line.
@@ -83,9 +86,14 @@ for (const [width, height] of sizes) {
         expect(Math.abs(button.height - m.gear.height)).toBeLessThanOrEqual(0.5);
         expect(Math.abs(button.top - m.gear.top)).toBeLessThanOrEqual(0.5);
       }
-      // In the corner, within the page padding (24 px) of the play area's top and right edges.
-      expect(m.area.right - m.help.right).toBeGreaterThanOrEqual(8);
-      expect(m.area.right - m.help.right).toBeLessThanOrEqual(24);
+      // In the corner, within the page padding (24 px) of the play area's top and right edges. On a phone held upright
+      // the row sits in the middle of the screen instead (Christian, 2026-11-27).
+      if (width < 480) {
+        expect(Math.abs((m.gear.left + m.help.right) / 2 - m.area.cx), 'buttons centred on a phone').toBeLessThanOrEqual(1);
+      } else {
+        expect(m.area.right - m.help.right).toBeGreaterThanOrEqual(8);
+        expect(m.area.right - m.help.right).toBeLessThanOrEqual(24);
+      }
       expect(m.gear.top - m.area.top).toBeGreaterThanOrEqual(8);
       expect(m.gear.top - m.area.top).toBeLessThanOrEqual(24);
 
@@ -170,8 +178,14 @@ for (const path of framedRoutes) {
           expect(m.row[i]!.width).toBeGreaterThanOrEqual(43.9);
           expect(m.row[i]!.height).toBeGreaterThanOrEqual(43.9);
         }
-        expect(m.area.right - m.help.right).toBeGreaterThanOrEqual(8);
-        expect(m.area.right - m.help.right).toBeLessThanOrEqual(24);
+        // On a phone held upright the row is centred (Christian, 2026-11-27); sudoku keeps it on the right, because its
+        // difficulty menu shares that row.
+        if (width < 480 && path !== '/play/sudoku') {
+          expect(Math.abs((m.gear.left + m.help.right) / 2 - (m.area.left + m.area.right) / 2), 'buttons centred on a phone').toBeLessThanOrEqual(1);
+        } else {
+          expect(m.area.right - m.help.right).toBeGreaterThanOrEqual(8);
+          expect(m.area.right - m.help.right).toBeLessThanOrEqual(24);
+        }
         expect(m.gear.top - m.area.top).toBeGreaterThanOrEqual(8);
         expect(m.gear.top - m.area.top).toBeLessThanOrEqual(24);
         expect(m.text.length, 'date line is one line').toBe(1);
@@ -191,7 +205,12 @@ for (const path of framedRoutes) {
       await expect(page.getByTestId('game-frame-gear')).toBeVisible();
       const m = await page.evaluate(() => {
         const cx = (n: Element | null) => { const b = n!.getBoundingClientRect(); return b.left + b.width / 2; };
-        return { area: cx(document.querySelector('.game-frame-main')), board: cx(document.querySelector('.game-frame-board')) };
+        // The content box's centre: on desktop the play area keeps the fanned cards' reach clear on its right, so the
+        // board sits midway between the side panel and the cards (Christian, 2026-11-27).
+        const main = document.querySelector('.game-frame-main')!;
+        const r = main.getBoundingClientRect();
+        const c = getComputedStyle(main);
+        return { area: (r.left + Number.parseFloat(c.paddingLeft) + r.right - Number.parseFloat(c.paddingRight)) / 2, board: cx(document.querySelector('.game-frame-board')) };
       });
       expect(Math.abs(m.board - m.area)).toBeLessThanOrEqual(1);
     });

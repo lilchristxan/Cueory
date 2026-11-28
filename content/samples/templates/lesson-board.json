@@ -1,0 +1,31 @@
+{
+  "id": "sample-house",
+  "lesson": "study-skills-01",
+  "status": "sample",
+  "title": "the parts of a house (everyday sample)",
+  "pictures": [
+    {
+      "id": "house",
+      "image": {
+        "src": "/learn/study-skills/label-it/house.svg",
+        "alt": "a simple drawing of a house with four labels",
+        "width": 800,
+        "height": 600,
+        "credit": "drawing: cueory, an everyday sample made for this page"
+      },
+      "labels": [
+        { "id": "roof", "text": "roof", "x": 42, "y": 5, "w": 16, "h": 7.5 },
+        { "id": "chimney", "text": "chimney", "x": 74, "y": 11.5, "w": 20, "h": 7.5 },
+        { "id": "window", "text": "window", "x": 5.5, "y": 47.5, "w": 17, "h": 7.5 },
+        { "id": "door", "text": "door", "x": 43, "y": 89.5, "w": 14, "h": 7.5 }
+      ]
+    }
+  ],
+  "clauses": [
+    { "id": "c1", "said": "The roof covers the top of the house.", "question": "What covers the top of the house?", "answer": "roof", "label": "roof" },
+    { "id": "c2", "said": "Smoke leaves through the chimney.", "question": "Where does smoke leave the house?", "answer": "chimney", "label": "chimney" },
+    { "id": "c3", "said": "Light comes in through the window.", "question": "What lets light into the house?", "answer": "window", "label": "window" },
+    { "id": "c4", "said": "You walk in through the door.", "question": "How do you walk into the house?", "answer": "door", "label": "door" },
+    { "id": "c5", "said": "That is the whole house." }
+  ]
+}

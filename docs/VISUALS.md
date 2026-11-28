@@ -5,6 +5,25 @@ ourselves, and disease overlays on the healthy versions (Christian's decision, 2
 
 Targets: the first visuals by about **14 November 2026**, the full kit by about **12 December 2026**.
 
+## Outside illustrations: Servier Medical Art (Christian's decision, 2026-11-26)
+
+Servier Medical Art (https://smart.servier.com) is now the main source for lesson illustrations: teaching-video
+animations, label-it pictures and other lesson images. This replaces the "only our own pictures" plan above for 2D
+illustrations. BodyParts3D stays the source for the 3D anatomy lab.
+
+- Licence, read on Servier's own "How to Cite" and "Using SMART Images" pages on 2026-11-26: CC BY 4.0, credit
+  required. Servier offers PNG and PowerPoint files, not SVG. The site's own text, logos and layout are not covered.
+- Files come from Servier's site itself, never a mirror, and are self-hosted under `public/images/servier/<set>/`.
+- Every file has a record in `content/images/<set>.json`: Servier title, source page, download link, licence, download
+  date, size, SHA-256 and what we changed. `tests/unit/image-sources.test.ts` fails if a hosted file has no record, a
+  record has no file, or a file changed while its record still says "none".
+- Credit: Servier's own wording, kept in the manifest. An unchanged image uses "Image provided by…"; a cropped,
+  labelled or otherwise edited one uses "Image adapted from…" (`creditFor` in `src/images/sources.ts`). The credit shows
+  wherever an image appears and on the credits page. For YouTube, Servier asks for it in the video description.
+- Images are teaching content only, never decoration, and a Servier image is never redrawn, recoloured or traced.
+- Label names and answers come from Christian's reviewed content batches, never from AI.
+- First set: `servier-respiratory` (eight originals, downloaded 2026-11-26, none changed).
+
 ## What's in the kit, in build order
 
 | Order | Topic | 2D diagrams | 3D | Overlays ("simplified for learning") |

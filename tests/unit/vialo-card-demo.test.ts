@@ -31,15 +31,16 @@ describe('the home vialo card preview', () => {
     expect(demoStyle).toContain('border-radius: var(--radius-pill)');
   });
 
-  it('uses the live board\'s states: white absent, red elsewhere, green in place; no marks under the letters', () => {
-    expect(token('game-demo-vialo-green')).toBe(token('game-dark-green'));
-    expect(token('game-demo-vialo-red')).toBe(token('game-oxblood'));
+  it('uses the live board\'s states: white absent, pink elsewhere, light green in place; no marks under the letters', () => {
+    // The demo's own tokens hold the live board's values (Christian, 2026-11-27): the "red" token is now wordpill's pink.
+    expect(token('game-demo-vialo-green').split(';')[0]!.split(' ')[0]).toBe(token('wordpill-here'));
+    expect(token('game-demo-vialo-red').split(' ')[0]).toBe(token('wordpill-elsewhere'));
     expect(token('game-demo-vialo-absent-face')).toBe(token('vialo-absent-face'));
     expect(token('game-demo-vialo-absent-ink')).toBe(token('vialo-absent-ink'));
     expect(demoStyle).not.toMatch(/::after/);
     expect(demoStyle).not.toContain('\\25CF');
-    // Only the red pill carries the thin light inset ring.
-    expect(demoStyle).toMatch(/\.gc\.gc-elsewhere::before \{[^}]*inset: var\(--game-demo-vialo-ring-gap\);[^}]*border: var\(--game-demo-vialo-ring\) solid var\(--gc-ring\)/);
+    // Only the pink pill carries the small dot under its letter, the sign besides colour.
+    expect(demoStyle).toMatch(/\.gc\.gc-elsewhere::before \{[^}]*solid var\(--game-demo-vialo-on-red\);[^}]*border-radius: 50%/);
     expect(demoStyle.match(/::before/g)).toHaveLength(1);
     expect(card.match(/class="gc gc-here/g)!.length).toBeGreaterThan(0);
     expect(card.match(/class="gc gc-elsewhere/g)!.length).toBeGreaterThan(0);
@@ -47,8 +48,9 @@ describe('the home vialo card preview', () => {
   });
 
   it('keeps its letters readable: at least 4.5 to 1 on every pill', () => {
-    expect(contrast('#ffffff', token('game-demo-vialo-green'))).toBeGreaterThanOrEqual(4.5);
-    expect(contrast('#ffffff', token('game-demo-vialo-red'))).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token('game-demo-vialo-on-green').split(' ')[0]!, token('game-demo-vialo-green').split(' ')[0]!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token('game-demo-vialo-on-red').split(' ')[0]!, token('game-demo-vialo-red').split(' ')[0]!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(token('game-demo-vialo-on-red').split(' ')[0]!, token('game-demo-vialo-red-deep').split(' ')[0]!)).toBeGreaterThanOrEqual(4.5);
     expect(contrast(token('game-demo-vialo-absent-ink'), token('game-demo-vialo-absent-face'))).toBeGreaterThanOrEqual(4.5);
   });
 
