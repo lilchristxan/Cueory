@@ -18,6 +18,13 @@
   .lab-page {
     background: var(--lab-stage-flat);
   }
+  /* Printing a worksheet: the full-page lab goes back into the normal page flow, so a long sheet runs over as many
+     printed pages as it needs instead of being clipped to one window. */
+  @media print {
+    html.lab-open {
+      overflow: visible;
+    }
+  }
   /* The bars around the stage (top bar, panel buttons, other tools, credits) stay brown on a black or a white stage. */
   /* A box hidden down to its round icon button: the button's own brown disc, on a black or a white stage. */
   .lab-min .lab-round {

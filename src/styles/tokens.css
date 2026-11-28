@@ -1946,6 +1946,11 @@
 }
 .lab-page[data-stage='white'] {
   --lab-stage-flat: var(--lab-ivory);
+  /* A saved picture or worksheet takes the stage's colours too, so the dark model sits on Ivory there as on screen. */
+  --lab-picture-page: var(--lab-ivory);
+  --lab-picture-ink: var(--lab-charcoal);
+  --lab-picture-ink-soft: var(--lab-walnut);
+  --lab-picture-line: var(--lab-bronze);
   --lab-model: var(--lab-bronze);
   --lab-model-alt: var(--lab-walnut);
   --lab-model-selected: var(--lab-copper-deep);

@@ -2280,7 +2280,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   );
 
   return (
-    <div className="lab-page fixed inset-0 z-50 m-0 overflow-x-hidden overflow-y-auto" onKeyDown={onLabKey} data-stage={stage} data-testid="anatomy-page">
+    <div className="lab-page fixed inset-0 z-50 m-0 overflow-x-hidden overflow-y-auto print:static print:overflow-visible" onKeyDown={onLabKey} data-stage={stage} data-testid="anatomy-page">
       <LabFullPage />
       <p className="sr-only" aria-live="polite" data-testid="anatomy-announce">{announce}</p>
 

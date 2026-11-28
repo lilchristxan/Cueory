@@ -85,11 +85,12 @@ export function readColors(root: HTMLElement = document.documentElement): LabCol
     return Number.isFinite(value) ? value : fallback;
   };
   return {
-    page: get('--color-page'),
+    // page, ink, inkSoft and line colour saved pictures only; on the white stage they follow it (tokens.css).
+    page: get('--lab-picture-page') || get('--color-page'),
     surface: get('--color-surface'),
-    ink: get('--color-ink'),
-    inkSoft: get('--color-ink-soft'),
-    line: get('--color-line'),
+    ink: get('--lab-picture-ink') || get('--color-ink'),
+    inkSoft: get('--lab-picture-ink-soft') || get('--color-ink-soft'),
+    line: get('--lab-picture-line') || get('--color-line'),
     model: get('--color-model'),
     modelAlt: get('--color-model-alt'),
     modelSelected: get('--color-model-selected'),

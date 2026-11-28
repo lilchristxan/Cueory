@@ -152,6 +152,18 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     await expect(spin).toHaveAttribute('aria-pressed', 'false');
   });
 
+  test('printing puts the full-page lab back into the page flow, so a long worksheet is not clipped', async ({ page }) => {
+    await markPanelsSeen(page);
+    await page.goto('/preview/anatomy-lab');
+    await page.getByRole('button', { name: 'open the anatomy lab' }).click();
+    const lab = page.getByTestId('anatomy-page');
+    await expect(lab).toBeVisible({ timeout: 20_000 });
+    expect(await lab.evaluate((el) => getComputedStyle(el).position)).toBe('fixed');
+    await page.emulateMedia({ media: 'print' });
+    expect(await lab.evaluate((el) => [getComputedStyle(el).position, getComputedStyle(el).overflowY])).toEqual(['static', 'visible']);
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflowY)).toBe('visible');
+  });
+
   test('the black / white switch changes the stage, and keeps the panels brown', async ({ page }) => {
     await openLab(page);
     const orientation = page.getByRole('group', { name: 'panels' }).getByRole('button', { name: 'controls', exact: true });
@@ -166,8 +178,15 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     await expect(choices.getByRole('button', { name: 'white' })).toHaveAttribute('aria-pressed', 'true');
     expect(await stage()).toBe('rgb(249, 245, 239)');
     expect(await bar()).toBe(brown);
+    // A saved picture takes the white stage's colours too: an Ivory page with dark text.
+    const picture = () => page.getByTestId('anatomy-lab').evaluate((lab) => {
+      const style = getComputedStyle(lab);
+      return [style.getPropertyValue('--lab-picture-page').trim(), style.getPropertyValue('--lab-picture-ink').trim()];
+    });
+    expect(await picture()).toEqual(['#f9f5ef', '#1c1917']);
     await choices.getByRole('button', { name: 'black' }).click();
     expect(await stage()).toBe('rgb(28, 25, 23)');
+    expect(await picture()).toEqual(['', '']);
   });
 
   test('the controls box: undo, up, redo / left, play, right / zoom out, down, zoom in, with a hide button', async ({ page }) => {
