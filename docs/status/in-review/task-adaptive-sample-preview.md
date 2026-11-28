@@ -1,0 +1,2 @@
+status: Add a hidden adaptive-learning preview to locked staging. Keyboard, touch, Light and Evening, date jumps, and a backwards device-clock change have focused browser coverage. The preview uses labeled sample cards and in-page progress. Engine #1257 and the Anatomy Lab serialization fix #1259 are in the base.
+decision: Christian approved trying the 20-item cap and spaced mastery rule on staging.

@@ -1,0 +1,1 @@
+status: Connect the labeled study-skills sample deck to the adaptive engine through a build-time switch that defaults off. The ordinary Learn experience remains the default, and live Workers builds and reviewed decks cannot activate the pilot.

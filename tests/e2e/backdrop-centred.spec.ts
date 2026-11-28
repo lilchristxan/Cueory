@@ -120,9 +120,12 @@ test.describe('game backdrop and board are centred in the play area', () => {
           expect(box.board.top, `${label}: board below the controls`).toBeGreaterThanOrEqual(box.headBottom - 1);
           expect(box.board.bottom, `${label}: board inside the play area`).toBeLessThanOrEqual(box.main.y + box.main.h + 1);
 
-          // Hide everything inside the play area and look at the paper alone.
+          // Hide everything inside the play area and look at the paper alone. The graph-paper lines are the play area's
+          // own background; what lies behind them is the frame's. wordpill's frame is a sky (a gradient), so the lines
+          // are measured over the plain page colour on every route: the same lines, on flat paper.
           await page.evaluate(() => {
             for (const el of document.querySelectorAll<HTMLElement>('.game-frame-main > *, .game-frame-deck-slot')) el.style.visibility = 'hidden';
+            document.querySelector<HTMLElement>('.game-frame')!.style.background = getComputedStyle(document.documentElement).getPropertyValue('--color-page');
           });
           const w = Math.floor(box.main.w);
           const h = Math.floor(box.main.h);
@@ -152,6 +155,7 @@ test.describe('game backdrop and board are centred in the play area', () => {
 
           await page.evaluate(() => {
             for (const el of document.querySelectorAll<HTMLElement>('.game-frame-main > *, .game-frame-deck-slot')) el.style.visibility = '';
+            document.querySelector<HTMLElement>('.game-frame')!.style.background = '';
           });
         }
       });

@@ -26,6 +26,7 @@
 
   /* ---------- Daytime palette (brand guide) ---------- */
   --color-page: #f9f5ef;        /* Ivory    — page background */
+  --study-page: #ffffff;        /* study screens sit on plain white in Daytime (Christian, 2026-11-26); not a brand colour, so not a --color-* token */
   --color-surface: #eadccf;     /* Linen    — cards and panels */
   --color-soft: #d3b7a1;        /* Taupe    — decorative / soft fill (notice bar) */
   --color-highlight: #8b6f5b;   /* Mocha    — accents and highlights (not for small text) */
@@ -124,7 +125,7 @@
   --game-frame-emblem-hi-size: 2.0625rem;/* 33px */
   --game-frame-wordmark-height: 3.75rem; /* 60px */
   --game-frame-title-size: 2.5rem;       /* 40px */
-  --game-frame-tagline-size: 1.5rem;     /* 24px */
+  --game-frame-tagline-size: 1.125rem;   /* 18px (Christian, 2026-11-27: smaller, and every tagline in lower case) */
   --game-frame-stat-value-size: 1.75rem; /* 28px */
   --game-frame-stat-label-size: 0.8125rem; /* 13px */
   --game-frame-dateline-size: 0.875rem;  /* 14px */
@@ -161,12 +162,13 @@
   --game-deck-card-height: 19.25rem;     /* 308px */
   --game-deck-card-radius: 1.25rem;      /* 20px */
   --game-deck-card-line: 0.09375rem;     /* 1.5px */
-  --game-deck-front-top: 23.25rem;       /* 372px from the frame's top edge */
+  --game-deck-front-top: calc(50vh - 4.875rem); /* the fan (back card's top to front card's bottom) sits in the middle of the window's height (Christian, 2026-11-27); 372px down in a 900px window, as before */
   --game-deck-front-hang: 4.875rem;      /* 78px of the front card hangs past the right edge (142px of it shows) */
   --game-deck-front-tilt: 15deg;
   --game-deck-step-up: 2.625rem;         /* 42px: each card behind sits this much higher... */
   --game-deck-step-out: 1.125rem;        /* 18px: ...this much further out past the edge... */
   --game-deck-step-tilt: 2.5deg;         /* ...and this much less tilted */
+  --game-deck-reach: 11.25rem;          /* 180px: how far the fanned cards reach in from the right edge; the play area keeps this clear so the board is midway between the side panel and the cards */
   --game-deck-reserve-end: 9.375rem;    /* 150px: at 1120 px the main area gives up this much on its right, so a full-width board stays left of the fanned cards... */
   --game-deck-reserve-start: 0px;          /* ...and keeps none on its left (the usual padding comes back as the screen widens) */
   --game-deck-reserve-until: 83.75rem;   /* 1340px: from here the usual padding is enough */
@@ -779,17 +781,18 @@
      dark green in place, oxblood elsewhere. A cap is the colour itself, its deep step as the lip and a little of its
      light step at the lit top. The caps keep the Daytime values in Evening too, as the pills on the LOCKED v1 board
      do, so the white letter is at least 5:1 on every part of either cap in both palettes. */
-  --vialo-key-here-top: color-mix(in srgb, #3f8a68 30%, #0e5a3d);       /* in place: a dark green cap, lit at the top */
-  --vialo-key-here-bottom: #0e5a3d;
-  --vialo-key-here-lip: #053321;
-  --vialo-key-elsewhere-top: color-mix(in srgb, #a0413a 35%, #6e2019);  /* elsewhere in the word: an oxblood cap */
-  --vialo-key-elsewhere-bottom: #6e2019;
-  --vialo-key-elsewhere-lip: #4a100d;
-  --vialo-key-on-mark: #ffffff;         /* the letter on a green or oxblood key */
+  --vialo-key-here-top: var(--wordpill-here-light);       /* in place: a light green cap, lit at the top */
+  --vialo-key-here-bottom: var(--wordpill-here);
+  --vialo-key-here-lip: var(--wordpill-here-deep);
+  --vialo-key-elsewhere-top: var(--wordpill-elsewhere-light);  /* elsewhere in the word: a pink cap */
+  --vialo-key-elsewhere-bottom: var(--wordpill-elsewhere);
+  --vialo-key-elsewhere-lip: var(--wordpill-elsewhere-lip);
+  --vialo-key-on-mark: var(--wordpill-on-here);         /* the letter on a light green key */
+  --vialo-key-on-elsewhere: var(--wordpill-on-elsewhere); /* the letter on a pink key */
   --vialo-pill-ring: 2px;               /* the light ring inside an "elsewhere" pill on the board, as on its key */
   --vialo-pill-ring-gap: 3px;           /* how far that ring sits inside the pill's edge */
   --vialo-pill-ring-color: var(--vialo-key-ring-color);
-  --vialo-key-ring-color: rgb(255 255 255 / 0.6);
+  --vialo-key-ring-color: var(--wordpill-elsewhere-ring);
   --vialo-key-shine: rgb(255 255 255 / 0.35);  /* the lit top edge of a green key */
   --shadow-vialo-key: 0 8px 12px rgb(var(--shadow-tint) / 0.13);
 }
@@ -927,7 +930,7 @@
     --game-demo-vialo-font-size: 0.8125rem;
     --game-demo-vialo-ring: 1px;              /* the light ring inside a red pill, scaled down from the board's 2 px */
     --game-demo-vialo-ring-gap: 2px;
-    --game-demo-vialo-ring-color: rgb(255 255 255 / 0.6);
+    --game-demo-vialo-ring-color: transparent; /* no ring on a pink pill, as on the live board */
     /* The card stays light in Evening, so the board's Daytime foil and pill colours (the --game-oxblood, --game-dark-green,
        --vialo-absent-* and --color-pillo-foil values by day) stay fixed here. */
     --game-demo-vialo-foil: color-mix(in srgb, #6b5243 16%, #f9f5ef);
@@ -935,12 +938,14 @@
     --game-demo-vialo-hatch-clear: rgb(from #3e2c23 r g b / 0);
     --game-demo-vialo-gloss: color-mix(in srgb, #f9f5ef 70%, transparent);
     --game-demo-vialo-gloss-clear: rgb(from #f9f5ef r g b / 0);
-    --game-demo-vialo-green: #0e5a3d;
-    --game-demo-vialo-green-light: #3f8a68;
-    --game-demo-vialo-green-deep: #053321;
-    --game-demo-vialo-red: #6e2019;
-    --game-demo-vialo-red-light: #a0413a;
-    --game-demo-vialo-red-deep: #4a100d;
+    --game-demo-vialo-green: #a8d5ba;        /* wordpill's light green, as on the live board (Christian, 2026-11-27) */
+    --game-demo-vialo-green-light: #dff1e6;
+    --game-demo-vialo-green-deep: #8fae8b;
+    --game-demo-vialo-on-green: #053321;     /* the letter on a light green pill */
+    --game-demo-vialo-red: #f4a6c0;          /* wordpill's pink (the token keeps its old name) */
+    --game-demo-vialo-red-light: #f7c6d4;
+    --game-demo-vialo-red-deep: #ec8fb0;
+    --game-demo-vialo-on-red: #3e2c23;       /* the letter on a pink pill */
     --game-demo-vialo-absent-face: #ffffff;
     --game-demo-vialo-absent-ink: #6b5243;
     --game-demo-tachyyy-width: 10.625rem;
@@ -1129,6 +1134,7 @@
   --picc-sticker-ring-bead: 3px;        /* the same inside a 54 px bead */
   --picc-sticker-ring-bead-gap: 5px;
   --vialo-sticker-ring-scale: 2;        /* the board's "elsewhere" ring, scaled up to the sticker's bigger pills */
+  --vialo-sticker-ring-color: rgb(255 255 255 / 0.6); /* the light ring inside the sticker's "elsewhere" pill: the sticker keeps its own ring (its pills are still oxblood), whatever the live board uses */
   --vialo-sticker-pill-gloss: rgba(249, 245, 239, 0.9);
   --vialo-sticker-here-light: rgb(63, 138, 104);
   --vialo-sticker-here-mid: rgb(14, 90, 61);
@@ -1217,6 +1223,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --color-page: #1c1917;      /* Charcoal      — page background */
+    --study-page: var(--color-page); /* study screens in Evening stay Charcoal */
     --share-story-dark-logo: 1;
     --color-surface: #3a2d24;   /* Walnut        — cards and panels */
     --color-soft: #3a2d24;      /* Walnut        — notice bar */
@@ -1349,6 +1356,7 @@
 
 :root[data-theme="dark"] {
   --color-page: #1c1917;      /* Charcoal      — page background */
+  --study-page: var(--color-page); /* study screens in Evening stay Charcoal */
   --share-story-dark-logo: 1;
   --color-surface: #3a2d24;   /* Walnut        — cards and panels */
   --color-soft: #3a2d24;      /* Walnut        — notice bar */
@@ -1491,6 +1499,59 @@
   --game-pip-bg: var(--color-surface);
   --game-pip-ink: var(--color-ink);
   --game-demo-active-bg: var(--color-surface);
+}
+
+/* wordpill's Evening sky (Christian, 2026-11-27): each sky colour swaps with the colour of the letter that sits on its
+   pill in Daytime: light green becomes that letter's dark green, white becomes bronze and pink becomes dark brown.
+   The pills and keys themselves keep their Daytime colours in Evening. Two copies, as for every Evening value: one for
+   the device setting, one for the footer's Dark pick. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --wordpill-sky-mint: #053321;
+    --wordpill-sky-pale-mint: #2c4a37;
+    --wordpill-sky-white: #6b5243;
+    --wordpill-sky-rose: #543c30;
+    --wordpill-sky-pink: #3e2c23;
+    --wordpill-sky-glow: #6b5243;
+  }
+}
+
+:root[data-theme="dark"] {
+  --wordpill-sky-mint: #053321;
+  --wordpill-sky-pale-mint: #2c4a37;
+  --wordpill-sky-white: #6b5243;
+  --wordpill-sky-rose: #543c30;
+  --wordpill-sky-pink: #3e2c23;
+  --wordpill-sky-glow: #6b5243;
+}
+
+@theme static {
+  /* ---------- wordpill's Daytime page sky (Christian's "S6", 2026-11-27) ----------
+     Mint at the top, a white glow in the middle, pink at the bottom. Only wordpill's game page uses it, and only in
+     Daytime: Evening keeps the usual page. The same five colours fill the capsule in wordpill's artwork. */
+  /* wordpill's marks (Christian, 2026-11-27): light green in place, pink elsewhere in the word, white not in the
+     word. Dark letters on all three (tests check AA); the pink mark also keeps its ring, so colour is never the only
+     signal. The same values in Daytime and Evening, as the caps had before. */
+  --wordpill-here: #a8d5ba;
+  --wordpill-here-light: #dff1e6;
+  --wordpill-here-deep: #8fae8b;
+  --wordpill-on-here: #053321;
+  --wordpill-elsewhere: #f4a6c0;
+  --wordpill-elsewhere-light: #f7c6d4;
+  --wordpill-elsewhere-deep: #ec8fb0;
+  --wordpill-elsewhere-lip: #ec8fb0;
+  --wordpill-elsewhere-ring: transparent; /* no ring on a pink pill or key (Christian, 2026-11-27) */
+  --vialo-pill-dot: 0.25rem;            /* 4px: the dot under the letter on a pink pill or key, the sign besides colour */
+  --wordpill-on-elsewhere: #3e2c23;
+  --wordpill-sky-mint: #a8d5ba;
+  --wordpill-sky-pale-mint: #dff1e6;
+  --wordpill-sky-white: #fff5f7;
+  --wordpill-sky-rose: #f7c6d4;
+  --wordpill-sky-pink: #f4a6c0;
+  --wordpill-sky-glow: #ffffff;
+  --wordpill-sky:
+    radial-gradient(90% 55% at 50% 50%, var(--wordpill-sky-glow), transparent 70%),
+    linear-gradient(180deg, var(--wordpill-sky-mint) 0%, var(--wordpill-sky-pale-mint) 30%, var(--wordpill-sky-white) 55%, var(--wordpill-sky-rose) 80%, var(--wordpill-sky-pink) 100%);
 }
 
 @theme static {
@@ -1880,4 +1941,16 @@
   --color-model: var(--lab-model);
   --color-model-alt: var(--lab-model-alt);
   --color-model-selected: var(--lab-model-selected);
+}
+
+/* The game side panel's copper bar on the screen's midline (Christian, 2026-11-27). Only on a desktop window at least
+   50rem (800 px) tall: the badge above the bar ends near 343 px, and on a shorter window the bar (which starts 22 px
+   above the midline) would run into the tagline, so there it stays in the flow. */
+@media (width >= 64rem) and (height >= 50rem) {
+  :root {
+    --game-frame-account-position: absolute;
+    --game-frame-account-top: 50vh;
+    --game-frame-account-shift: calc(var(--game-frame-btn-size) / -2);
+    --game-frame-account-pad: calc(var(--spacing) * 6);
+  }
 }

@@ -88,14 +88,25 @@ export function nextInLevelTest(
   return undefined;
 }
 
+function statusFor({ first, second }: ConceptTest): ConceptProgressStatus {
+  if (!first) return 'not started';
+  if (!first.right) return 'learning';
+  return second?.right ? 'got it' : 'getting there';
+}
+
+const progressDescriptions: Record<ConceptProgressStatus, string> = {
+  'not started': 'this concept has not been started.',
+  'learning': 'this concept is still learning.',
+  'got it': 'this concept is going well.',
+  'getting there': 'this concept is getting there.',
+};
+
 export function levelTestResult(
   questions: readonly AdaptiveQuestion[], attempts: readonly AdaptiveAttempt[],
 ): LevelTestProgress[] {
-  return progress(questions, attempts).concepts.map(({ concept, first, second }) => {
-    if (!first) return { concept, status: 'not started', description: 'this concept has not been started.' };
-    if (!first.right) return { concept, status: 'learning', description: 'this concept is still learning.' };
-    if (second?.right) return { concept, status: 'got it', description: 'this concept is going well.' };
-    return { concept, status: 'getting there', description: 'this concept is getting there.' };
+  return progress(questions, attempts).concepts.map(test => {
+    const status = statusFor(test);
+    return { concept: test.concept, status, description: progressDescriptions[status] };
   });
 }
 
@@ -115,4 +126,23 @@ export function levelTestInWords(questions: readonly AdaptiveQuestion[]): string
   const twos = capacity.filter(value => value === 2).length, ones = concepts.length - twos;
   const forConcepts = (number: number) => number === 1 ? 'for 1 concept' : `for each of ${number} concepts`;
   return `${beginning} across ${count}: up to 2 ${forConcepts(twos)} and 1 question ${forConcepts(ones)}.`;
+}
+
+/** Count only accepted evidence from the same path used by the existing unit check. */
+export function levelTestEvidence(
+  questions: readonly AdaptiveQuestion[], attempts: readonly AdaptiveAttempt[],
+) {
+  const { concepts, used } = progress(questions, attempts);
+  return concepts.map(test => {
+    const { concept, questions: choices, first, second } = test;
+    const answers = [first, second].filter(answer => answer !== undefined);
+    return {
+      concept,
+      status: statusFor(test),
+      right: answers.filter(answer => answer.right).length,
+      asked: answers.length,
+      levels: answers.map(answer => answer.question.level),
+      harderAvailable: Boolean(second || choices.some(question => question.level === 3 && !used.has(question.id))),
+    };
+  });
 }

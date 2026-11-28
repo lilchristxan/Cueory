@@ -1,0 +1,1 @@
+status: the lesson board format is defined (one file per teaching video: pictures with labels, spoken clauses) with converters to label-it sets and study rows, a labeled sample and tests; the study pages do not read boards yet.
