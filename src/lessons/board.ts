@@ -9,14 +9,15 @@
  * answer; wrong choices are other answers from the same lesson, never new words. Pure functions, unit tested.
  */
 import type { Label, LabelSet } from '../islands/labelit';
+import { studyTargetSchema, type ModuleLesson, type StudyTarget } from './module-path';
 
 export interface BoardPicture {
   id: string;
   image: LabelSet['image'];
-  labels: Label[];
+  labels: (Label & Partial<StudyTarget>)[];
 }
 
-export interface BoardClause {
+export interface BoardClause extends Partial<StudyTarget> {
   id: string;
   /** The clause exactly as the narrator says it. */
   said: string;
@@ -37,7 +38,7 @@ export interface LessonBoard {
 }
 
 /** One fact in the shape every study mode shares (the same columns as the study-set spreadsheet template). */
-export interface StudyRow {
+export interface StudyRow extends Partial<StudyTarget> {
   id: string;
   question: string;
   answer: string;
@@ -51,7 +52,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> => typeof va
 const inRange = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100;
 
 /** Every problem with a board, in plain words. An empty list means the board can be used. */
-export function boardProblems(raw: unknown): string[] {
+export function boardProblems(raw: unknown, lesson?: ModuleLesson): string[] {
   if (!isRecord(raw)) return ['a lesson board must be an object'];
   const problems: string[] = [];
   const where = isText(raw.id) ? `board "${raw.id}"` : 'the board';
@@ -62,6 +63,27 @@ export function boardProblems(raw: unknown): string[] {
   if (pictures.length === 0) problems.push(`${where} needs at least one picture`);
   if (clauses.length === 0) problems.push(`${where} needs its spoken clauses`);
 
+  function checkTarget(row: Record<string, unknown>, what: string, requiresTarget: boolean, labelId?: string) {
+    // Old standalone boards remain readable. A module-linked study row must carry all four tags.
+    if (!requiresTarget && !['lo', 'bloom', 'level', 'anchor'].some(key => key in row)) return;
+    const target = studyTargetSchema.safeParse(row);
+    if (!target.success) {
+      problems.push(`${where}: ${what} needs lo, bloom, level and anchor study tags`);
+      return;
+    }
+    if (lesson) {
+      const { lo, anchor } = target.data;
+      const shared = labelId && lesson.items.find(item => item.activity === 'label-it' && item.id === labelId);
+      if (labelId && !shared) {
+        problems.push(`${where}: ${what} needs an indexed label-it item in lesson ${lesson.id}`);
+      } else if (shared && (shared.lo !== lo || shared.anchor !== anchor || shared.bloom !== target.data.bloom || shared.level !== target.data.level)) {
+        problems.push(`${where}: ${what} study tags differ from its indexed module item`);
+      }
+      const objective = lesson.objectives.find(objective => objective.id === lo);
+      if (!objective || !objective.anchors.includes(anchor)) problems.push(`${where}: ${what} needs an objective and teaching anchor in lesson ${lesson.id}`);
+    }
+  }
+  if (lesson && raw.lesson !== lesson.id) problems.push(`${where}: expected board for lesson ${lesson.id}`);
   const labelIds = new Set<string>();
   const pictureIds = new Set<string>();
   for (const picture of pictures) {
@@ -77,6 +99,7 @@ export function boardProblems(raw: unknown): string[] {
       if (!isRecord(label) || !isText(label.id) || !isText(label.text)) { problems.push(`${where}: a label on "${picture.id}" needs an id and its word`); continue; }
       if (labelIds.has(label.id)) problems.push(`${where}: label "${label.id}" appears twice`);
       labelIds.add(label.id);
+      checkTarget(label, `label "${label.id}"`, !!lesson, label.id);
       // The box needs a real width and height (the label-it page rejects an empty box); x and y may be 0.
       const sized = (label.w as number) > 0 && (label.h as number) > 0;
       if (![label.x, label.y, label.w, label.h].every(inRange) || !sized || (label.x as number) + (label.w as number) > 100 || (label.y as number) + (label.h as number) > 100) {
@@ -91,6 +114,7 @@ export function boardProblems(raw: unknown): string[] {
     if (!isRecord(clause) || !isText(clause.id) || !isText(clause.said)) { problems.push(`${where}: every clause needs an id and what is said`); continue; }
     if (clauseIds.has(clause.id)) problems.push(`${where}: clause "${clause.id}" appears twice`);
     clauseIds.add(clause.id);
+    checkTarget(clause, `clause "${clause.id}"`, !!lesson && clause.question !== undefined);
     // Absent is fine (the clause teaches no single fact); present must be real text, so a number or an empty string
     // is a mistake in the file, never a silent "no question".
     const present = (value: unknown) => value !== undefined;
@@ -116,7 +140,7 @@ export function parseBoard(raw: unknown): LessonBoard {
 }
 
 /** One label-it set per picture, so a phone shows one section of the board at a time. */
-export function boardLabelSets(board: LessonBoard): LabelSet[] {
+export function boardLabelSets(board: LessonBoard): (Omit<LabelSet, 'labels'> & { labels: BoardPicture['labels'] })[] {
   return board.pictures.map((picture) => ({
     id: board.pictures.length === 1 ? board.id : `${board.id}-${picture.id}`,
     image: picture.image,
@@ -137,6 +161,7 @@ export function boardRows(board: LessonBoard): StudyRow[] {
     // Whole words only, any letter case: "roof" is blanked in "The roof covers…" but not inside "roofing".
     const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${escapeForPattern(answer)}(?![\\p{L}\\p{N}])`, 'iu');
     const row: StudyRow = { id: clause.id, question: clause.question.trim(), answer };
+    if (clause.lo !== undefined) Object.assign(row, studyTargetSchema.parse(clause));
     if (pattern.test(clause.said)) row.sentence = clause.said.replace(pattern, BLANK);
     rows.push(row);
   }

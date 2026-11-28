@@ -29,6 +29,18 @@ A lesson needs `course`, positive integer `order`, `title` (1–120 characters),
 }
 ```
 
+## Module learning paths
+
+A module lists the lessons in a course, what each lesson teaches and which activities give a student practice with each learning objective. Start with the [labeled study-skills sample](../content/samples/module-path/study-skills.json). Sample manifests live in `content/samples/module-path/`. Draft and published manifests live in `content/module-path/manifests/`.
+
+1. Give the module an `id`, `course`, `title` and `status` (`sample`, `draft` or `published`). For each lesson, enter its `id` and the file IDs for its `video` and `reading`. Both sources must belong to that lesson, and the reading must belong to the module's course.
+2. Add teaching anchors so a student can revisit the material for an activity. A `video` anchor gives whole seconds for the start and end of a passage. A `reading` anchor gives the `section` ID of a sentence in the reading. Both kinds need an `id` unique within the lesson. The sample video time is illustrative, marked `sampleTiming: true`, and the sample reading points to placeholder text. Publishing requires both kinds of anchor and published sources with actual video timing.
+3. Give each learning objective its own `id`, a plain-language `title`, one or more `concepts`, its target `bloom` tier and a list of teaching `anchors`. Tiers are `remember`, `understand`, `apply`, `analyze` and `evaluate`.
+4. For each study item, record its source `id` and `activity`. Tag it with its learning objective ID (`lo`), what this particular item asks the student to do (`bloom`), its difficulty (`level`, 1 through 3) and one teaching `anchor` from that objective. An item asking the student to explain an idea can assess `understand` on the way to an `apply` objective. A labeled sample may also name a `board` from `content/samples/templates/`. For shared label regions, all four tags must agree with the board.
+5. Before publishing, check that each objective has a teaching anchor and a `diagnostic` item at `understand` or `apply`. The build warns about missing practice in any of `flashcard`, `label-it`, `learning-question`, `fill-in` and `matching`. It also warns when fewer than three distinct `practice-exam` items are reserved for an objective.
+
+The sample resolves its reading and deck using their content entry IDs. An entry ID comes from the normalized filename or an explicit slug. Each sample source must be labeled or marked as a placeholder. The study-skills draft video is allowed only with its placeholder video ID and an explicitly illustrative time range. For a draft or published module, supply an approved inventory at `content/module-path/sources/<lesson-id>.json`. It has `status` set to `approved`, a `lesson` ID and an `items` list containing only `id` and `activity`. Every inventory item needs matching tags in the manifest. The build checks the inventory locally. Checking whether the corresponding items are available on the live service is a separate release check. Keep prompts, answers and rationales in the private review system.
+
 ## Card decks
 
 Directory: `content/cards/*.json`
@@ -202,12 +214,13 @@ This file is imported directly by `src/pages/gloves/messages.json.ts` (which pub
 
 ## Schema field index
 
-All JSON keys in the collection schemas are listed here. `[]` means an item in a list and `?` marks an optional key. `tests/unit/content-format-doc.test.ts` compares this index with the schemas. Break ideas are not an Astro collection.
+All JSON keys in the collection schemas are listed here. `[]` means an item in a list and `?` marks an optional key. For module anchors, `startSeconds`, `endSeconds` and `sampleTiming` belong to the video form, and `section` belongs to the reading form. `tests/unit/content-format-doc.test.ts` compares this index with the schemas. Break ideas are not an Astro collection.
 
 <!-- FIELD-INDEX: START -->
 | Collection | Fields |
 | --- | --- |
 | `lessons` | `course`, `order`, `title`, `summary`, `status`, `sentences`, `sentences[].id`, `sentences[].text` |
+| `modulePaths` | `id`, `course`, `title`, `status`, `lessons`, `lessons[].id`, `lessons[].video`, `lessons[].reading`, `lessons[].board?`, `lessons[].anchors`, `lessons[].anchors[].id`, `lessons[].anchors[].kind`, `lessons[].anchors[].startSeconds`, `lessons[].anchors[].endSeconds`, `lessons[].anchors[].sampleTiming?`, `lessons[].anchors[].section`, `lessons[].objectives`, `lessons[].objectives[].id`, `lessons[].objectives[].title`, `lessons[].objectives[].concepts`, `lessons[].objectives[].bloom`, `lessons[].objectives[].anchors`, `lessons[].items`, `lessons[].items[].id`, `lessons[].items[].activity`, `lessons[].items[].lo`, `lessons[].items[].bloom`, `lessons[].items[].level`, `lessons[].items[].anchor` |
 | `cards` | `lesson`, `title`, `status`, `cards`, `cards[].id`, `cards[].front`, `cards[].back`, `cards[].blank?` |
 | `pulse` | `status`, `word`, `cue` |
 | `triage` | `status`, `groups`, `groups[].name`, `groups[].terms`, `oddOne` |

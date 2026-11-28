@@ -1,0 +1,1 @@
+status: Module path phase 1 links labeled sample practice to lesson objectives and teaching anchors, with build checks for diagnostic coverage. The learner model and preview screens follow in later phases.

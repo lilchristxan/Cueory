@@ -14,18 +14,18 @@
         "credit": "drawing: cueory, an everyday sample made for this page"
       },
       "labels": [
-        { "id": "roof", "text": "roof", "x": 42, "y": 5, "w": 16, "h": 7.5 },
-        { "id": "chimney", "text": "chimney", "x": 74, "y": 11.5, "w": 20, "h": 7.5 },
-        { "id": "window", "text": "window", "x": 5.5, "y": 47.5, "w": 17, "h": 7.5 },
-        { "id": "door", "text": "door", "x": 43, "y": 89.5, "w": 14, "h": 7.5 }
+        { "id": "roof", "text": "roof", "x": 42, "y": 5, "w": 16, "h": 7.5, "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+        { "id": "chimney", "text": "chimney", "x": 74, "y": 11.5, "w": 20, "h": 7.5, "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+        { "id": "window", "text": "window", "x": 5.5, "y": 47.5, "w": 17, "h": 7.5, "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+        { "id": "door", "text": "door", "x": 43, "y": 89.5, "w": 14, "h": 7.5, "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" }
       ]
     }
   ],
   "clauses": [
-    { "id": "c1", "said": "The roof covers the top of the house.", "question": "What covers the top of the house?", "answer": "roof", "label": "roof" },
-    { "id": "c2", "said": "Smoke leaves through the chimney.", "question": "Where does smoke leave the house?", "answer": "chimney", "label": "chimney" },
-    { "id": "c3", "said": "Light comes in through the window.", "question": "What lets light into the house?", "answer": "window", "label": "window" },
-    { "id": "c4", "said": "You walk in through the door.", "question": "How do you walk into the house?", "answer": "door", "label": "door" },
+    { "id": "c1", "said": "The roof covers the top of the house.", "question": "What covers the top of the house?", "answer": "roof", "label": "roof", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+    { "id": "c2", "said": "Smoke leaves through the chimney.", "question": "Where does smoke leave the house?", "answer": "chimney", "label": "chimney", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+    { "id": "c3", "said": "Light comes in through the window.", "question": "What lets light into the house?", "answer": "window", "label": "window", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+    { "id": "c4", "said": "You walk in through the door.", "question": "How do you walk into the house?", "answer": "door", "label": "door", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
     { "id": "c5", "said": "That is the whole house." }
   ]
 }

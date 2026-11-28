@@ -10,6 +10,8 @@ import { modelFileProblems, visualProblems } from './visuals/sources';
 import { videoSchema } from './videos/schema';
 import { repeatedCardIndexes } from './content/card-schema';
 import { lessonSentenceProblems } from './content/lesson-validation';
+import { modulePathSchema } from './lessons/module-path';
+import { loadModulePaths } from './lessons/module-sources';
 
 /**
  * Lessons are content, not code: they live as JSON files in /content/lessons.
@@ -436,4 +438,10 @@ const helloCards = defineCollection({
     }),
 });
 
-export const collections = { lessons, cards, pulse, triage, cueword, suture, 'hello-cards': helloCards, organizer, 'fill-in': fillIn, 'label-it': labelIt, questions, visuals, videos };
+// The public repository carries labeled sample metadata only; validating the graph does not publish a route.
+const modulePaths = defineCollection({
+  loader: async () => loadModulePaths('content', message => console.warn(message)),
+  schema: modulePathSchema,
+});
+
+export const collections = { modulePaths, lessons, cards, pulse, triage, cueword, suture, 'hello-cards': helloCards, organizer, 'fill-in': fillIn, 'label-it': labelIt, questions, visuals, videos };
