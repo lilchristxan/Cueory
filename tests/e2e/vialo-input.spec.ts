@@ -5,10 +5,29 @@ import { fixClock } from './clock';
 // mouse, touch and keyboard activation of the on-screen keys.
 test.beforeEach(async ({ page }) => {
   await fixClock(page, new Date('2026-11-01T15:00:00'));
+  await silenceGameSound(page);
   await page.goto('/play/wordpill');
   await expect(page.getByTestId('vialo')).toBeVisible();
   await startStallSampler(page); // temporary, see below
 });
+
+// These tests are about keys, not sound. Turn the shared "game sounds" switch off before the page loads, so the page
+// makes no audio context at all (src/islands/gamesound.ts). CI's WebKit has no audio device: with sound on, every
+// on-screen key press there took about two seconds (the log's active-key timeline), and a 30-key test ran out of its
+// 90 s. A counter in place of AudioContext lets one test below prove nothing is made. Sound itself is covered in
+// game-sounds.spec.ts.
+async function silenceGameSound(page: Page) {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('cueory-game-settings', JSON.stringify({ highContrast: false, motion: 'device', sound: false }));
+    } catch { /* optional storage */ }
+    const counted = { contexts: 0 };
+    (window as unknown as { audioContexts: typeof counted }).audioContexts = counted;
+    (window as unknown as { AudioContext: unknown }).AudioContext = class {
+      constructor() { counted.contexts += 1; }
+    };
+  });
+}
 
 // TEMPORARY DIAGNOSTICS for the WebKit-only stall inside the sixth word (a letter key stops being "stable"). From the
 // page's own animation frames it logs only CHANGES (capped at 20000 frames / 90 s): each letter key's rect and
@@ -243,6 +262,13 @@ test('Enter and Backspace do nothing after the game is finished', async ({ page 
   await page.keyboard.press('Enter');
   await page.keyboard.press('Backspace');
   await expect(guesses(page)).toHaveCount(before);
+});
+
+test('on-screen keys make no audio context while game sounds are off', async ({ page }) => {
+  await typeOnScreen(page, 'crane');
+  await page.keyboard.press('Enter');
+  await expect(guesses(page)).toHaveCount(1);
+  expect(await page.evaluate(() => (window as unknown as { audioContexts: { contexts: number } }).audioContexts.contexts)).toBe(0);
 });
 
 test.describe('on-screen delete and enter keys', () => {

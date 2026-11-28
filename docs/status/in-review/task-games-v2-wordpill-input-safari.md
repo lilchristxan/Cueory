@@ -1,0 +1,1 @@
+status: wordpill-input keys-only tests turn game sound off (test setup only, no assertion or timeout changed): inferred cause is CI WebKit's missing audio device making each on-screen key take about 2 s since game sounds (25 Nov); needs a release-check rerun on WebKit to confirm.
