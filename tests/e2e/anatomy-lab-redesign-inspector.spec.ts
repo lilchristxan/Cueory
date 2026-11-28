@@ -123,7 +123,8 @@ test.describe('anatomy lab inspector', () => {
     await openLab(page);
     await select(page, 'fixture cube A');
     const trigger = card(page).getByRole('link', { name: 'flag or comment' });
-    const pageFlag = page.locator('#footer-flag').getByRole('button', { name: 'flag or comment' });
+    // The footer is hidden while the lab is the whole page, so its flag button is found by its markup, not its role.
+    const pageFlag = page.locator('#footer-flag button[aria-label="flag or comment"]');
     await expect(pageFlag).toHaveAttribute('aria-expanded', 'false');
     await trigger.click();
     await expect(pageFlag).toHaveAttribute('aria-expanded', 'true');

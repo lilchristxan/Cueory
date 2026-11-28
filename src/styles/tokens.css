@@ -1900,7 +1900,8 @@
   --lab-rail-gap: 0.75rem;
   --lab-edge-inset: 1.25rem;       /* a panel's distance from the stage edge */
   --lab-stage-height: min(56rem, 100dvh);
-  --lab-stage-height-small: min(60rem, 82dvh);
+  --lab-stage-min: 30rem;          /* the full-page lab's stage never gets shorter than this; the page scrolls instead */
+  --lab-stage-height-small: max(24rem, 100dvh - 19rem);
   --lab-topbar-height: 4.5rem;
   --lab-thumb-width: 4.25rem;
   --lab-thumb-height: 6.75rem;

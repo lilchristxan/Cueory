@@ -39,7 +39,7 @@ export default function AnatomyLabOpen({ systems: encodedSystems, fixture: encod
     system?.fixture ? undefined : system && props.modelBytes?.[system.key]);
   return (
     <div className="space-y-6">
-      {Lab ? <Lab {...props} systems={systems} fixture={fixture} autoOpen /> : (
+      {Lab ? <Lab {...props} systems={systems} fixture={fixture} autoOpen onExit={() => { setLab(null); setState('cover'); }} /> : (
         <AnatomyLabCover onOpen={open} busy={state === 'loading'} error={state === 'error'} note={note} />
       )}
       <AnatomyTextRecall systems={textSystems} drafts={props.drafts} />

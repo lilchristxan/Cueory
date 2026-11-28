@@ -161,6 +161,8 @@ export interface AnatomyLabProps {
   modelBytes?: Readonly<Record<string, number>>;
   /** True when the small cover island (`AnatomyLabOpen.tsx`) already took the tap: open at once instead of showing the cover. */
   autoOpen?: boolean;
+  /** Leaves the full-page lab and goes back to the page it was opened from. */
+  onExit?: () => void;
 }
 
 interface Worksheet {
@@ -272,7 +274,7 @@ function measureLabel(font: string, fontPx: number): (s: string) => number {
  * or from the list, labels with leader lines, a "find it" quiz and picture export for Christian's posts and videos.
  * Nothing from three.js loads before the student taps "open the anatomy lab". Rendered client:only.
  */
-export default function AnatomyLab({ systems: baseSystems, fixture, drafts, autoOpen = false, modelBytes = {} }: Props) {
+export default function AnatomyLab({ systems: baseSystems, fixture, drafts, autoOpen = false, modelBytes = {}, onExit }: Props) {
   const [phase, setPhase] = useState<Phase>(autoOpen ? 'opening' : 'cover');
   const [textLimit, setTextLimit] = useState(TEXT_FALLBACK_BATCH);
   const systems = useMemo(() => {
@@ -346,6 +348,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   // showing, the orientation thumbnails (pictures of the loaded model) and "spread structures apart" (0 to 1).
   const [panels, setPanels] = useState({ orientation: false, systems: false, structures: false });
   const [moreOpen, setMoreOpen] = useState(false);
+  const [sidesHidden, setSidesHidden] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
+  // The other tools open under the stage; bring them into view so the tap visibly does something on a full-page lab.
+  useEffect(() => {
+    if (moreOpen) moreRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [moreOpen]);
   const [orientation, setOrientation] = useState<ViewPreset | 'free' | null>('front');
   const [thumbs, setThumbs] = useState<Partial<Record<'front' | 'back' | 'left', string>>>({});
   const [spread, setSpread] = useState(0);
@@ -1959,16 +1967,25 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   };
 
   return (
-    <div className="space-y-6" onKeyDown={onLabKey}>
+    <div className="lab-page fixed inset-0 z-50 m-0 overflow-x-hidden overflow-y-auto" onKeyDown={onLabKey} data-testid="anatomy-page">
+      <LabFullPage />
       <p className="sr-only" aria-live="polite" data-testid="anatomy-announce">{announce}</p>
 
       <div ref={labRef} className="anatomy-lab" data-testid="anatomy-lab">
         <div className="lab-topbar flex-wrap">
-          <div className="min-w-0">
-            <p className="lab-title">anatomy lab</p>
-            <p className="lab-cap" data-testid="anatomy-caption">
-              {system.title} · {system.model.release} · {system.structures.length} structures
-            </p>
+          <div className="flex min-w-0 items-center gap-3">
+            {onExit && (
+              <button type="button" className="lab-btn lab-round shrink-0" onClick={onExit} data-testid="anatomy-exit">
+                <span aria-hidden="true">←</span>
+                <span className="sr-only">leave the anatomy lab</span>
+              </button>
+            )}
+            <div className="min-w-0">
+              <p className="lab-title">anatomy lab</p>
+              <p className="lab-cap" data-testid="anatomy-caption">
+                {system.title} · {system.model.release} · {system.structures.length} structures
+              </p>
+            </div>
           </div>
           <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
             {!namesHidden && (
@@ -1989,6 +2006,15 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 />
               </div>
             )}
+            <button
+              type="button"
+              className="lab-btn hidden shrink-0 lg:inline-flex"
+              aria-pressed={sidesHidden}
+              onClick={() => setSidesHidden((hidden) => !hidden)}
+              data-testid="anatomy-focus"
+            >
+              model only
+            </button>
             <button
               ref={keysButtonRef}
               type="button"
@@ -2031,7 +2057,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </div>
           )}
 
-        <div ref={stageRef} className="relative flex flex-col lg:block lg:h-(--lab-stage-height)" data-testid="anatomy-stage">
+        <div ref={stageRef} className="relative flex flex-col lg:block lg:min-h-(--lab-stage-min) lg:flex-1" data-testid="anatomy-stage">
           <div ref={ringRef} className="lab-selring" aria-hidden="true" data-testid="anatomy-selection-ring" />
           <svg className="lab-leader hidden lg:block" aria-hidden="true" data-testid="anatomy-leader"><line ref={leaderRef} /></svg>
           <div className="relative h-(--lab-stage-height-small) lg:absolute lg:inset-0 lg:h-auto">
@@ -2225,7 +2251,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             ))}
           </div>
 
-          <div className="contents lg:pointer-events-none lg:absolute lg:top-5 lg:bottom-12 lg:left-5 lg:z-10 lg:flex lg:w-(--lab-rail-width) lg:flex-col lg:gap-3 lg:overflow-y-auto">
+          <div className={`contents lg:pointer-events-none lg:absolute lg:top-5 lg:bottom-5 lg:left-5 lg:z-10 lg:w-(--lab-rail-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-rail">
             <section id="lab-panel-orientation" className="lab-glass mx-3 mb-3 hidden p-4 data-open:block lg:pointer-events-auto lg:m-0 lg:block" data-open={panels.orientation || undefined} aria-labelledby="lab-orientation-heading">
               <h2 id="lab-orientation-heading" className="lab-cap">orientation</h2>
               <div className="mt-3 flex justify-between gap-2" role="group" aria-label="preset views">
@@ -2363,7 +2389,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </section>
           </div>
 
-          <div className="contents lg:pointer-events-none lg:absolute lg:inset-y-5 lg:right-5 lg:z-10 lg:flex lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto">
+          <div className={`contents lg:pointer-events-none lg:absolute lg:inset-y-5 lg:right-5 lg:z-10 lg:w-(--lab-inspector-width) lg:flex-col lg:gap-3 lg:overflow-y-auto ${sidesHidden ? 'lg:hidden' : 'lg:flex'}`} data-testid="anatomy-inspector">
           {selectedName && !quiz && !namesHidden && (
             <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
               <p className="lab-cap flex justify-between gap-3"><span>selected structure</span><span className="lab-id" data-testid="anatomy-card-id">{selected}</span></p>
@@ -2596,8 +2622,11 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           </div>
         </div>
 
-        <div id="lab-more" hidden={!moreOpen} className="space-y-3 border-t border-line p-4" data-testid="anatomy-more">
-          <h2 className="lab-cap">more</h2>
+        <div id="lab-more" ref={moreRef} hidden={!moreOpen} className="space-y-3 border-t border-line p-4" data-testid="anatomy-more">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="lab-cap">more</h2>
+            <button type="button" className={secondaryButton} onClick={() => setMoreOpen(false)} data-testid="anatomy-more-close">close</button>
+          </div>
           <details open className="rounded-lg border border-line" data-testid="anatomy-tools">
             <summary className="flex min-h-11 cursor-pointer items-center px-4 text-sm text-ink-soft">tools</summary>
             <div className="space-y-3 px-4 pb-4">
@@ -3151,7 +3180,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           </section>
         </div>
 
-        <div className="space-y-1 border-t border-line p-4 text-sm text-ink-soft">
+        <div className="flex flex-wrap gap-x-5 gap-y-1 border-t border-line px-4 py-2 text-sm text-ink-soft" data-testid="anatomy-credits">
           {drafts && system.status === 'draft' && <p className="text-ink">draft · labels waiting for review</p>}
             <p>
               {system.fixture ? (
@@ -3237,6 +3266,16 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
           )}
     </div>
   );
+}
+
+/** While the lab is on screen it is the whole page: everything else on the page is hidden (anatomy-lab.css). */
+function LabFullPage() {
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add('lab-open');
+    return () => root.classList.remove('lab-open');
+  }, []);
+  return null;
 }
 
 /**

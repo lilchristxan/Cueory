@@ -1,0 +1,2 @@
+status: Task 178, anatomy lab as the whole page: the open lab fills the window, the site header, footer and page heading are hidden while it is open, a back button leaves it, "model only" clears the side panels on desktop, the credits sit on one compact bottom strip, and the page's flag form opens over the lab.
+decision: D-pending (Task 178) The open anatomy lab is a full-page instrument with nothing outside it; the building notice, header and footer return when the student leaves the lab. Reason: Christian asked for the anatomy to be the whole page (2026-11-27).
