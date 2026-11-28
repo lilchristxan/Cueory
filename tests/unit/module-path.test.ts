@@ -831,6 +831,41 @@ describe('module path: second review round', () => {
     expect(isShown(levelStatus(level))).toBe(true);
   });
 
+  describe('ordering table: review, new material and exhausted levels', () => {
+    type ApplyState = 'due' | 'overdue only' | 'fine';
+    type UnderstandState = 'unstarted' | 'exhausted' | 'shown';
+    const build = (apply: ApplyState, understand: UnderstandState): ModuleProgress => {
+      let p: ModuleProgress = { ...emptyProgress(), diagnosed: true };
+      for (let i = 0; i < 6; i++) p = at(p, true, `sample-card-${i}`, apply === 'fine' ? 3 : 0);
+      if (apply === 'overdue only') {
+        for (let i = 0; i < 5; i++) p = at(p, false, `sample-card-${i}`, 3);
+        p = at(p, true, 'sample-card-5', 3);
+      }
+      if (understand === 'exhausted') p = at(p, true, 'sample-understand-1', 3, 'sample-a', 'understand');
+      if (understand === 'shown') p = shownOn(p, ['understand'], ['sample-a']);
+      return p;
+    };
+    const apply6 = applyItems.slice(0, 6);
+    const understandSeen: ModuleItem = { id: 'sample-understand-1', concept: 'sample-a', level: 'understand', technique: 'fill in the blank' };
+    const understandNew: ModuleItem = { id: 'sample-understand-2', concept: 'sample-a', level: 'understand', technique: 'fill in the blank' };
+    const cases: [string, ApplyState, UnderstandState, ModuleItem[], object][] = [
+      ['due apply with no apply items still offers unseen understand', 'due', 'unstarted', [understandNew], { kind: 'step', level: 'understand', id: 'sample-understand-2' }],
+      ['due apply with items is reviewed before new understand', 'due', 'unstarted', [...apply6, understandNew], { kind: 'step', level: 'apply', reason: 'due for review' }],
+      ['due apply and an exhausted understand: review wins', 'due', 'exhausted', [...apply6, understandSeen], { kind: 'step', level: 'apply', reason: 'due for review' }],
+      ['due apply, nothing usable anywhere: no content', 'due', 'unstarted', [], { kind: 'no content' }],
+      ['overdue-only apply does not crowd out new understand', 'overdue only', 'unstarted', [...apply6, understandNew], { kind: 'step', level: 'understand', id: 'sample-understand-2' }],
+      ['overdue-only apply is reviewed when understand is exhausted', 'overdue only', 'exhausted', [...apply6, understandSeen], { kind: 'step', level: 'apply', reason: 'due for review' }],
+      ['overdue-only apply with nothing else left is an optional review on done', 'overdue only', 'shown', [...apply6, understandSeen], { kind: 'done' }],
+      ['a fine apply never gets in the way of new understand', 'fine', 'unstarted', [...apply6, understandNew], { kind: 'step', level: 'understand', reason: 'not practised yet' }],
+      ['exhausted understand with a fine apply names the exhausted level', 'fine', 'exhausted', [...apply6, understandSeen], { kind: 'no content', exhausted: [{ concept: 'sample-a', level: 'understand' }] }],
+    ];
+    it.each(cases)('%s', (_name, apply, understand, pool, expected) => {
+      const result = nextStep(one, build(apply, understand), pool, { usedIds: [], recentTechniques: [] }, () => 0, undefined, clockOn(3));
+      expect(result).toMatchObject(expected);
+      if (expected && (expected as { kind: string }).kind === 'done') expect((result as { reviewDue?: unknown[] }).reviewDue?.length).toBeGreaterThan(0);
+    });
+  });
+
   function distinctRun(n: number): ModuleProgress {
     let p = emptyProgress();
     for (let i = 0; i < n; i++) p = at(p, true, `sample-card-${i}`, 0);

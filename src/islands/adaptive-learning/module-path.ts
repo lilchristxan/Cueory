@@ -604,6 +604,9 @@ export function nextStep(
   // A perfect diagnostic that has not lapsed needs no adaptive practice (documented departure, see FAST_TRACK).
   if (upTo.length === GATE_LEVELS.length && GATE_LEVELS.every((level) => upTo.includes(level)) && diagnosticFastTrack(shape, progress, today)) return { kind: 'done' };
   const start = new Map(calibrate(shape, progress, upTo, today));
+  // The calibrated level stays a candidate even when a due level is tried first: if the due level has nothing usable
+  // in the supplied pool, practice at the calibrated level must not be hidden.
+  const dueOverride = new Map<string, ThinkingLevel>();
   // A level that is still shown but has faded (strong dropped to sufficient, say) is due for review: it keeps its
   // place as shown for readiness, but review has priority over new material. The lowest due level wins.
   if (today) {
@@ -615,7 +618,7 @@ export function nextStep(
         const a = levelAssessment(levels?.[level], today);
         return a.due;
       });
-      if (dueLevel) start.set(concept, dueLevel);
+      if (dueLevel) dueOverride.set(concept, dueLevel);
     }
   }
   const lastId = history.usedIds.at(-1);
@@ -623,9 +626,10 @@ export function nextStep(
   const tired = run.length === SAME_TECHNIQUE_RUN && run.every((technique) => technique === run[0]) ? run[0] : undefined;
 
   const ranked = shape.concepts
-    .map((concept, order) => {
-      const level = start.get(concept);
-      if (!level) return undefined;
+    .flatMap((concept, order) => {
+      // Candidate levels for the concept: the due one (reviewed first) and the calibrated one (new material).
+      const levels = [dueOverride.get(concept), start.get(concept)].filter((level, at, all): level is ThinkingLevel => level !== undefined && all.indexOf(level) === at);
+      return levels.map((level) => {
       const evidence = progress.concepts.get(concept)?.[level];
       const missedLast = evidence?.recent.filter(isDirect).at(-1)?.correct === false;
       const assessment = levelAssessment(evidence, today);
@@ -635,8 +639,8 @@ export function nextStep(
       // Review that is due first (so the loop keeps re-locating the student), then lower levels (foundations before
       // application), a recent miss first within a level, then module order.
       return { concept, level, evidence, due, overdue, rank: [due ? 0 : 1, levelIndex, missedLast ? 0 : 1, order] as const };
+      });
     })
-    .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
     .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.rank[2] - b.rank[2] || a.rank[3] - b.rank[3]);
 
   // Interleave: a concept that has just had two steps in a row waits behind the others that need work.
@@ -653,7 +657,7 @@ export function nextStep(
     // Collected independently of the calibrated start: a concept can be working on one level while another holds overdue cards.
     upTo.flatMap((level) => {
       const evidence = progress.concepts.get(concept)?.[level];
-      return evidence && level !== start.get(concept) && levelAssessment(evidence, today).overdue > 0 ? [{ concept, level, evidence }] : [];
+      return evidence && level !== start.get(concept) && level !== dueOverride.get(concept) && levelAssessment(evidence, today).overdue > 0 ? [{ concept, level, evidence }] : [];
     }));
   for (const { concept, level, evidence, overdue } of ranked) {
     const fitting = TECHNIQUES_FOR_LEVEL[level];
