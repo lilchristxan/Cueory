@@ -1,0 +1,1 @@
+status: in review: proposal only, changes no page. docs/proposals/ACCOUNTS-PRIVACY-TERMS.md lists what an account stores and proposes new /privacy and /terms wording for Christian to approve before accounts open. Documentation only.
