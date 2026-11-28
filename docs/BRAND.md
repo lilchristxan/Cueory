@@ -165,6 +165,22 @@ Christian's decision (2026-10-31), to match how younger students write.
 - **Light / Dark / Follow device:** a switch in every page footer. Follow device is the default; a Light or Dark pick
   overrides the device and is remembered in the browser. Colors change; layout never does.
 
+## piccline's page sky, 27 Nov 2026
+
+Christian sent a picture of a soft sky and asked for its palette as the background of piccline's game page. These colors
+are for that page only (`/play/piccline`, and `/play/word-path`, the same game): never on other pages, never for text.
+Evening is the same sky at dusk. Text that sits straight on the sky is the main ink (Espresso in Daytime, Ivory in
+Evening), which measures at least 4.5:1 on every color below; the teal cue line is ink on this page for that reason.
+
+| Role | Daytime HEX | Evening HEX |
+| --- | --- | --- |
+| Sky blue | `#9FC3DF` | `#2F4F6B` |
+| Mist | `#CFE0EC` | `#263A4C` |
+| Cream | `#FDF3D6` | `#2E2F33` |
+| Sun | `#FBE6A8` | `#5A4D2E` |
+| Blush | `#F8D9C2` | `#4A3028` |
+| Peach | `#F5B98F` | `#6B4638` |
+
 ## wordpill (formerly vialo), 26 Nov 2026
 
 Christian renamed vialo to wordpill and approved its artwork: wordmark B (a horizontal capsule, "word" in white on game green, "pill" in bold oxblood on ivory), icon L1 (the capsule shortened to "w | p" on an ivory tile) and, in Evening, the same art with a thin ivory rim (E1). The letters are outlines taken from Liberation Serif (SIL OFL), drawn by `scripts/generate-wordpill-art.py` into `public/design/games-v2/assets/`.

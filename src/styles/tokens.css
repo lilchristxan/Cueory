@@ -58,6 +58,14 @@
   /* Ivory and Espresso text fail 4.5:1 on the copper stops; Charcoal passes on all four (4.65 or more). */
   --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient, in both themes */
   /* Game accents (Christian, 20 Nov 2026; docs/BRAND.md). Teal is for piccline only; dim is for vialo's unlit board cells on dark. */
+  /* Conventional colours for anatomical parts (Christian, 2026-11-27): red arteries, blue veins, yellow nerves, brown
+     muscles, as anatomy atlases and models print them (sources in src/islands/anatomycolours.ts). These are the one
+     place the anatomy lab steps outside the brand palette, on his instruction; bones and organs keep the lab's own
+     model colours. Chosen to read on the black and on the white stage. */
+  --anatomy-artery: #c9463d;
+  --anatomy-vein: #3f6fb5;
+  --anatomy-nerve: #d9b53a;
+  --anatomy-muscle: #9a5b45;
   --color-game-teal: #2f7a78;     /* Teal         — piccline accent in Daytime */
   --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));
@@ -1501,6 +1509,45 @@
   --game-demo-active-bg: var(--color-surface);
 }
 
+/* piccline's page sky (Christian's picture, 2026-11-27): soft clouds of blue, cream and peach. Only piccline's game
+   page uses it. The left side stays cream and peach so the teal name keeps its contrast; the blue sits to the right.
+   Evening is the same sky at dusk. Two copies of the Evening values, as for every Evening value. */
+:root {
+  --piccline-sky-blue: #9fc3df;
+  --piccline-sky-mist: #cfe0ec;
+  --piccline-sky-cream: #fdf3d6;
+  --piccline-sky-sun: #fbe6a8;
+  --piccline-sky-blush: #f8d9c2;
+  --piccline-sky-peach: #f5b98f;
+  --piccline-sky:
+    radial-gradient(50% 42% at 62% 14%, var(--piccline-sky-blue) 0%, transparent 70%),
+    radial-gradient(42% 40% at 96% 30%, var(--piccline-sky-sun) 0%, transparent 72%),
+    radial-gradient(46% 40% at 46% 50%, var(--piccline-sky-cream) 0%, transparent 70%),
+    radial-gradient(44% 40% at 78% 90%, var(--piccline-sky-blue) 0%, transparent 70%),
+    radial-gradient(40% 36% at 14% 92%, var(--piccline-sky-peach) 0%, transparent 72%),
+    linear-gradient(180deg, var(--piccline-sky-cream) 0%, var(--piccline-sky-mist) 34%, var(--piccline-sky-cream) 62%, var(--piccline-sky-blush) 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --piccline-sky-blue: #2f4f6b;
+    --piccline-sky-mist: #263a4c;
+    --piccline-sky-cream: #2e2f33;
+    --piccline-sky-sun: #5a4d2e;
+    --piccline-sky-blush: #4a3028;
+    --piccline-sky-peach: #6b4638;
+  }
+}
+
+:root[data-theme="dark"] {
+  --piccline-sky-blue: #2f4f6b;
+  --piccline-sky-mist: #263a4c;
+  --piccline-sky-cream: #2e2f33;
+  --piccline-sky-sun: #5a4d2e;
+  --piccline-sky-blush: #4a3028;
+  --piccline-sky-peach: #6b4638;
+}
+
 /* wordpill's Evening sky (Christian, 2026-11-27): each sky colour swaps with the colour of the letter that sits on its
    pill in Daytime: light green becomes that letter's dark green, white becomes bronze and pink becomes dark brown.
    The pills and keys themselves keep their Daytime colours in Evening. Two copies, as for every Evening value: one for
@@ -1893,14 +1940,19 @@
   --lab-cell-size-large: 1.5em;    /* the letter in a cell */
   --lab-location-dot: 0.75rem;     /* the dot on the location picture */
   --lab-page-max: 90rem;           /* the lab's page is wider than the reading width: it is an instrument, not text */
-  --lab-rail-width: 16.5rem;       /* orientation, systems and layers */
+  --lab-rail-width: 20rem;         /* orientation, systems and layers */
   --lab-inspector-width: 22.5rem;  /* selected structure and the structure list */
   --lab-rail-clear: calc(var(--lab-rail-width) + 2.25rem);       /* left rail plus its inset and a gap: where the models may start */
   --lab-inspector-clear: calc(var(--lab-inspector-width) + 2.25rem); /* right panel plus its inset and a gap: where the models must stop */
   --lab-rail-gap: 0.75rem;
   --lab-edge-inset: 1.25rem;       /* a panel's distance from the stage edge */
   --lab-stage-height: min(56rem, 100dvh);
-  --lab-stage-height-small: min(60rem, 82dvh);
+  --lab-remote-clear-min: 5.5rem;  /* the same, with the controls hidden down to their title row */
+  --lab-remote-clear: 24.5rem;     /* the view remote in the bottom right corner, plus its inset and a gap: where the right panel must stop */
+  --lab-logo-width: 6rem;          /* the cueory logo in the middle of the lab's top bar */
+  --lab-keys-width: 30rem;         /* the ? pop-up: keys, shortcuts and credits */
+  --lab-stage-min: 30rem;          /* the full-page lab's stage never gets shorter than this; the page scrolls instead */
+  --lab-stage-height-small: max(24rem, 100dvh - 19rem);
   --lab-topbar-height: 4.5rem;
   --lab-thumb-width: 4.25rem;
   --lab-thumb-height: 6.75rem;
@@ -1923,6 +1975,24 @@
   --lab-model: #eadccf;
   --lab-model-alt: #d3b7a1;
   --lab-model-selected: var(--lab-copper);
+}
+
+/* The stage behind the model is flat black or flat white, the student's choice (Christian, 2026-11-27); the panels and
+   bars around it stay brown. Brand colours only: black is Charcoal, white is Ivory, and on white the model is drawn
+   in the brand's dark browns so it stays easy to see. */
+.lab-page {
+  --lab-stage-flat: var(--lab-charcoal);
+}
+.lab-page[data-stage='white'] {
+  --lab-stage-flat: var(--lab-ivory);
+  /* A saved picture or worksheet takes the stage's colours too, so the dark model sits on Ivory there as on screen. */
+  --lab-picture-page: var(--lab-ivory);
+  --lab-picture-ink: var(--lab-charcoal);
+  --lab-picture-ink-soft: var(--lab-walnut);
+  --lab-picture-line: var(--lab-bronze);
+  --lab-model: var(--lab-bronze);
+  --lab-model-alt: var(--lab-walnut);
+  --lab-model-selected: var(--lab-copper-deep);
 }
 
 /* The lab alone keeps the dark instrument look in Light and in Evening: the colour tokens its components use are

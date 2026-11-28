@@ -6,6 +6,7 @@
  * needs only the CSP's 'wasm-unsafe-eval' (D-49), and its worker mode (blob: workers) is never turned on.
  * Colors come from the brand tokens at runtime (getComputedStyle), so the model follows the Daytime and Evening palettes.
  */
+import { spreadBoard } from './anatomyspread';
 import * as THREE from 'three';
 import { disposeAnatomyMaterials, disposeAnatomyMeshResources, indexAnatomyGroup, summarizeIndexedAnatomyIds } from './anatomymeshindex';
 import { withTemporaryMeshAppearance } from './anatomyidpass';
@@ -84,11 +85,12 @@ export function readColors(root: HTMLElement = document.documentElement): LabCol
     return Number.isFinite(value) ? value : fallback;
   };
   return {
-    page: get('--color-page'),
+    // page, ink, inkSoft and line colour saved pictures only; on the white stage they follow it (tokens.css).
+    page: get('--lab-picture-page') || get('--color-page'),
     surface: get('--color-surface'),
-    ink: get('--color-ink'),
-    inkSoft: get('--color-ink-soft'),
-    line: get('--color-line'),
+    ink: get('--lab-picture-ink') || get('--color-ink'),
+    inkSoft: get('--lab-picture-ink-soft') || get('--color-ink-soft'),
+    line: get('--lab-picture-line') || get('--color-line'),
     model: get('--color-model'),
     modelAlt: get('--color-model-alt'),
     modelSelected: get('--color-model-selected'),
@@ -203,6 +205,8 @@ export interface LabScene {
   clear(): void;
   setAppearance(appearance: Appearance): void;
   setColors(colors: LabColors): void;
+  /** Gives some structures a colour of their own (a CSS colour by id); the rest keep the model colours. */
+  setTints(tints: ReadonlyMap<string, string>): void;
   /** The quiz uses nearest-hit picking so earlier answers do not bias later taps. */
   pick(clientX: number, clientY: number, preferSelected?: boolean): string | null;
   project(ids: readonly string[]): ProjectedPoint[];
@@ -211,12 +215,16 @@ export interface LabScene {
   /** The visible model's box on screen, in CSS pixels, or null when nothing is in front of the camera. */
   extent(): Rect | null;
   orbit(yaw: number, pitch: number): void;
+  /** Slides the model across the view: below zero left, above zero right, as a share of the distance to it. */
+  pan(share: number): void;
   zoom(factor: number): void;
   resetView(): void;
   /** Looks at the model's center from `direction` (model frame, any length) at the starting distance. */
   viewFrom(direction: readonly [number, number, number]): void;
   /** Turns drag inertia off (reduced motion) or on; follows the device setting while the lab is open. */
   setReducedMotion(reduced: boolean): void;
+  /** Starts or stops the model turning slowly by itself. Taking hold of the model stops it (see `onSpinStop`). */
+  setSpin(on: boolean): void;
   /** One of the six standard views of the visible model (animated unless reduced motion is on). */
   viewPreset(preset: ViewPreset): void;
   /** Frames one structure's box; false when it is not in the model or is hidden. */
@@ -257,19 +265,62 @@ interface Options {
   posture?: Posture;
   /** Called after every frame the scene draws, so the labels can follow the camera. */
   onRender: () => void;
+  /** Called when the student takes hold of the model while it is turning by itself: the turning has stopped. */
+  onSpinStop?: () => void;
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
-/** "Spread structures apart" at 100% moves each structure this share of the model's largest size away from its middle. */
-const SPREAD_REACH = 0.35;
+/** The logo on a saved picture is this tall, as a share of the title's type size. */
+const PICTURE_LOGO_SHARE = 1.2;
+/** How long a saved picture waits for the logo file before going without it. */
+const PICTURE_LOGO_WAIT_MS = 1500;
+
+/** True when a CSS colour is dark enough to need the logo drawn for dark grounds. */
+function isDarkColor(color: string): boolean {
+  const c = new THREE.Color();
+  try {
+    c.set(color);
+  } catch {
+    return true;
+  }
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b < 0.5;
+}
+
+/** Christian's logo artwork for a picture on `ground`, or null when it cannot be loaded in time. */
+function loadPictureLogo(ground: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    const timer = window.setTimeout(() => resolve(null), PICTURE_LOGO_WAIT_MS);
+    const done = (value: HTMLImageElement | null) => {
+      window.clearTimeout(timer);
+      resolve(value);
+    };
+    image.onload = () => done(image.naturalWidth > 0 && image.naturalHeight > 0 ? image : null);
+    image.onerror = () => done(null);
+    image.src = isDarkColor(ground) ? '/brand/v1/logo-full-dark-480.png' : '/brand/v1/logo-full-light-480.png';
+  });
+}
+/** The model turning by itself takes this long for one full turn: slow enough to study while it moves. */
+const SPIN_TURN_MS = 24_000;
+/** A frame that arrives late (a hidden tab coming back) turns the model by no more than this much time. */
+const SPIN_MAX_STEP_MS = 100;
 /** The orientation thumbnails leave a little room round the model (1 is a tight fit). */
 const THUMBNAIL_MARGIN = 1.08;
 /** How long the camera must be still before the lab checks which labeled structures it can see. */
 const VISIBILITY_IDLE_MS = 120;
+/** How often labels are re-checked for being in front or behind while the model turns by itself. */
+const SPIN_VISIBILITY_MS = 250;
 /** The ID picture's size: about this many pixels, whatever the view's size (enough to find small visible parts). */
 const ID_PICTURE_PIXELS = 360_000;
 
-export function createLabScene({ canvas, reducedMotion, colors: initialColors, posture: initialPosture, onRender }: Options): LabScene {
+function sameIds(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a === b) return true;
+  if (a.size !== b.size) return false;
+  for (const id of a) if (!b.has(id)) return false;
+  return true;
+}
+
+export function createLabScene({ canvas, reducedMotion, colors: initialColors, posture: initialPosture, onRender, onSpinStop }: Options): LabScene {
   let colors = initialColors;
   let currentReducedMotion = reducedMotion;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -331,6 +382,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
   // VISIBILITY_IDLE_MS (and after any change to what is shown), not on every frame.
   let visibilityDirty = true;
   let lastMove = 0;
+  let lastVisibilityCheck = 0;
   let labelIds: string[] = [];
   let visibility = new Map<string, { behind: boolean; world: THREE.Vector3 }>();
   const requestRender = () => {
@@ -350,14 +402,23 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     requestRender();
     scheduleVisibility();
   };
+  /** The model turning by itself (the remote's play button): one slow turn about the upright axis. */
+  let spinning = false;
+  let lastSpin = 0;
   const onControlsStart = () => {
     move = null;
+    if (spinning) {
+      spinning = false;
+      onSpinStop?.();
+    }
   };
   controls.addEventListener('start', onControlsStart);
   controls.addEventListener('change', onCameraChange);
 
   let root: THREE.Object3D | null = null;
   let spread = 0;
+  /** A structure's own colour, by id: the conventional colours (anatomycolours.ts). */
+  let tints: ReadonlyMap<string, string> = new Map();
   let meshesById = new Map<string, THREE.Mesh[]>();
   let order: string[] = [];
   let centers = new Map<string, THREE.Vector3>();
@@ -394,14 +455,27 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       camera.lookAt(controls.target);
       onCameraChange();
     }
+    if (spinning && !move) {
+      const elapsed = lastSpin === 0 ? 0 : Math.min(time - lastSpin, SPIN_MAX_STEP_MS);
+      lastSpin = time;
+      const offset = camera.position.clone().sub(controls.target).applyAxisAngle(UP, (elapsed / SPIN_TURN_MS) * Math.PI * 2);
+      camera.position.copy(controls.target).add(offset);
+      camera.lookAt(controls.target);
+      onCameraChange();
+      moving = true;
+    }
     if (visibilityDirty && root) {
       // Both timestamps use performance.now(). A delayed frame that fires early
       // must re-arm the visibility check rather than leaving stale occlusion labels.
-      const remaining = remainingIdleDelay(performance.now(), lastMove, VISIBILITY_IDLE_MS);
-      if (remaining > 0) {
+      const now = performance.now();
+      const remaining = remainingIdleDelay(now, lastMove, VISIBILITY_IDLE_MS);
+      // While the model turns by itself the camera never rests, so labels are re-checked on a slow beat instead.
+      const spinBeat = spinning && labelIds.length > 0 && now - lastVisibilityCheck >= SPIN_VISIBILITY_MS;
+      if (remaining > 0 && !spinBeat) {
         if (labelIds.length > 0) scheduler.afterIdle(remaining);
       } else {
         visibilityDirty = false;
+        lastVisibilityCheck = now;
         if (labelIds.length > 0) {
           const w = canvas.clientWidth || 1;
           const h = canvas.clientHeight || 1;
@@ -487,7 +561,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       // A faded structure stays see-through even while selected; dimming (another one selected) goes further.
       const fade = faded.has(id);
       const opacity = dim ? Math.min(colors.dimAlpha, fade ? colors.fadedOpacity : 1) : fade ? colors.fadedOpacity : 1;
-      const color = isSelected ? colors.modelSelected : index % 2 === 0 ? colors.model : colors.modelAlt;
+      // A conventional colour (red artery, blue vein…) wins over the lab's own two model colours; selected wins over both.
+      const color = isSelected ? colors.modelSelected : tints.get(id) ?? (index % 2 === 0 ? colors.model : colors.modelAlt);
       for (const mesh of meshesById.get(id) ?? []) {
         mesh.visible = !hidden.has(id);
         const material = solidOf(mesh);
@@ -760,6 +835,11 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
   function setReducedMotion(reduced: boolean) {
     currentReducedMotion = reduced;
     controls.enableDamping = !reduced;
+    // Reduced motion turned on while the model turns by itself: stop it, and tell the page so its button agrees.
+    if (reduced && spinning) {
+      spinning = false;
+      onSpinStop?.();
+    }
     requestRender();
   }
 
@@ -864,7 +944,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     return result;
   }
 
-  /** Puts every structure back, then moves each away from the model's middle by `spread` of the model's size. */
+  /**
+   * Puts every structure back, then slides each toward its own spot on a flat board of tidy rows (anatomyspread.ts):
+   * at 100% the open system is laid out part by part, facing the home view; in between it is partway there.
+   */
   function applySpread() {
     if (!root) return;
     for (const meshes of meshesById.values()) {
@@ -878,16 +961,26 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     }
     recomputeBounds();
     if (spread > 0 && boxes.size > 0) {
+      // The board faces the home view: across is X; up is Y standing, and Z for a model lying on its back.
+      const up = posture === 'lying' ? 'z' : 'y';
+      const depth = posture === 'lying' ? 'y' : 'z';
+      const shown = [...meshesById].filter(([id, meshes]) => meshes.length > 0 && boxes.has(id) && !appearance.hidden.has(id));
       const all = new THREE.Box3();
-      for (const box of boxes.values()) all.union(box);
+      for (const [id] of shown) all.union(boxes.get(id)!);
       const middle = all.getCenter(new THREE.Vector3());
-      const reach = spread * Math.max(...all.getSize(new THREE.Vector3()).toArray()) * SPREAD_REACH;
-      for (const [id, meshes] of meshesById) {
+      const spots = spreadBoard(shown.map(([id]) => {
+        const size = boxes.get(id)!.getSize(new THREE.Vector3());
+        return { id, width: size.x, height: size[up] };
+      }));
+      for (const [id, meshes] of shown) {
         const center = centers.get(id);
-        if (!center || meshes.length === 0) continue;
-        const away = center.clone().sub(middle);
-        if (away.lengthSq() < 1e-12) continue;
-        away.setLength(reach);
+        const spot = spots.get(id);
+        if (!center || !spot) continue;
+        const target = new THREE.Vector3();
+        target.x = middle.x + spot.u;
+        target[up] = middle[up] + (up === 'z' ? -spot.v : spot.v);
+        target[depth] = middle[depth];
+        const away = target.sub(center).multiplyScalar(spread);
         for (const mesh of meshes) {
           if (!mesh.parent) continue;
           mesh.parent.updateWorldMatrix(true, false);
@@ -1049,6 +1142,19 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     requestRender();
   }
 
+  /** Slides the model left (below zero) or right across the view by a share of the distance to it. */
+  function pan(share: number) {
+    move = null;
+    const distance = camera.position.distanceTo(controls.target);
+    // The model goes right when the camera goes left, along the camera's own right-hand direction.
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).normalize();
+    const slide = right.multiplyScalar(-share * distance);
+    camera.position.add(slide);
+    controls.target.add(slide);
+    controls.update();
+    requestRender();
+  }
+
   function zoom(factor: number) {
     move = null;
     const offset = camera.position.clone().sub(controls.target);
@@ -1081,6 +1187,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       );
     }
 
+    // Every saved picture carries the cueory logo at the top, in the middle (Christian, 2026-11-27): his own artwork,
+    // the file for dark or for light grounds, sized only. A logo that cannot load never stops the picture.
+    const logo = await loadPictureLogo(colors.page);
+
     // scene.clear() and scene.dispose() advance loadId synchronously.
     if (pictureLoadId !== loadId) throw new Error('The anatomy model changed during picture preparation.');
 
@@ -1100,7 +1210,11 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     ctx.font = `400 ${creditSize}px ${font}`;
     const creditLines = wrapText(request.credit, width - 2 * pad, (s) => ctx.measureText(s).width);
     const creditLineHeight = Math.round(creditSize * tk.leading);
-    const top = titleLayout.top;
+    // The logo's band sits above the title: the title and the model start below it.
+    const logoHeight = logo ? Math.round(titleSize * PICTURE_LOGO_SHARE) : 0;
+    const logoWidth = logo ? Math.round(logoHeight * (logo.naturalWidth / logo.naturalHeight)) : 0;
+    const brandBand = logo ? logoHeight + Math.round(pad / 2) : 0;
+    const top = titleLayout.top + brandBand;
     const bottom = pad + creditLines.length * creditLineHeight + Math.round(pad / 2);
     const viewHeight = Math.max(1, height - top - bottom);
 
@@ -1223,8 +1337,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       ctx.font = `700 ${titleSize}px ${font}`;
       titleLayout.lines.forEach((line, index) => {
         // Bound even a single unbroken title word to the canvas text width.
-        ctx.fillText(line, pad, pad + titleSize + index * titleLayout.lineHeight, titleLayout.maxWidth);
+        ctx.fillText(line, pad, brandBand + pad + titleSize + index * titleLayout.lineHeight, titleLayout.maxWidth);
       });
+      if (logo) ctx.drawImage(logo, Math.round((width - logoWidth) / 2), pad, logoWidth, logoHeight);
       ctx.fillStyle = colors.inkSoft;
       ctx.font = `400 ${creditSize}px ${font}`;
       creditLines.forEach((line, i) => {
@@ -1245,7 +1360,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     load,
     add,
     setAppearance(next) {
+      const before = appearance.hidden;
       appearance = next;
+      // The board holds only the parts on show, so hiding or bringing back a part while spread re-lays it.
+      if (spread > 0 && !sameIds(before, next.hidden)) applySpread();
       applyAppearance();
     },
     setColors(next) {
@@ -1269,10 +1387,22 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       return extentWith(camera, canvas.clientWidth, canvas.clientHeight);
     },
     orbit,
+    pan,
     zoom,
     resetView,
     viewFrom,
     setReducedMotion,
+    setTints(next) {
+      tints = next;
+      applyAppearance();
+      requestRender();
+    },
+    setSpin(on) {
+      if (on === spinning) return;
+      spinning = on;
+      lastSpin = 0;
+      requestRender();
+    },
     viewPreset,
     focusOn,
     setPosture,
@@ -1285,6 +1415,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       if (next === spread) return;
       spread = next;
       applySpread();
+      // The board is far wider than the body: step back (or forward again) so the whole of it stays in view.
+      frame();
+      resetView();
     },
     thumbnail,
     thumbnailMarks,
