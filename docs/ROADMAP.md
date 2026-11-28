@@ -14,7 +14,7 @@ The order of the lessons themselves comes from the med-surg lesson map in [docs/
 electrolytes, acid-base) come first, then the systems in the order shown. The map is an outline of topics only: every
 lesson still goes through the content pipeline, and each visual names the `lesson_id` it serves.
 
-A Draft 4 reorganization is under review in separate pull requests. Its proposed block catalog, objectives and legacy crosswalk are not yet part of `staging`, so do not treat their IDs or mappings as approved for question authoring. The historical 19-unit Med-Surg map remains the available reference until the new data, validator and crosswalk are reviewed and merged.
+A Draft 4 reorganization is on `staging` as review drafts (#415: `content/curriculum/blocks-v4.csv`, `objectives-pilot-v4.csv`, `docs/curriculum/CROSSWALK.md`), not approved for question authoring: do not treat their IDs or mappings as approved. The historical 19-unit Med-Surg map remains the available reference until the new data, validator and crosswalk are reviewed and merged.
 
 ## Task 1 — Static site foundation (see STATUS.md)
 Repo, design tokens, `main` and `staging` deploy branches, placeholder pages, launch-updates signup (Kit), security
@@ -22,10 +22,13 @@ headers and CSP, CodeQL, Dependabot, secret scanning, CI, rules docs, Cloudflare
 
 ## Task 2 — Accounts and database
 - Two Supabase projects: `cueory-staging` and `cueory-prod`.
-- Schema: `concepts`, `items`, `item_versions`, `sources`, `rights_records`, `reviews`, `attempts`, `review_state`,
-  `exam_plans`, `profiles`. Row-level security policies on every table.
-- `check_answer(item_id, choice)` RPC: returns right/wrong and the rationale, never sending the key first.
-- Google sign-in (main), email magic links via Resend (backup, because the free plan sends 100 a day). Rate limited.
+- Schema as built (17 migrations): `profiles`, `concepts`, `sources`, `rights_records`, `items`, `item_versions`,
+  `item_choices`, `item_answers`, `attempts`, `review_state`, `exam_plans`, `flags`, `study_events`, `admins`.
+  Row-level security policies on every table.
+- `check_answer(item_id, version_id, picked)` RPC: records the attempt, then returns right/wrong, the key and the
+  rationales (D-33, D-86); the key never reaches the browser before an answer is recorded.
+- Google sign-in (main) and email with a password plus reset links (backup); account emails through Supabase's
+  built-in sender until Christian decides on Resend (GO-LIVE 1.9). Rate limited.
 - **Account corner and ☰ panel (built in D-46, ready for accounts):** signed out, the top-right person icon opens
   "create free account" and "sign in". Signed in, it becomes a round avatar with the student's initials (no photo
   uploads) and opens their name, school (an optional onboarding answer), "see profile", "account settings" and
@@ -113,10 +116,11 @@ and review steps are in [docs/VISUALS.md](VISUALS.md) (D-56).
 
 ## Task 7 — Daily medical puzzles (major feature, now ahead of the visuals kit)
 One fresh set of medical-themed puzzles a day for everyone, on `/play` and in a home page section. Four games, with
-the names Christian chose (D-64, `src/config/games.ts`): pulse (guess the word: five to seven letters, seven beats,
-a cue for one beat), cueword (a mini crossword), triage (sort ten terms into three named groups, one of them fitting
-none; three slips end the round) and suture (trace hidden words through a letter grid). pulse is first (D-61), then
-triage (D-63). Words and clues come only from approved lesson content and go through the
+the names Christian chose (D-64, Task 113/114, `src/config/games.ts`): pillo (guess the five-letter word in six tries,
+blister-pack look; id `pulse`), crossword (a mini crossword; id `cueword`), sort (sort ten terms into three named
+groups, one of them fitting none; three slips end the round; id `triage`) and word path (trace hidden words through a
+letter grid; id `suture`). pillo is first (D-61), then
+sort (id `triage`, D-63). Words and clues come only from approved lesson content and go through the
 same review pipeline; only today's puzzle ever reaches the browser (D-61 proposes how). Results share as plain words,
 stats are optional and private, there is no streak guilt, it works offline once loaded, and every puzzle gets the
 "Flag or comment" button. Original game names, rules and visual design. Never the names Wordle, Connections, Strands
