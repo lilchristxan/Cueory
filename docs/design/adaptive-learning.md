@@ -85,6 +85,7 @@ node work/adaptive/simulation.cjs --matched-work
 - [#1257](https://github.com/lilchristxan/Cueory/pull/1257) — shipped to staging with the pure engine, module tests and fixed-seed simulation.
 - [#1258](https://github.com/lilchristxan/Cueory/pull/1258) — shipped the on-device progress format and migration to staging. Browser saving remains disconnected.
 - [#1266](https://github.com/lilchristxan/Cueory/pull/1266) — shipped the locked sample preview, backwards-clock recovery and measured route budget to staging.
+- [Preview exam-date correction](https://github.com/lilchristxan/Cueory/pulls?q=is%3Apr+head%3Atask-adaptive%2Fpreview-exam-date) — corrects the sample form’s validation timing for Firefox.
 - [#1275](https://github.com/lilchristxan/Cueory/pull/1275) — shipped the Learn connection to staging with the switch off. The existing see, choose and type flow stays active. Explicit opt-in is limited to the labeled study-skills deck in builds that allow samples.
 - [Spaced relearning](https://github.com/lilchristxan/Cueory/pulls?q=is%3Apr+head%3Atask-adaptive%2Fspaced-relearning) — added short follow-up reviews after a miss and compared the two schedules on identical synthetic students.
 
