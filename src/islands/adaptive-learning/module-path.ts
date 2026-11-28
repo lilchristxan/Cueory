@@ -613,16 +613,21 @@ export function nextStep(
   const due = orderCandidates(dueCandidates(shape, progress, upTo, today), history);
   // Phase 3: new material for the calibrated levels (a level's own overdue cards come at its turn).
   const calibrated = orderCandidates(calibratedCandidates(shape, progress, start, today), history);
-  // Phase 4: due cards first, then new material.
-  const dueStep = firstDueCard(due, context);
-  if (dueStep) return dueStep;
+  // Phase 4: due cards first, then new material, with the concept-run limit applied across both groups: a concept
+  // that has just had two steps in a row waits behind every other concept that has something usable, due or new.
+  const streak = streakConcept(history);
+  const others = (list: readonly Candidate[]): Candidate[] => list.filter((entry) => entry.concept !== streak);
+  const streaked = (list: readonly Candidate[]): Candidate[] => list.filter((entry) => entry.concept === streak);
   const exhausted: { concept: string; level: ThinkingLevel }[] = [];
-  const newStep = firstNewMaterial(calibrated, context, exhausted);
-  if (newStep) return newStep;
+  const chosen = firstDueCard(others(due), context)
+    ?? firstNewMaterial(others(calibrated), context, exhausted)
+    ?? firstDueCard(streaked(due), context)
+    ?? firstNewMaterial(streaked(calibrated), context, exhausted);
+  if (chosen) return chosen;
   // Overdue cards on other levels come back when the remaining work has nothing to offer, but only while work remains.
   if (!complete) {
     const optional = optionalReviewCandidates(shape, progress, start, due, upTo, today);
-    const optionalStep = firstDueCard(optional, context);
+    const optionalStep = firstDueCard(others(optional), context) ?? firstDueCard(streaked(optional), context);
     if (optionalStep) return optionalStep;
   }
   // Phase 5: nothing usable. A module with no concepts has shown nothing, so it is never "done".
@@ -711,10 +716,15 @@ function optionalReviewCandidates(
 function orderCandidates(candidates: readonly Candidate[], history: StepHistory): Candidate[] {
   const sorted = [...candidates].sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.rank[2] - b.rank[2]);
   // Interleave (brief #1281): a concept that has just had two steps in a row waits behind the others that need work.
-  const run = (history.recentConcepts ?? []).slice(-SAME_CONCEPT_RUN);
-  const streak = run.length === SAME_CONCEPT_RUN && run.every((c) => c === run[0]) ? run[0] : undefined;
+  const streak = streakConcept(history);
   if (streak === undefined || !sorted.some((entry) => entry.concept !== streak)) return sorted;
   return [...sorted.filter((entry) => entry.concept !== streak), ...sorted.filter((entry) => entry.concept === streak)];
+}
+
+/** The concept that has had the last SAME_CONCEPT_RUN steps in a row, if any. */
+function streakConcept(history: StepHistory): string | undefined {
+  const run = (history.recentConcepts ?? []).slice(-SAME_CONCEPT_RUN);
+  return run.length === SAME_CONCEPT_RUN && run.every((c) => c === run[0]) ? run[0] : undefined;
 }
 
 /** Items of a level that fit its techniques, other than the one just shown. */

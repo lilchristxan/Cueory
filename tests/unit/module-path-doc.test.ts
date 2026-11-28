@@ -24,14 +24,15 @@ describe('design doc simulation block', () => {
     const matches = [...quoted.matchAll(/(\d+(?:\.\d)?)% \((\d+) of (\d+)\)/g)];
     expect(matches.length).toBeGreaterThan(30);
     for (const [, percent, n, of] of matches) {
-      expect(Number(percent)).toBeCloseTo((Number(n) / Number(of)) * 100, 1);
+      // Same tolerance as before (half a tenth), with a float-epsilon so an exact .x5 such as 9 of 80 = 11.25 rounds up.
+      expect(Math.abs(Number(percent) - (Number(n) / Number(of)) * 100)).toBeLessThanOrEqual(0.05 + 1e-9);
     }
   });
 
   it('the prose figures agree with the table', () => {
     // The targets table quotes figures from the block: they must appear in it.
-    for (const figure of ['60 of 77', '52 of 64', '5 of 65', '16 of 1332', '53 of 408']) expect(quoted).toContain(figure);
-    expect(doc).toContain('60 of 77 (77.9%)');
-    expect(doc).toContain('5 of 65 (7.7%)');
+    for (const figure of ['71 of 122', '52 of 64', '9 of 80', '34 of 2219', '62 of 516']) expect(quoted).toContain(figure);
+    expect(doc).toContain('71 of 122 (58.2%)');
+    expect(doc).toContain('9 of 80 (11.3%)');
   });
 });

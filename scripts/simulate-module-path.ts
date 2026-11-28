@@ -3,7 +3,7 @@
  * `simulate` (the unit test does). All ids and outcomes are synthetic: no content, questions or answer keys.
  *
  * Every probability below is an UNVERIFIED modelling assumption, chosen to be plausible, not measured.
- * Each student has a hidden TRUE level per concept (0 = none, 1 = remember, 2 = understand, 3 = apply). The path runs
+ * Each student has a hidden TRUE level per concept (1 = remember, the least a student has after the input stage; the draw's 0 is raised to 1, 2 = understand, 3 = apply). The path runs
  * a diagnostic, then adaptive steps until "done" or the step cap. Two rules are compared on the same students:
  *   - old: every answer counts equally and nothing is ever forgotten (the baseline, kept here only);
  *   - new: weighted by technique, guess-aware, slip-aware, with review due (the rule in module-path.ts).
@@ -192,7 +192,10 @@ function runStudent(rule: RuleName, seed: number, retention: boolean, stepCap: n
   const draw = seededRandom(seed ^ 0x9e3779b9);
   const first = dayNumber('2028-01-01');
   const prepared = random() < PREPARED_SHARE;
-  const trueLevel = new Map(conceptIds.map((concept) => [concept, prepared ? 3 : Math.floor(random() * 4)]));
+  // Every student has done the input stage (video and reading) before the diagnostic, which teaches the terms: nobody
+  // starts below "remember". The product offers no remember-level step in the adaptive path (it picks understand and
+  // apply items only), so a student who knows nothing could otherwise never learn anything here.
+  const trueLevel = new Map(conceptIds.map((concept) => [concept, prepared ? 3 : Math.max(1, Math.floor(random() * 4))]));
   const breakAt = random() < BREAK_CHANCE ? 3 + Math.floor(random() * 5) : -1;
   const breakDays = 20 + Math.floor(random() * 30);
 

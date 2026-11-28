@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  calibrate, cardOverdue, emptyProgress, GATE_LEVELS, nextStep, recordModuleAnswer, stageOf,
+  calibrate, cardOverdue, emptyProgress, GATE_LEVELS, levelAssessment, nextStep, recordModuleAnswer, stageOf,
   type ModuleItem, type ModuleProgress, type ModuleShape, type ThinkingLevel,
 } from '../../src/islands/adaptive-learning/module-path';
 import { calendarDay, dayNumber, type StudyClock } from '../../src/islands/adaptive-learning/calendar';
@@ -124,5 +124,46 @@ describe('module path: due cards at every faded tier come before new material', 
     ];
     expect(nextStep(shape, progress, pool, { usedIds: [], recentTechniques: [] }, () => 0, undefined, clockOn(3)))
       .toMatchObject({ kind: 'step', concept: 'sample-a', level: 'apply', reason: 'due for review', id: 'sample-sample-a-apply-seen-0' });
+  });
+});
+
+describe('module path: the concept-run limit holds across due and new material', () => {
+  const shape: ModuleShape = { concepts: ['sample-a', 'sample-b'], practiceTechniques: [] };
+  it('repeated due reviews of A do not starve B, which has an unseen item', () => {
+    const { progress } = build(['sample-a', 'sample-b'], {
+      'sample-a': { understand: 'sufficient', apply: 'sufficient' },
+      'sample-b': { understand: 'not started', apply: 'not started' },
+    });
+    const pool: ModuleItem[] = [
+      { id: 'sample-sample-a-apply-seen-0', concept: 'sample-a', level: 'apply', technique: 'learning questions' },
+      { id: 'sample-b-new', concept: 'sample-b', level: 'understand', technique: 'learning questions' },
+    ];
+    const history = { usedIds: [], recentTechniques: [], recentConcepts: ['sample-a', 'sample-a'] };
+    expect(nextStep(shape, progress, pool, history, () => 0, undefined, clockOn(3))).toMatchObject({ kind: 'step', concept: 'sample-b', id: 'sample-b-new' });
+    // Without the streak, the due card still wins.
+    expect(nextStep(shape, progress, pool, { usedIds: [], recentTechniques: [] }, () => 0, undefined, clockOn(3))).toMatchObject({ concept: 'sample-a', reason: 'due for review' });
+    // With nothing else usable, the streak concept is still served.
+    expect(nextStep(shape, progress, [pool[0]!], history, () => 0, undefined, clockOn(3))).toMatchObject({ kind: 'step', concept: 'sample-a' });
+  });
+
+  it('property: over every state, a streak concept is chosen only when no other concept has new material or a due-level review', () => {
+    for (const states of assignments(shape.concepts)) for (const due of [false, true]) for (const kind of POOLS) {
+      const { progress, seen } = build(shape.concepts, states);
+      const items = pool(shape.concepts, seen, kind);
+      const today = clockOn(due ? 3 : 0);
+      const plain = { usedIds: [], recentTechniques: [] };
+      for (const streak of shape.concepts) {
+        const result = nextStep(shape, progress, items, { ...plain, recentConcepts: [streak, streak] }, () => 0, undefined, today);
+        if (result.kind !== 'step' || result.concept !== streak) continue;
+        const other = shape.concepts.find((c) => c !== streak)!;
+        const withoutStreak = items.filter((item) => item.concept === other);
+        const alt = nextStep(shape, progress, withoutStreak, { ...plain, recentConcepts: [streak, streak] }, () => 0, undefined, today);
+        // An optional review on a level that is not the concept's unfinished one deliberately ranks below the streak
+        // concept's own unfinished work, so only new material (or a due-level review of the other concept) is a violation.
+        const dueLevel = GATE_LEVELS.some((level) => levelAssessment(progress.concepts.get(other)?.[level], today).due);
+        const violation = alt.kind === 'step' && alt.concept === other && (alt.reason !== 'due for review' || dueLevel);
+        expect(violation, JSON.stringify({ states, due, kind, streak })).toBe(false);
+      }
+    }
   });
 });
