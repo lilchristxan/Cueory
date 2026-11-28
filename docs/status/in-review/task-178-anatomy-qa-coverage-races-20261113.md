@@ -1,0 +1,1 @@
+status: Task 178 QA (#662): evidence map for every student-flow and access row, plus real-model show-all versus show-only network-race and 320/390 px whole-body catalog browser regressions. All manual locked-staging and performance acceptance remain pending.
