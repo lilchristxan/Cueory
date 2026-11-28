@@ -2,8 +2,8 @@
 /**
  * The old address of wordpill (the game was called vialo until 26 Nov 2026). Old links and bookmarks land here and go on
  * to /play/wordpill. The build checks that every page carries the site's Content-Security-Policy tag, which Astro's own
- * static redirect pages do not, so this is a normal page: noindex, canonical to the new address, a bundled script that
- * sends the browser on at once (src/scripts/oldvialoaddress.ts) and a plain link for anyone without JavaScript.
+ * static redirect pages do not, so this is a normal page: noindex, canonical to the new address, an external head script that
+ * sends the browser on before the body is read (src/scripts/oldvialoaddress.ts) and a plain link for anyone without JavaScript.
  */
 import Layout from '../../layouts/Layout.astro';
 import { gameName } from '../../config/games';
@@ -12,12 +12,9 @@ import { WORDPILL_PATH } from '../../scripts/oldvialoaddress';
 const name = gameName('vialo');
 ---
 <Layout title={`${name} has moved`} description={`${name} has a new address, ${WORDPILL_PATH}. this page sends you there, and has a link if it does not.`} socialImage="/share/games-scene.png" noindex={true} canonicalTo={WORDPILL_PATH} promo={false}>
+  <script is:inline slot="head" src="/old-vialo-address.js"></script>
   <article class="mx-auto max-w-prose p-6 text-center" data-testid="old-vialo-address">
     <h1 class="display text-title">{name} has moved</h1>
     <p class="mt-4">{name} has a new address. <a class="underline" href={WORDPILL_PATH} data-testid="old-vialo-link">go to {name}</a>.</p>
   </article>
 </Layout>
-<script>
-  import { followOldVialoAddressWhenSettled } from '../../scripts/oldvialoaddress';
-  followOldVialoAddressWhenSettled(window, document);
-</script>

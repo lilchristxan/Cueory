@@ -1,1 +1,1 @@
-status: in review. /play/vialo (the old wordpill address) now redirects only after the page has loaded and its islands hydrated, so Firefox no longer cancels in-flight scripts (NS_BINDING_ABORTED); the console sweep follows the redirect and stays as strict.
+status: in review. /play/vialo (the old wordpill address) now redirects from an external script in the head, before any island chunk is requested, so nothing is left to cancel (Firefox NS_BINDING_ABORTED) and visitors leave sooner; the console sweep follows the redirect and stays as strict.
