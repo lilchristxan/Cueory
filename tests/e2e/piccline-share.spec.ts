@@ -176,7 +176,10 @@ test.describe('the solve timer', () => {
     await open(page);
     // The page's clock stands still between the test's own steps, so a slow machine's real seconds (Safari's engine on a
     // busy CI runner) cannot add to the 7 faked ones: the saved time is exactly what this test moved the clock by.
-    await page.clock.pauseAt(new Date('2026-11-01T15:00:01'));
+    // It pauses a minute ahead of wherever the page's clock has got to: opening the game can take more than a real second
+    // on a busy runner, and the clock cannot be paused at a time it has already passed. The solve timer starts at the
+    // first move, so the minute skipped before it adds nothing.
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 60_000);
     await playWord(page, 1);
     await page.clock.fastForward(7000);
     await playWord(page, 0);
