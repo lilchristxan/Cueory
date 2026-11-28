@@ -154,6 +154,11 @@ describe('module path: calibration and the next step', () => {
     expect(stepOf(nextStep(one, p, only, { usedIds: ['only', 'other'], recentTechniques: [] }, () => 0)).id).toBe('only');
   });
 
+  it('a module with no concepts is "no content", never "done"', () => {
+    const empty: ModuleShape = { concepts: [], practiceTechniques: [] };
+    expect(nextStep(empty, diagnosed(emptyProgress()), [], { usedIds: [], recentTechniques: [] }, () => 0)).toEqual({ kind: 'no content', concepts: [] });
+  });
+
   it('changes technique after two in a row even when unused items remain in the tired one', () => {
     const p = diagnosed(emptyProgress());
     const pool = items.filter((item) => item.concept === 'sample-a' && item.level === 'remember');

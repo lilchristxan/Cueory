@@ -232,6 +232,8 @@ export function nextStep(
         : 'one more to lock it in';
     return { kind: 'step', id: pick.id, concept, level, technique: pick.technique, reason };
   }
+  // A module with no concepts has shown nothing, so it is never "done" (stageOf keeps it out of "ready" too).
+  if (shape.concepts.length === 0) return { kind: 'no content', concepts: [] };
   return ranked.length === 0 ? { kind: 'done' } : { kind: 'no content', concepts: ranked.map((entry) => entry.concept) };
 }
 
