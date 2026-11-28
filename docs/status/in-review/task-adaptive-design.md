@@ -1,0 +1,1 @@
+status: Task 4b adaptive learning design draft with the research sources, simulation and current staging rollout. The engine, sample preview and default-off Learn connection are in staging. The on-device progress format is still in draft.
