@@ -21,7 +21,13 @@ describe('the old /play/vialo address', () => {
     expect(html).toContain('name="robots" content="noindex, nofollow"');
     expect(html).toContain('rel="canonical" href="https://cueory.app/play/wordpill"');
     expect(html).toContain('href="/play/wordpill"');
-    expect(html).toMatch(/<script type="module">[^<]*\/play\/wordpill[^<]*replace/); // the redirect is a bundled module the CSP already hashes (build-output checks every hash)
+    // the redirect is an external script in the head, ahead of the body, so no island has started fetching when it runs
+    const head = html.slice(0, html.indexOf('</head>'));
+    expect(head).toContain('<script src="/old-vialo-address.js"></script>');
+    const script = readFileSync(new URL('../../dist/old-vialo-address.js', import.meta.url), 'utf8');
+    expect(script).toContain('/play/wordpill');
+    expect(script).toContain('followOldVialoAddress(window.location)');
+    expect(script).not.toMatch(/\bimport\b|\bexport\b/);
     const sitemap = readFileSync(new URL('../../dist/sitemap.xml', import.meta.url), 'utf8');
     expect(sitemap).toContain('/play/wordpill');
     expect(sitemap).not.toContain('/play/vialo');
