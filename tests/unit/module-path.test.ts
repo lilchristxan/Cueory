@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
-  calibrate, emptyProgress, levelStatus, nextStep, recordModuleAnswer, shownThrough, stageOf, summarize, summarizeCourse,
-  TECHNIQUES_FOR_LEVEL, THINKING_LEVELS, type ModuleItem, type ModuleProgress, type ModuleShape, type ThinkingLevel,
+  calibrate, emptyProgress, evidenceWeight, EVIDENCE_WEIGHT, levelStatus, nextStep, recordModuleAnswer, shownThrough, stageOf,
+  STALE_AFTER_DAYS, summarize, summarizeCourse, TECHNIQUES_FOR_LEVEL, THINKING_LEVELS,
+  type AnswerDetail, type ModuleItem, type ModuleProgress, type ModuleShape, type Technique, type ThinkingLevel,
 } from '../../src/islands/adaptive-learning/module-path';
+import { calendarDay, dayNumber, type StudyClock } from '../../src/islands/adaptive-learning/calendar';
 
 // Labeled sample shape: concept ids only, no clinical content.
 const shape: ModuleShape = { concepts: ['sample-a', 'sample-b'], practiceTechniques: ['flashcards', 'matching'] };
 
-function answer(progress: ModuleProgress, concept: string, level: ThinkingLevel, results: boolean[]): ModuleProgress {
-  return results.reduce((p, correct) => recordModuleAnswer(p, concept, level, correct), progress);
+function answer(progress: ModuleProgress, concept: string, level: ThinkingLevel, results: boolean[], detail: AnswerDetail = {}): ModuleProgress {
+  return results.reduce((p, correct) => recordModuleAnswer(p, concept, level, correct, detail), progress);
 }
+
+const FIRST_DAY = dayNumber('2028-01-01');
+const clockOn = (offset: number): StudyClock => ({ day: calendarDay(FIRST_DAY + offset), now: (FIRST_DAY + offset + 0.5) * 86_400_000 });
+const statusOf = (p: ModuleProgress, level: ThinkingLevel, today?: StudyClock) => levelStatus(p.concepts.get('sample-a')![level], today);
 
 function shownOn(progress: ModuleProgress, levels: readonly ThinkingLevel[], concepts = shape.concepts): ModuleProgress {
   let next = progress;
@@ -175,8 +181,8 @@ describe('module path: summaries count evidence and never score', () => {
   it('summarises a module per thinking level and lists what to strengthen', () => {
     const p = shownOn(emptyProgress(), ['remember', 'understand', 'apply'], ['sample-a']);
     const summary = summarize(shape, answer(p, 'sample-b', 'remember', [true]));
-    expect(summary.levels.remember).toEqual({ 'not started': 0, learning: 1, shown: 1 });
-    expect(summary.levels.evaluate).toEqual({ 'not started': 2, learning: 0, shown: 0 });
+    expect(summary.levels.remember).toEqual({ 'not started': 0, learning: 1, shown: 1, 'review due': 0 });
+    expect(summary.levels.evaluate).toEqual({ 'not started': 2, learning: 0, shown: 0, 'review due': 0 });
     expect(summary.toStrengthen).toEqual(['sample-b']);
   });
 
@@ -191,5 +197,173 @@ describe('module path: summaries count evidence and never score', () => {
     expect(course.levels.apply).toEqual({ shown: 2, of: 4 });
     expect(course.next).toBe('sample-module-2');
     expect(JSON.stringify(course)).not.toMatch(/score|percent|pass/i);
+  });
+});
+
+describe('module path: evidence weight by technique', () => {
+  it('recognition shows less than production, and a worked case shows most', () => {
+    expect(EVIDENCE_WEIGHT.matching).toBeLessThan(EVIDENCE_WEIGHT.flashcards);
+    expect(EVIDENCE_WEIGHT['learning questions']).toBeLessThan(EVIDENCE_WEIGHT['fill in the blank']);
+    for (const technique of ['flashcards', 'label it', 'fill in the blank', 'matching', 'learning questions'] as const) {
+      expect(EVIDENCE_WEIGHT['case questions']).toBeGreaterThan(EVIDENCE_WEIGHT[technique]);
+    }
+  });
+
+  it('needs more right answers in a recognition technique than in a production one', () => {
+    const matching = (n: number) => answer(emptyProgress(), 'sample-a', 'remember', Array(n).fill(true), { technique: 'matching' });
+    const flash = answer(emptyProgress(), 'sample-a', 'remember', [true, true], { technique: 'flashcards' });
+    expect(statusOf(flash, 'remember')).toBe('shown');
+    expect(statusOf(matching(2), 'remember')).toBe('learning');
+    expect(statusOf(matching(3), 'remember')).toBe('learning');
+    expect(statusOf(matching(4), 'remember')).toBe('shown');
+  });
+
+  it('one lucky answer never makes a level shown, even a worked case', () => {
+    for (const technique of ['flashcards', 'case questions', 'matching'] as const) {
+      expect(statusOf(answer(emptyProgress(), 'sample-a', 'apply', [true], { technique }), 'apply')).toBe('learning');
+    }
+    // Two worked cases are plenty.
+    expect(statusOf(answer(emptyProgress(), 'sample-a', 'apply', [true, true], { technique: 'case questions' }), 'apply')).toBe('shown');
+  });
+
+  it('the last two answers must still be right, whatever the technique', () => {
+    const p = answer(emptyProgress(), 'sample-a', 'apply', [true, true, true, false], { technique: 'case questions' });
+    expect(statusOf(p, 'apply')).toBe('learning');
+  });
+
+  it('answers without a technique count as one ordinary answer', () => {
+    expect(evidenceWeight(true)).toBe(1);
+    expect(evidenceWeight(false, { technique: 'matching' })).toBe(EVIDENCE_WEIGHT.matching);
+  });
+});
+
+describe('module path: guessing', () => {
+  const technique: Technique = 'learning questions';
+
+  it('a right answer is weaker evidence the fewer options there were', () => {
+    expect(evidenceWeight(true, { technique, options: 2 })).toBeLessThan(evidenceWeight(true, { technique, options: 3 }));
+    expect(evidenceWeight(true, { technique, options: 3 })).toBeLessThan(evidenceWeight(true, { technique, options: 4 }));
+    expect(evidenceWeight(true, { technique, options: 8 })).toBe(evidenceWeight(true, { technique }));
+    expect(evidenceWeight(true, { technique, options: 1 })).toBe(evidenceWeight(true, { technique, options: 2 }));
+  });
+
+  it('options only matter on recognition items, and never soften a miss', () => {
+    expect(evidenceWeight(true, { technique: 'flashcards', options: 2 })).toBe(EVIDENCE_WEIGHT.flashcards);
+    expect(evidenceWeight(false, { technique, options: 2 })).toBe(EVIDENCE_WEIGHT[technique]);
+  });
+
+  it('true or false style items need more right answers to show a level than four-option items', () => {
+    const n = (options: number) => {
+      let p = emptyProgress();
+      for (let i = 1; i <= 12; i++) {
+        p = answer(p, 'sample-a', 'understand', [true], { technique, options });
+        if (statusOf(p, 'understand') === 'shown') return i;
+      }
+      return Infinity;
+    };
+    expect(n(2)).toBeGreaterThan(n(4));
+  });
+});
+
+describe('module path: slips', () => {
+  const detail: AnswerDetail = { technique: 'flashcards' };
+
+  it('one miss after a strong run drops the level to learning', () => {
+    const p = answer(emptyProgress(), 'sample-a', 'remember', [true, true, true, true, false], detail);
+    expect(statusOf(p, 'remember')).toBe('learning');
+  });
+
+  it('recovers with two right answers after a slip, but not after the same miss early on', () => {
+    const slip = answer(emptyProgress(), 'sample-a', 'remember', [true, true, true, true, false, true], detail);
+    expect(statusOf(slip, 'remember')).toBe('learning'); // the last two must be right
+    expect(statusOf(answer(slip, 'sample-a', 'remember', [true], detail), 'remember')).toBe('shown');
+
+    const early = answer(emptyProgress(), 'sample-a', 'remember', [true, false, true, true], detail);
+    expect(statusOf(early, 'remember')).toBe('learning');
+  });
+
+  it('recovery after a slip needs fewer answers than after a real run of misses', () => {
+    const recoveryAnswers = (history: boolean[]) => {
+      let p = answer(emptyProgress(), 'sample-a', 'remember', history, detail);
+      for (let i = 1; i <= 20; i++) {
+        p = answer(p, 'sample-a', 'remember', [true], detail);
+        if (statusOf(p, 'remember') === 'shown') return i;
+      }
+      return Infinity;
+    };
+    const afterSlip = recoveryAnswers([true, true, true, true, false]);
+    const afterMisses = recoveryAnswers([true, true, false, false, false, false]);
+    expect(afterSlip).toBe(2);
+    expect(afterSlip).toBeLessThan(afterMisses);
+  });
+
+  it('two misses in a row are not slips', () => {
+    const p = answer(emptyProgress(), 'sample-a', 'remember', [true, true, true, true, false, false], detail);
+    expect(p.concepts.get('sample-a')!.remember!.recent.map((a) => a.slip)).toEqual([false, false, false, false, true, false]);
+  });
+});
+
+describe('module path: staleness and review due', () => {
+  const detail = (day: number): AnswerDetail => ({ technique: 'flashcards', clock: clockOn(day) });
+  const shownOnDay = (day: number) => answer(answer(emptyProgress(), 'sample-a', 'remember', [true], detail(day)), 'sample-a', 'remember', [true], detail(day));
+
+  it('stays shown until the newest answer is older than the limit, then is review due', () => {
+    const p = shownOnDay(0);
+    expect(statusOf(p, 'remember', clockOn(STALE_AFTER_DAYS))).toBe('shown');
+    expect(statusOf(p, 'remember', clockOn(STALE_AFTER_DAYS + 1))).toBe('review due');
+    expect(statusOf(p, 'remember')).toBe('shown'); // no clock, no staleness
+  });
+
+  it('only shown levels go stale: learning stays learning, answers without a day never expire', () => {
+    const learning = answer(emptyProgress(), 'sample-a', 'remember', [true], detail(0));
+    expect(statusOf(learning, 'remember', clockOn(60))).toBe('learning');
+    const undated = answer(emptyProgress(), 'sample-a', 'remember', [true, true]);
+    expect(statusOf(undated, 'remember', clockOn(60))).toBe('shown');
+  });
+
+  it('a right answer on the review re-shows the level, a miss makes it learning', () => {
+    const p = shownOnDay(0);
+    const later = clockOn(30);
+    expect(statusOf(answer(p, 'sample-a', 'remember', [true], detail(30)), 'remember', later)).toBe('shown');
+    expect(statusOf(answer(p, 'sample-a', 'remember', [false], detail(30)), 'remember', later)).toBe('learning');
+  });
+
+  it('a stale level takes the student out of ready and into adaptive practice', () => {
+    const base: ModuleProgress = { ...emptyProgress(), watched: true, read: true, diagnosed: true };
+    let p = base;
+    for (const concept of shape.concepts) for (const level of THINKING_LEVELS.slice(0, 3)) p = answer(p, concept, level, [true, true], detail(0));
+    expect(stageOf(shape, p, clockOn(5))).toBe('ready');
+    expect(stageOf(shape, p, clockOn(40))).toBe('adaptive');
+    expect(summarize(shape, p, clockOn(40)).levels.remember['review due']).toBe(2);
+    expect(summarize(shape, p, clockOn(40)).toStrengthen).toEqual(['sample-a', 'sample-b']);
+  });
+
+  it('review that is due comes ahead of new material and says so', () => {
+    const base: ModuleProgress = { ...emptyProgress(), watched: true, read: true, diagnosed: true };
+    // sample-b: remember shown long ago. sample-a: nothing yet, and first in module order.
+    const p = answer(base, 'sample-b', 'remember', [true, true], detail(0));
+    const history = { usedIds: [], recentTechniques: [] };
+    const fresh = nextStep(shape, p, items, history, () => 0, undefined, clockOn(2));
+    expect(fresh).toMatchObject({ kind: 'step', concept: 'sample-a', level: 'remember', reason: 'not practised yet' });
+    const step = nextStep(shape, p, items, history, () => 0, undefined, clockOn(40));
+    expect(step).toMatchObject({ kind: 'step', concept: 'sample-b', level: 'remember', reason: 'due for review' });
+  });
+
+  it('is never "done" while something is review due, and is done again once reviewed', () => {
+    const base: ModuleProgress = { ...emptyProgress(), watched: true, read: true, diagnosed: true };
+    let p = base;
+    for (const concept of shape.concepts) for (const level of THINKING_LEVELS.slice(0, 3)) p = answer(p, concept, level, [true, true], detail(0));
+    const history = { usedIds: [], recentTechniques: [] };
+    expect(nextStep(shape, p, items, history, () => 0, undefined, clockOn(3))).toEqual({ kind: 'done' });
+    expect(nextStep(shape, p, items, history, () => 0, undefined, clockOn(40)).kind).toBe('step');
+    for (const concept of shape.concepts) for (const level of THINKING_LEVELS.slice(0, 3)) p = answer(p, concept, level, [true], detail(40));
+    expect(nextStep(shape, p, items, history, () => 0, undefined, clockOn(40))).toEqual({ kind: 'done' });
+  });
+
+  it('records the day without changing the old progress', () => {
+    const before = emptyProgress();
+    const after = recordModuleAnswer(before, 'sample-a', 'remember', true, detail(3));
+    expect(after.concepts.get('sample-a')!.remember!.recent[0]!.day).toBe(FIRST_DAY + 3);
+    expect(before.concepts.size).toBe(0);
   });
 });

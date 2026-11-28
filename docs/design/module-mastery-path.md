@@ -41,12 +41,55 @@ Each technique suits some levels better than others, and the engine only offers 
 
 ## What counts as "shown"
 
-For each concept at each level the engine keeps only right and wrong counts and the last six results. A level is
-**shown** when the last two answers there are right and the smoothed share right across the recent answers is at least
-70%. So two right in a row from a fresh start counts, one lucky answer does not, and a miss puts the level back to
-**learning** until the student recovers. Old misses fade as new answers replace them.
+Christian's direction (2026-11-28): use every learning method to find where a student really is, and keep the loop
+going until they are advanced. So the engine does not just count answers; it weighs them. For each concept at each
+level it keeps the last six answers, each with how much it shows and the day it was given. Every number below is an
+**unverified starting value**, to be tuned with the simulation and real use.
 
-These numbers (two, six, 70%) are Cueory's unverified starting values, to be tuned with the simulation and real use.
+A level is **shown** when all of these hold:
+
+- the last two answers there are right (one lucky answer never counts);
+- the right answers in the last six add up to at least 2 points of evidence;
+- the smoothed, weighted share right across the last six is at least 70%.
+
+If a level was shown but the newest answer there is more than 14 days old, it becomes **review due** (see
+Staleness). Otherwise it is **learning** (or **not started**). Old misses fade as new answers replace them.
+
+### How much one answer shows (unverified)
+
+| Technique | Kind | Points per right answer |
+| --- | --- | ---: |
+| flashcards (self-recall) | production | 1.0 |
+| label it (typed) | production | 1.0 |
+| fill in the blank | production | 1.0 |
+| matching | recognition | 0.5 |
+| learning questions | recognition | 0.6 |
+| case questions | worked case | 1.5 |
+
+Reason: pulling an answer out of memory shows more than picking it from choices on screen, and applying it in a case
+shows most. In words: two flashcards in a row are enough; matching needs four right in a row; two right cases are
+plenty, but one never is. A miss counts at the technique's full points.
+
+### Guessing (unverified)
+
+A right answer on a recognition item (matching, learning questions) is scaled by how hard it is to guess. With four
+options, the assumed default, it counts in full. With three options it counts 89%, and with two options 67%. More than
+four options never counts extra. Items can state their option count; if they do not, four is assumed.
+
+### Slips (unverified)
+
+If a student gets one answer wrong right after four or more right in a row, that miss is called a **slip**. It still
+drops the level to learning, because the last two answers must be right, but it counts as half a miss, so two right
+answers afterwards bring the level back. A real run of misses, or a miss early on, needs more right answers to
+recover.
+
+### Staleness (unverified)
+
+Each answer carries the calendar day it was given. When a shown level's newest answer is more than 14 days old, the
+level becomes **review due**. Review due is not "ready": the module drops back to adaptive practice, and the next
+step puts due review ahead of new material, with the reason "due for review". One right answer on the review shows
+the level again; a miss makes it learning. This keeps the loop re-locating the student instead of trusting old
+evidence forever.
 
 ## The diagnostic and calibration
 
@@ -56,11 +99,12 @@ remember. A student who shows every concept through apply on the quiz goes strai
 
 ## Choosing the next step
 
+0. Review that is due comes first.
 1. Rank concepts by the level they are working on, lowest first: foundations before application.
 2. Within a level, a concept whose last answer was a miss goes first; then module order.
 3. Pick an item for that concept and level that was not just shown, preferring ones unused this session.
 4. Use the best-fitting technique, but never the same technique more than twice in a row when another fits.
-5. Tell the student why: "you missed this recently", "not practised yet", "one more to lock it in" or "next level up".
+5. Tell the student why: "you missed this recently", "not practised yet", "one more to lock it in", "next level up" or "due for review".
 
 When every concept is shown at the ready levels the engine answers "done" and the student is ready. If concepts are
 still learning but the module has no item to offer for them (too little content, or its only item was just shown), it
@@ -109,18 +153,41 @@ For the engine to work, every item in a module batch needs: a module id, a conce
 technique. Christian's Excel template gets those four columns. Concept names, questions, answers and rationales come
 only from his reviewed batches; this repository holds labeled samples only.
 
+## Simulation: old rule against new rule
+
+`scripts/simulate-module-path.ts` runs 2,000 synthetic students (6 sample concepts each, seed 7, step cap 150). Each
+has a hidden true level per concept (none, remember, understand, apply), answers with probabilities that depend on
+that level, the technique (recognition can be guessed) and a slip rate, learns a little from practice, forgets a
+little over time and half of them take one long break. The path is a diagnostic of six items per concept, then
+adaptive steps until "done" or the cap. "Old" is the equal-weight rule that never forgets (kept in the script only).
+Every probability in the model is an unverified assumption, so read the table as a comparison, not a measurement.
+
+| Measure (unverified model) | Old rule | New rule |
+| --- | ---: | ---: |
+| Marked shown, truly not mastered (placed too high) | 5.5% | 3.6% |
+| Shown at the finish, truly not mastered | 9.6% | 4.6% |
+| Truly mastered, not shown at the finish (placed too low) | 2.1% | 6.6% |
+| Median steps to done (students who finished) | 87 | 109 |
+| Never done within the cap | 50.1% | 43.3% |
+| Techniques met per student (mean) | 5.63 | 5.93 |
+
+In words: the new rule trusts a level less often when it should not (and catches forgetting after a break), at the
+price of asking for more evidence, so mastered levels are sometimes held back and finishing takes more steps. Whether
+that trade is right is Christian's call once real students use it. Run it with esbuild and Node, as for
+`simulate-adaptive-learning.ts`.
+
 ## What is built, and what is next
 
 Built in this change (pure rules with unit tests, no screen yet):
 
-- `src/islands/adaptive-learning/module-path.ts`: stages, levels, "shown", calibration, next step, module and course
-  summaries.
+- `src/islands/adaptive-learning/module-path.ts`: stages, levels, "shown" (weighted by technique, guess-aware,
+  slip-aware, with review due), calibration, next step, module and course summaries.
+- `scripts/simulate-module-path.ts`: the old-against-new simulation above.
 - `src/islands/adaptive-learning/momentum.ts`: sets, moments, the break suggestion, the streak and the daily goal.
 
 Next, in order:
 
-1. A simulation of the whole path over synthetic students (how many steps to ready, how often the technique changes,
-   whether anyone gets stuck), like the one in adaptive-learning.md.
+1. Tune the unverified values above against real use.
 2. A hidden sample preview on locked staging that walks one labeled sample module through all seven stages.
 3. The content columns in the Excel template and the seed-file check.
 4. Database tables for module evidence and the course rollup, with row-level security, export and delete.
