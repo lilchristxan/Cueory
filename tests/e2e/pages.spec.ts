@@ -362,7 +362,11 @@ for (const path of [...new Set(pages)]) {
 
     const res = await page.goto(path);
     expect(res?.status()).toBe(200);
+    // A focused study screen (learn mode; Christian, 2026-11-26) has no site header and no notice strip: only its own bar.
+    const focused = /\/learn-mode$/.test(path);
     const notice = page.getByTestId('building-notice');
+    if (focused) await expect(notice).toHaveCount(0);
+    else {
     await expect(notice).toHaveText("we're still building. please support (opens in a new tab) our development. more coming soon!");
     const support = notice.getByRole('link', { name: /^support/ });
     await expect(support).toHaveAttribute('href', 'https://ko-fi.com/cueory');
@@ -372,6 +376,7 @@ for (const path of [...new Set(pages)]) {
       .toMatchObject({ weight: '700', line: 'underline' });
     expect((await support.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await expect(notice.locator('.building-strip-icon')).toHaveCount(2);
+    }
     await expect(page.locator('h1')).toHaveCount(1);
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
@@ -513,7 +518,7 @@ test('Learn mode brings back what you miss until you know every card', async ({ 
       await expect(page.getByText(card.back)).toBeVisible();
       await page.getByRole('button', { name: 'Next card' }).focus();
       await page.keyboard.press('Enter');
-    } else if (step === 'Choose the answer') {
+    } else if (step === 'Choose an answer') {
       const answers = await page.getByRole('list', { name: 'Answers' }).getByRole('button').allTextContents();
       expect(answers).toContain(card.back);
       const pick = missedOnce ? card.back : answers.find((a) => a !== card.back)!;
@@ -546,7 +551,7 @@ test('Learn mode brings back what you miss until you know every card', async ({ 
 
   await expect(page.getByText('You know all 3 cards.')).toBeVisible();
   expect(steps.filter((s) => s === 'New card')).toHaveLength(3);
-  expect(steps.filter((s) => s === 'Choose the answer')).toHaveLength(4);
+  expect(steps.filter((s) => s === 'Choose an answer')).toHaveLength(4);
   expect(steps).toContain('Fill in the blank');
   expect(steps.filter((s) => s === 'Type the answer')).toHaveLength(2);
 
