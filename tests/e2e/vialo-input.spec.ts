@@ -337,9 +337,9 @@ test('after a lost game the answer appears nowhere in the visible text or access
   expect(everything).not.toMatch(/\bgrace\b/i);
 });
 
-// Christian (25 Nov 2026): the board uses only white, oxblood and dark green, the same as the keys, in Light and Evening.
+// Christian (27 Nov 2026): the board uses only white, pink and light green, the same in Light and Evening.
 for (const scheme of ['light', 'dark'] as const) {
-  test(`board pills and help example pills use only white, oxblood and dark green (${scheme})`, async ({ page }) => {
+  test(`board pills and help example pills use only white, pink and light green (${scheme})`, async ({ page }) => {
     await page.emulateMedia({ colorScheme: scheme });
     await typeOnScreen(page, 'crane');
     await key(page, 'enter').click();
@@ -358,8 +358,8 @@ for (const scheme of ['light', 'dark'] as const) {
       };
       const read = (selector: string) => Array.from(document.querySelectorAll(selector), (pill) => getComputedStyle(pill).backgroundColor);
       const result = {
-        green: resolve('--game-dark-green'),
-        oxblood: resolve('--game-oxblood'),
+        green: resolve('--wordpill-here'),
+        oxblood: resolve('--wordpill-elsewhere'),
         espresso: resolve('--color-pillo-here'),
         tan: resolve('--color-pillo-elsewhere'),
         here: read('.vialo-pill.vialo-here'),
@@ -372,6 +372,8 @@ for (const scheme of ['light', 'dark'] as const) {
     });
     expect(colours.here.length).toBeGreaterThan(1);
     expect(colours.elsewhere.length).toBeGreaterThan(1);
+    expect(colours.green).toBe('rgb(168, 213, 186)');
+    expect(colours.oxblood).toBe('rgb(244, 166, 192)');
     for (const colour of colours.here) expect(colour).toBe(colours.green);
     for (const colour of colours.elsewhere) expect(colour).toBe(colours.oxblood);
     for (const colour of colours.absent) expect(colour).toBe('rgb(255, 255, 255)');

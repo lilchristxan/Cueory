@@ -108,12 +108,9 @@
   }
 
   .vialo-pill.vialo-here {
-    /* A dark shoulder keeps the white letter legible throughout the shine, including in Evening. */
-    --vialo-cap-shoulder: color-mix(in srgb, var(--game-dark-green-light) 38%, var(--game-dark-green-deep));
-    --vialo-cap-face: var(--game-dark-green);
-    color: var(--game-frame-pill-text-color);
-    background-color: var(--vialo-cap-face);
-    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, var(--vialo-cap-shoulder), var(--vialo-cap-face) 55%, var(--game-dark-green-deep));
+    color: var(--wordpill-on-here);
+    background-color: var(--wordpill-here);
+    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, var(--wordpill-here-light), var(--wordpill-here) 55%, var(--wordpill-here-deep));
     box-shadow: var(--shadow-pillo-pill);
   }
 
@@ -137,10 +134,10 @@
   }
 
   .vialo-pill.vialo-elsewhere {
-    color: var(--game-frame-pill-text-color);
-    background-color: var(--game-oxblood);
-    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-oxblood-light) 80%, var(--game-oxblood)), var(--game-oxblood) 55%, var(--game-oxblood-deep));
-    box-shadow: inset 0 0 0 var(--pillo-contrast-rim) var(--game-oxblood-light), var(--shadow-pillo-pill);
+    color: var(--wordpill-on-elsewhere);
+    background-color: var(--wordpill-elsewhere);
+    background-image: radial-gradient(ellipse 120% 140% at 30% 20%, var(--wordpill-elsewhere-light), var(--wordpill-elsewhere) 55%, var(--wordpill-elsewhere-deep));
+    box-shadow: var(--shadow-pillo-pill);
   }
 
   .vialo-pill.vialo-absent {
@@ -178,11 +175,19 @@
     "not in the word" the plain white pill. The row's spoken label already names each result.
   */
   .vialo-pill.vialo-elsewhere::after {
+    /* A small dot under the letter (Christian's pink has no ring, 2026-11-27): the sign, besides colour, that this
+       letter is in the word but somewhere else. */
     content: "";
     position: absolute;
-    inset: var(--vialo-pill-ring-gap);
-    border: var(--vialo-pill-ring) solid var(--vialo-pill-ring-color);
-    border-radius: inherit;
+    inset-block-end: var(--vialo-pill-ring-gap);
+    inset-inline-start: 50%;
+    inline-size: var(--vialo-pill-dot);
+    block-size: var(--vialo-pill-dot);
+    translate: -50% 0;
+    /* Drawn as a border, not a background, so it survives forced colours (Windows High Contrast). */
+    box-sizing: border-box;
+    border: calc(var(--vialo-pill-dot) / 2) solid var(--wordpill-on-elsewhere);
+    border-radius: 50%;
     pointer-events: none;
   }
 
@@ -361,16 +366,22 @@
     --vialo-key-lip-now: var(--vialo-key-elsewhere-lip);
     border-color: var(--vialo-key-elsewhere-lip);
     background-image: linear-gradient(180deg, var(--vialo-key-elsewhere-top), var(--vialo-key-elsewhere-bottom));
-    color: var(--vialo-key-on-mark);
+    color: var(--vialo-key-on-elsewhere);
   }
 
-  /* Elsewhere in the word: a light ring inside the key's edge, so it differs from "in place" by more than colour. */
+  /* Elsewhere in the word: a small dot under the key's letter, so it differs from "in place" by more than colour. */
   .vialo-key.vialo-elsewhere::after {
     content: "";
     position: absolute;
-    inset: var(--vialo-key-ring-gap);
-    border: var(--vialo-key-ring) solid var(--vialo-key-ring-color);
-    border-radius: calc(var(--vialo-key-radius) - var(--vialo-key-ring-gap));
+    inset-block-end: var(--vialo-key-ring-gap);
+    inset-inline-start: 50%;
+    inline-size: var(--vialo-pill-dot);
+    block-size: var(--vialo-pill-dot);
+    translate: -50% 0;
+    /* Drawn as a border, not a background, so it survives forced colours (Windows High Contrast). */
+    box-sizing: border-box;
+    border: calc(var(--vialo-pill-dot) / 2) solid var(--wordpill-on-elsewhere);
+    border-radius: 50%;
     pointer-events: none;
   }
 
