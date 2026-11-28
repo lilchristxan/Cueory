@@ -307,6 +307,8 @@ const SPIN_MAX_STEP_MS = 100;
 const THUMBNAIL_MARGIN = 1.08;
 /** How long the camera must be still before the lab checks which labeled structures it can see. */
 const VISIBILITY_IDLE_MS = 120;
+/** How often labels are re-checked for being in front or behind while the model turns by itself. */
+const SPIN_VISIBILITY_MS = 250;
 /** The ID picture's size: about this many pixels, whatever the view's size (enough to find small visible parts). */
 const ID_PICTURE_PIXELS = 360_000;
 
@@ -379,6 +381,7 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
   // VISIBILITY_IDLE_MS (and after any change to what is shown), not on every frame.
   let visibilityDirty = true;
   let lastMove = 0;
+  let lastVisibilityCheck = 0;
   let labelIds: string[] = [];
   let visibility = new Map<string, { behind: boolean; world: THREE.Vector3 }>();
   const requestRender = () => {
@@ -463,11 +466,15 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     if (visibilityDirty && root) {
       // Both timestamps use performance.now(). A delayed frame that fires early
       // must re-arm the visibility check rather than leaving stale occlusion labels.
-      const remaining = remainingIdleDelay(performance.now(), lastMove, VISIBILITY_IDLE_MS);
-      if (remaining > 0) {
+      const now = performance.now();
+      const remaining = remainingIdleDelay(now, lastMove, VISIBILITY_IDLE_MS);
+      // While the model turns by itself the camera never rests, so labels are re-checked on a slow beat instead.
+      const spinBeat = spinning && labelIds.length > 0 && now - lastVisibilityCheck >= SPIN_VISIBILITY_MS;
+      if (remaining > 0 && !spinBeat) {
         if (labelIds.length > 0) scheduler.afterIdle(remaining);
       } else {
         visibilityDirty = false;
+        lastVisibilityCheck = now;
         if (labelIds.length > 0) {
           const w = canvas.clientWidth || 1;
           const h = canvas.clientHeight || 1;
