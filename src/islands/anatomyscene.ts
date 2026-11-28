@@ -267,6 +267,36 @@ interface Options {
 }
 
 const UP = new THREE.Vector3(0, 1, 0);
+/** The logo on a saved picture is this tall, as a share of the title's type size. */
+const PICTURE_LOGO_SHARE = 1.2;
+/** How long a saved picture waits for the logo file before going without it. */
+const PICTURE_LOGO_WAIT_MS = 1500;
+
+/** True when a CSS colour is dark enough to need the logo drawn for dark grounds. */
+function isDarkColor(color: string): boolean {
+  const c = new THREE.Color();
+  try {
+    c.set(color);
+  } catch {
+    return true;
+  }
+  return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b < 0.5;
+}
+
+/** Christian's logo artwork for a picture on `ground`, or null when it cannot be loaded in time. */
+function loadPictureLogo(ground: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const image = new Image();
+    const timer = window.setTimeout(() => resolve(null), PICTURE_LOGO_WAIT_MS);
+    const done = (value: HTMLImageElement | null) => {
+      window.clearTimeout(timer);
+      resolve(value);
+    };
+    image.onload = () => done(image.naturalWidth > 0 && image.naturalHeight > 0 ? image : null);
+    image.onerror = () => done(null);
+    image.src = isDarkColor(ground) ? '/brand/v1/logo-full-dark-480.png' : '/brand/v1/logo-full-light-480.png';
+  });
+}
 /** The model turning by itself takes this long for one full turn: slow enough to study while it moves. */
 const SPIN_TURN_MS = 24_000;
 /** A frame that arrives late (a hidden tab coming back) turns the model by no more than this much time. */
@@ -1132,6 +1162,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       );
     }
 
+    // Every saved picture carries the cueory logo at the top, in the middle (Christian, 2026-11-27): his own artwork,
+    // the file for dark or for light grounds, sized only. A logo that cannot load never stops the picture.
+    const logo = await loadPictureLogo(colors.page);
+
     // scene.clear() and scene.dispose() advance loadId synchronously.
     if (pictureLoadId !== loadId) throw new Error('The anatomy model changed during picture preparation.');
 
@@ -1151,7 +1185,11 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     ctx.font = `400 ${creditSize}px ${font}`;
     const creditLines = wrapText(request.credit, width - 2 * pad, (s) => ctx.measureText(s).width);
     const creditLineHeight = Math.round(creditSize * tk.leading);
-    const top = titleLayout.top;
+    // The logo's band sits above the title: the title and the model start below it.
+    const logoHeight = logo ? Math.round(titleSize * PICTURE_LOGO_SHARE) : 0;
+    const logoWidth = logo ? Math.round(logoHeight * (logo.naturalWidth / logo.naturalHeight)) : 0;
+    const brandBand = logo ? logoHeight + Math.round(pad / 2) : 0;
+    const top = titleLayout.top + brandBand;
     const bottom = pad + creditLines.length * creditLineHeight + Math.round(pad / 2);
     const viewHeight = Math.max(1, height - top - bottom);
 
@@ -1274,8 +1312,9 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       ctx.font = `700 ${titleSize}px ${font}`;
       titleLayout.lines.forEach((line, index) => {
         // Bound even a single unbroken title word to the canvas text width.
-        ctx.fillText(line, pad, pad + titleSize + index * titleLayout.lineHeight, titleLayout.maxWidth);
+        ctx.fillText(line, pad, brandBand + pad + titleSize + index * titleLayout.lineHeight, titleLayout.maxWidth);
       });
+      if (logo) ctx.drawImage(logo, Math.round((width - logoWidth) / 2), pad, logoWidth, logoHeight);
       ctx.fillStyle = colors.inkSoft;
       ctx.font = `400 ${creditSize}px ${font}`;
       creditLines.forEach((line, i) => {

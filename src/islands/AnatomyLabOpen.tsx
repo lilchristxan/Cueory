@@ -3,7 +3,7 @@ import AnatomyLabCover from './AnatomyLabCover';
 import AnatomyTextRecall from './AnatomyTextRecall';
 import { decodeAnatomySystem, type AnatomySystemProp } from './anatomy-island-data';
 import { systemsForView } from './anatomylayers';
-import { coverDownloadNote } from './anatomyviews';
+import { coverDownloadNote, openingSystemFirst } from './anatomyviews';
 import type { AnatomyLabProps } from './AnatomyLab.tsx';
 
 type AnatomyLabOpenProps = Omit<AnatomyLabProps, 'systems' | 'fixture'> & {
@@ -34,7 +34,8 @@ export default function AnatomyLabOpen({ systems: encodedSystems, fixture: encod
 
   const wantsFixture = fixture && new URLSearchParams(window.location.search).has('fixture');
   const textSystems = systemsForView(systems, false, wantsFixture ? fixture : null);
-  const system = textSystems[0];
+  // The cover's download note names the system the lab opens on.
+  const system = openingSystemFirst(textSystems)[0];
   const note = coverDownloadNote(system?.fixture ? null : system?.title ?? null,
     system?.fixture ? undefined : system && props.modelBytes?.[system.key]);
   return (

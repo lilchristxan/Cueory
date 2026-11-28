@@ -1,6 +1,7 @@
 import { isApplePlatform, shortcutKeyAction, shortcutWheelAction, SHORTCUT_KEY_MAP, type Modifiers, type ShortcutAction } from './anatomyshortcuts';
 import {
   Fragment,
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -40,6 +41,7 @@ import {
   focusFromSearch,
   formatDownloadSize,
   initialSystemKey,
+  openingSystemFirst,
   linkedStructureId,
   presetDirection,
   tappableIds,
@@ -303,7 +305,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const focus = useMemo(() => focusFromSearch(window.location.search), []);
   const focusSystemDone = useRef(false);
   const focusStructureDone = useRef(false);
-  const [systemKey, setSystemKey] = useState(() => initialSystemKey(systems.map((s) => s.key), focus));
+  const [systemKey, setSystemKey] = useState(() => initialSystemKey(openingSystemFirst(systems).map((s) => s.key), focus));
   const activeSystemKeyRef = useRef(systemKey);
   activeSystemKeyRef.current = systemKey;
   const [load, setLoad] = useState<SystemLoad>({ state: 'loading' });
@@ -2366,7 +2368,6 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <div className="lab-decor lab-ring bottom-15 left-1/2 hidden h-14 w-1/3 -translate-x-1/2 md:block" aria-hidden="true" />
             <div className="lab-decor lab-ring lab-ring-soft bottom-12 left-1/2 hidden h-20 w-1/2 -translate-x-1/2 md:block" aria-hidden="true" />
             <div className="lab-decor lab-ring lab-ring-faint bottom-8 left-1/2 hidden h-28 w-2/3 -translate-x-1/2 md:block" aria-hidden="true" />
-            <div className="lab-decor lab-scale top-1/6 left-1/4 hidden h-(--lab-scale-height) w-5 lg:block" aria-hidden="true" />
             <div className={`${compareSystem ? 'grid h-full grid-cols-2 pt-2 lg:pr-(--lab-inspector-clear) lg:pl-(--lab-rail-clear)' : 'h-full pt-2'} ${round ? 'pb-8 lg:pb-(--lab-study-clear)' : 'pb-32 lg:pb-28'}`} data-testid="anatomy-views-row">
               <div className="relative h-full">
                 <canvas
@@ -2763,100 +2764,57 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             <div className="contents lg:pointer-events-auto lg:flex lg:max-h-full lg:min-h-0 lg:flex-col lg:gap-3 lg:overflow-y-auto" role="group" aria-label="selected structure and study" tabIndex={0}>
           {selectedName && !quiz && !namesHidden && (
             <section className="lab-glass mx-3 mb-3 p-4 lg:pointer-events-auto lg:m-0" aria-labelledby="anatomy-name-card">
-              <p className="lab-cap flex justify-between gap-3"><span>selected structure</span><span className="lab-id" data-testid="anatomy-card-id">{selected}</span></p>
+              {/* Name and system only (Christian, 2026-11-27); the source id stays for screen readers and the flag form. */}
+              <span className="sr-only" data-testid="anatomy-card-id">{selected}</span>
               <h2 id="anatomy-name-card" className="lab-name">{selectedName}</h2>
               {selectedStructure && (
                 <dl data-testid="anatomy-card-rows">
-                  {inspectorRows(selectedStructure, system.title, system.model.release, selectedStructure.group).map((row) => (
+                  {inspectorRows(selectedStructure, system.title, system.model.release, selectedStructure.group).filter((row) => row.label === 'system').map((row) => (
                     <div key={row.label} className="lab-kv"><dt className="lab-cap">{row.label}</dt><dd className="m-0 text-right">{row.value}</dd></div>
                   ))}
                 </dl>
               )}
-              {crumbs.length > 1 ? (
-                <nav aria-label="where it sits" className="mt-1">
-                  <ol className="flex flex-wrap items-center gap-x-1 text-sm text-ink-soft" data-testid="anatomy-breadcrumb">
-                    {crumbs.map((row, index) => (
-                      <li key={`${index}-${row.name}`} className="flex items-center gap-x-1">
-                        {index > 0 && <span aria-hidden="true">›</span>}
-                        {row.current ? (
-                          <span aria-current="location" className="text-ink">{row.name}</span>
-                        ) : row.id ? (
-                          <button
-                            type="button"
-                            className="min-h-11 rounded-md px-1 text-ink underline underline-offset-4 disabled:no-underline disabled:opacity-60"
-                            disabled={!ready || !foundSet.has(row.id)}
-                            onClick={() => pickStructure(row.id!)}
-                          >
-                            {row.name}
-                          </button>
-                        ) : (
-                          <span>{row.name}</span>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                </nav>
-              ) : (
-                selectedGroup && <p className="text-sm text-ink-soft">{selectedGroup}</p>
-              )}
-              <p className="mt-1 text-sm text-ink-soft">{nameSourceFor(system)}</p>
-              {showSiblings(siblingList.length) && (
-                <details className="mt-2 rounded-md border border-line" data-testid="anatomy-siblings">
-                  <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm text-ink-soft">
-                    siblings ({siblingList.length})
-                  </summary>
-                  <ul className="flex flex-wrap gap-2 px-3 pb-3">
-                    {siblingList.map((sibling) => (
-                      <li key={sibling.id}>
-                        <button
-                          type="button"
-                          className={secondaryButton}
-                          disabled={!ready || !foundSet.has(sibling.id)}
-                          onClick={() => pickStructure(sibling.id)}
-                        >
-                          {sibling.text}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
+              {/* Icon buttons: each is named for screen readers and shows its name on hover or keyboard
+                  focus; on a touch screen, where nothing hovers, the name is always written beside the icon. */}
               <div className="mt-3 flex flex-wrap gap-2">
                 {!round && (<>
-                <button type="button" className={secondaryButton} onClick={() => { visibilityIntent.bump(); setHidden(onlyThis(system.structures.map((s) => s.id), selected!)); }}>
-                  isolate
+                <button type="button" className="lab-btn lab-round lab-tip" aria-label="isolate" onClick={() => { visibilityIntent.bump(); setHidden(onlyThis(system.structures.map((s) => s.id), selected!)); }}>
+                  <CardIcon name="isolate" /><span className="lab-tip-text" aria-hidden="true">isolate</span>
                 </button>
-                <button type="button" className={secondaryButton} onClick={() => changeVisibility((v) => hideStructure(v, selected!))}>
-                  {hidden.has(selected!) ? 'show' : 'hide'}
+                <button type="button" className="lab-btn lab-round lab-tip" aria-label={hidden.has(selected!) ? 'show' : 'hide'} onClick={() => changeVisibility((v) => hideStructure(v, selected!))}>
+                  <CardIcon name={hidden.has(selected!) ? 'show' : 'hide'} /><span className="lab-tip-text" aria-hidden="true">{hidden.has(selected!) ? 'show' : 'hide'}</span>
                 </button>
                 </>)}
                 <a
                   href={flagMailto(site.contactEmail, window.location.pathname)}
                   data-game-flag
-                  className={secondaryButton}
+                  className="lab-btn lab-round lab-tip"
+                  aria-label="flag or comment"
+                 
                 >
-                  flag or comment
+                  <CardIcon name="flag" /><span className="lab-tip-text" aria-hidden="true">flag or comment</span>
                 </a>
                 {!round && (<>
                 <button
                   type="button"
-                  className={secondaryButton}
+                  className="lab-btn lab-round lab-tip"
+                  aria-label={structureState({ hidden, faded }, selected!) === 'faded' ? 'unfade' : 'fade this'}
                   aria-pressed={structureState({ hidden, faded }, selected!) === 'faded'}
                   onClick={() => {
                     changeVisibility((v) => fadeStructure(v, selected!));
                     setAnnounce(faded.has(selected!) && !hidden.has(selected!) ? `${selectedName} shown in full.` : `${selectedName} faded.`);
                   }}
                 >
-                  {structureState({ hidden, faded }, selected!) === 'faded' ? 'unfade' : 'fade this'}
+                  <CardIcon name="fade" /><span className="lab-tip-text" aria-hidden="true">{structureState({ hidden, faded }, selected!) === 'faded' ? 'unfade' : 'fade this'}</span>
                 </button>
-                <button type="button" className={secondaryButton} disabled={!ready || !foundSet.has(selected!)} onClick={showNearby}>
-                  show nearby
+                <button type="button" className="lab-btn lab-round lab-tip" aria-label="show nearby" disabled={!ready || !foundSet.has(selected!)} onClick={showNearby}>
+                  <CardIcon name="nearby" /><span className="lab-tip-text" aria-hidden="true">show nearby</span>
                 </button>
                 </>)}
                 {speechOn && (
-                  <button type="button" className={secondaryButton} onClick={sayIt}>say it</button>
+                  <button type="button" className="lab-btn lab-round lab-tip" aria-label="say it" onClick={sayIt}><CardIcon name="say" /><span className="lab-tip-text" aria-hidden="true">say it</span></button>
                 )}
-                {!round && <button type="button" className={secondaryButton} onClick={() => setSelected(null)}>clear selection</button>}
+                {!round && <button type="button" className="lab-btn lab-round lab-tip" aria-label="clear selection" onClick={() => setSelected(null)}><CardIcon name="clear" /><span className="lab-tip-text" aria-hidden="true">clear selection</span></button>}
               </div>
             </section>
           )}
@@ -3536,6 +3494,30 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
             </section>
           )}
     </div>
+  );
+}
+
+/** The selected structure card's icon buttons. Drawn with the text colour; each button carries its own name. */
+function CardIcon({ name }: { name: 'isolate' | 'hide' | 'show' | 'flag' | 'fade' | 'nearby' | 'say' | 'clear' }) {
+  const paths: Record<typeof name, ReactNode> = {
+    // one thing in a frame
+    isolate: <><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" /><circle cx="12" cy="12" r="3" /></>,
+    // an eye, struck through
+    hide: <><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" /><circle cx="12" cy="12" r="2.5" /><path d="M4 4l16 16" /></>,
+    show: <><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" /><circle cx="12" cy="12" r="2.5" /></>,
+    flag: <path d="M6 21V4M6 5h11l-2.5 3.5L17 12H6" />,
+    // a circle, half filled
+    fade: <><circle cx="12" cy="12" r="8" /><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none" /></>,
+    // one thing with its neighbours around it
+    nearby: <><circle cx="12" cy="12" r="2.5" /><circle cx="5" cy="6" r="1.5" /><circle cx="19" cy="6" r="1.5" /><circle cx="5" cy="18" r="1.5" /><circle cx="19" cy="18" r="1.5" /></>,
+    // a speaker
+    say: <><path d="M4 10v4h3l5 4V6l-5 4z" /><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" /></>,
+    clear: <path d="M6 6l12 12M18 6L6 18" />,
+  };
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[name]}
+    </svg>
   );
 }
 

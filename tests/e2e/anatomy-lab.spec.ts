@@ -388,7 +388,6 @@ test.describe('anatomy lab', () => {
     await expect(cubeB).toHaveAttribute('aria-pressed', 'true');
     const card = page.getByRole('region', { name: 'fixture cube B' });
     await expect(card).toBeVisible();
-    await expect(card.getByText('name from the test fixture')).toBeVisible();
 
     // hide / show from the row's own dot, which sits just before the name (Christian, 2026-11-27)
     await page.keyboard.press('Shift+Tab');
@@ -1321,7 +1320,8 @@ test.describe('anatomy lab system switch', () => {
       // Re-arm exactly before the next system selection, so its GLB stays
       // pending while the old model's controls are checked.
       holdRequests = true;
-      await buttons.nth(1).click();
+      // Any system other than the one the lab opened on (the skeleton, since 2026-11-27).
+      await picker.locator(':scope > button[aria-pressed="false"]').first().click();
       await expect(page.getByText(/^loading /).first()).toBeVisible();
       const cameraControls = page.getByRole('group', { name: 'view' });
       for (const name of ['turn left', 'turn right', 'tilt up', 'tilt down', 'zoom in', 'zoom out', 'reset view']) {

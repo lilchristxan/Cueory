@@ -29,21 +29,32 @@ async function select(page: Page, name: string) {
 }
 
 test.describe('anatomy lab inspector', () => {
-  test('the card names the structure with its system, group, dataset and source id', async ({ page }) => {
+  test('the card names the structure and its system, with icon buttons that show their names on hover', async ({ page }) => {
     await openLab(page);
     await expect(page.getByTestId('anatomy-card-rows')).toHaveCount(0);
     await select(page, 'fixture cube A');
     await expect(card(page).getByRole('heading', { name: 'fixture cube A' })).toBeVisible();
-    await expect(card(page).getByText('selected structure', { exact: true })).toBeVisible();
+    // Christian (2026-11-27): the card is the name and the system only. The source id stays for screen readers.
     await expect(page.getByTestId('anatomy-card-id')).toHaveText('FIX001');
     const rows = await page.getByTestId('anatomy-card-rows').locator('.lab-kv').evaluateAll((els) =>
       els.map((el) => [el.querySelector('dt')?.textContent, el.querySelector('dd')?.textContent]));
-    expect(rows).toEqual([
-      ['system', 'organs'],
-      ['group', 'fixture group one'],
-      ['dataset', 'fixture 1 (made in code)'],
-      ['source id', 'FIX001'],
-    ]);
+    expect(rows).toEqual([['system', 'organs']]);
+    // Every action is an icon button with a name, and the name shows when the mouse is over it.
+    for (const name of ['isolate', 'hide', 'fade this', 'show nearby', 'clear selection']) {
+      const button = card(page).getByRole('button', { name, exact: true });
+      await expect(button.locator('svg')).toBeVisible();
+      await expect(button.locator('.lab-tip-text')).toHaveText(name);
+    }
+    // With a mouse the name appears on hover; a touch screen (no hover) shows it all the time.
+    const isolate = card(page).getByRole('button', { name: 'isolate', exact: true });
+    const shown = () => isolate.locator('.lab-tip-text').evaluate((el) => getComputedStyle(el).opacity);
+    const touch = await page.evaluate(() => matchMedia('(hover: none)').matches);
+    if (!touch) {
+      await page.mouse.move(0, 0);
+      expect(await shown()).toBe('0');
+      await isolate.hover();
+    }
+    expect(await shown()).toBe('1');
   });
 
   test('isolate, hide and show work from the card', async ({ page }) => {

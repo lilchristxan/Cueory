@@ -172,6 +172,51 @@
     background: linear-gradient(160deg, var(--lab-glass-top), var(--lab-glass-bottom));
   }
 
+  /* An icon button's name. With a mouse it floats above the button on hover and on keyboard focus; on a touch screen,
+     where nothing hovers, it is always written beside the icon, so the name is never hover-only. */
+  .lab-tip {
+    position: relative;
+  }
+  .lab-tip-text {
+    position: absolute;
+    bottom: calc(100% + var(--spacing) * 1.5);
+    left: 50%;
+    z-index: 20;
+    translate: -50% 0;
+    padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2.5);
+    border-radius: var(--lab-radius-row);
+    border: var(--lab-edge) solid var(--lab-ring);
+    background: var(--lab-charcoal);
+    color: var(--lab-ivory);
+    font-size: var(--lab-caption-size);
+    font-weight: 400;
+    line-height: 1.5;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .lab-tip:hover .lab-tip-text,
+  .lab-tip:focus-visible .lab-tip-text {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    .lab-btn.lab-tip {
+      width: auto;
+      padding: 0 calc(var(--spacing) * 4);
+      border-radius: var(--radius-pill);
+    }
+    .lab-tip-text {
+      position: static;
+      translate: none;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font-size: var(--lab-button-size);
+      opacity: 1;
+    }
+  }
+
   /* Text fields (the search box, the view name). */
   .lab-field {
     min-height: calc(var(--spacing) * 11);
