@@ -12,23 +12,43 @@ assumed.
 | Supabase security check on staging | One kind of warning only: ten functions that signed-in students may call (check an answer, send a flag, delete my account and so on). That is by design: each checks who is calling before it does anything. |
 | `cueory-prod` database | **Paused** (Supabase pauses free projects after 7 days without activity). Nothing can be checked or applied there until it is restored. |
 | Pages | Built and on staging: `/signup`, `/signin`, `/auth/callback`, `/reset-password`, `/account` (name, download my data, delete my account, sign out), `/account/two-factor`, `/progress`, `/admin/flags`. |
-| The switch | `accountsOpen` in `src/config/site.ts` is `false`: the live site says "accounts open soon" and never loads Supabase. |
+| The switch | `accountsOpen` in `src/config/site.ts` is `false`: the live site says "accounts open soon" and never loads Supabase. Staging and other previews open sign-in for testing through their own gate. |
 
 ## The order to open in
 
-1. **Staging sign-in works end to end.** Create a test account on locked staging with Google and with an email link;
-   confirm the email arrives; change the name; download the data; delete the account; confirm every row is gone.
-   Needs Christian: Supabase sign-in settings and the Google client for staging (docs/SETUP.md Parts L and M), if not
-   done yet.
-2. **Account emails.** Resend set up as the sender for confirmation and reset emails (free: 100 a day), with the
-   domain's email records. Email DNS is Christian's to change (CLAUDE.md rule 9).
-3. **Production database.** Restore `cueory-prod`, apply the same 20 changes in order, run the security check, and
+1. **Staging build variables.** The preview build needs `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+   for `cueory-staging` (docs/GO-LIVE.md, section 1.8). The key must be the `sb_publishable_` kind: the build refuses
+   the older anon key. Without both, the build succeeds but accounts stay unavailable. Rebuild, then confirm the
+   staging preview received them.
+2. **Staging sign-in settings.** docs/SETUP.md Part M (sign-in settings for `cueory-staging`) and Part N (the Google
+   client for staging).
+3. **Staging sign-in works end to end.** Staging already opens sign-in for testing through the preview gate
+   (`accountsPreviewAllowed` in `src/config/accountsgate.ts`); `accountsOpen` stays `false`. On locked staging:
+   - sign up with Google;
+   - sign up with an email and password, confirm the email, then sign in with the password;
+   - ask for a password reset and finish it (it returns through `/reset-password`);
+   - change the display name, download the data, delete the account, and confirm every row is gone.
+4. **Rate limits hold on the hosted project.** Run `scripts/ratelimit-check.mjs` against staging with a fresh confirmed
+   account and a published sample question (answer checks, flags, study events, name changes) and record the results
+   (docs/STATUS.md, Task 302). Confirm Supabase's own sign-in limits are still at their defaults after the email
+   sender is set up.
+5. **Account emails.** Resend as the sender for confirmation and reset emails (free: 100 a day), with the domain's
+   email records. Email DNS is Christian's to change (CLAUDE.md rule 9).
+6. **Privacy and terms copy for accounts.** Today `/privacy` says "Public accounts are closed" and `/terms` says
+   registration has not opened. Before opening, both need approved wording that says what accounts store: the
+   Supabase account, what Google shares at sign-in, sign-in sessions, and account emails sent through Resend. The
+   wording is Christian's to approve.
+7. **Production database.** Restore `cueory-prod`, apply the same 20 changes in order, run the security check, and
    confirm nightly backups run against it. Keep it awake: a free project pauses again after 7 quiet days.
-4. **Production sign-in.** Supabase settings and the Google client for `cueory.app` (SETUP Part N); production build
-   variables for the Supabase address and public key.
-5. **Legal pages.** `/privacy` and `/terms` say what accounts store (they already describe it); Christian re-reads both.
-6. **Admin.** Christian's own account added to `admins` (by hand in the SQL editor, by design) with two-factor on.
-7. **Open on staging first** (`accountsOpen` true on staging only), watch for a few days, then open on the live site.
+8. **Production sign-in.** docs/SETUP.md Part O: the same settings for `cueory-prod`, with the production Site URL
+   and both return addresses (`/auth/callback**` and `/reset-password`), and the production Google client. Then the
+   two production build variables.
+9. **Admin.** Cloudflare Access in front of `/admin` on the live site (SECURITY.md rule 10: it must be in place before
+   any admin page is public), checked from a signed-out browser. Then Christian's own account added to `admins` (by
+   hand in the SQL editor, by design) with two-factor on.
+10. **Open the live site.** Only now does `accountsOpen` change to `true`, in its own pull request that Christian
+    approves. It is one shared setting, not a staging-only one: once it reaches `main` with the production variables
+    present, sign-in is open to everyone.
 
 ## Seeing the data
 
@@ -61,7 +81,11 @@ Possible at any time, and it does not block accounts. What changes:
 ## Needs Christian
 
 - Restore `cueory-prod` (one button in Supabase), or say "restore prod" and Claude does it.
-- SETUP Parts L and M for staging, if not already done; Part N for production when step 4 is reached.
+- The two staging build variables in Cloudflare (step 1), and SETUP Parts M and N for staging, if not already done.
+- SETUP Part O and the production build variables when step 8 is reached.
 - Resend account and the domain's email records.
+- Approve the account wording for `/privacy` and `/terms`.
+- Cloudflare Access for `/admin` on the live site.
 - Approve the insights database change when its pull request is up.
+- Approve the pull request that opens accounts.
 - Decide on private: stay public, or approve the cost.
