@@ -601,134 +601,187 @@ export function nextStep(
   upTo: readonly ThinkingLevel[] = GATE_LEVELS,
   today?: StudyClock,
 ): NextResult {
-  // A perfect diagnostic that has not lapsed needs no adaptive practice (documented departure, see FAST_TRACK).
-  if (upTo.length === GATE_LEVELS.length && GATE_LEVELS.every((level) => upTo.includes(level)) && diagnosticFastTrack(shape, progress, today)) return { kind: 'done' };
-  const start = new Map(calibrate(shape, progress, upTo, today));
-  // The calibrated level stays a candidate even when a due level is tried first: if the due level has nothing usable
-  // in the supplied pool, practice at the calibrated level must not be hidden.
-  const dueOverride = new Map<string, ThinkingLevel>();
-  // A level that is still shown but has faded (strong dropped to sufficient, say) is due for review: it keeps its
-  // place as shown for readiness, but review has priority over new material. The lowest due level wins.
-  if (today) {
-    for (const concept of shape.concepts) {
-      const levels = progress.concepts.get(concept);
-      // A level whose tier was lowered is reviewed ahead of new material. Overdue cards on a level that is otherwise
-      // shown are still eligible (see `optionalReviews` below), so a successful review never hides failed ones.
-      const dueLevel = upTo.find((level) => {
-        const a = levelAssessment(levels?.[level], today);
-        return a.due;
-      });
-      if (dueLevel) dueOverride.set(concept, dueLevel);
-    }
+  // A perfect diagnostic that has not lapsed needs no adaptive practice (opt-in departure, see diagnosticFastTrack).
+  // Compared by content, never by array identity.
+  if (sameLevels(upTo, GATE_LEVELS) && diagnosticFastTrack(shape, progress, today)) return { kind: 'done' };
+  const context: PickContext = { items, lastId: history.usedIds.at(-1), history, random, upTo, today };
+  const start = calibrate(shape, progress, upTo, today);
+
+  // Phase 1: completion is decided from the calibrated unfinished levels only.
+  const complete = isComplete(shape, start);
+  // Phase 2: eligible due cards (answered, overdue, in the pool) on levels whose tier was lowered.
+  const due = orderCandidates(dueCandidates(shape, progress, upTo, today), history);
+  // Phase 3: new material for the calibrated levels (a level's own overdue cards come at its turn).
+  const calibrated = orderCandidates(calibratedCandidates(shape, progress, start, today), history);
+  // Phase 4: due cards first, then new material.
+  const dueStep = firstDueCard(due, context);
+  if (dueStep) return dueStep;
+  const exhausted: { concept: string; level: ThinkingLevel }[] = [];
+  const newStep = firstNewMaterial(calibrated, context, exhausted);
+  if (newStep) return newStep;
+  // Overdue cards on other levels come back when the remaining work has nothing to offer, but only while work remains.
+  if (!complete) {
+    const optional = optionalReviewCandidates(shape, progress, start, due, upTo, today);
+    const optionalStep = firstDueCard(optional, context);
+    if (optionalStep) return optionalStep;
   }
-  const lastId = history.usedIds.at(-1);
+  // Phase 5: nothing usable. A module with no concepts has shown nothing, so it is never "done".
+  if (shape.concepts.length === 0) return { kind: 'no content', concepts: [] };
+  if (complete) {
+    const reviewDue = today ? shape.concepts.flatMap((concept) => upTo.flatMap((level) => {
+      const evidence = progress.concepts.get(concept)?.[level];
+      const cards = evidence ? overdueCards(evidence, today) : [];
+      return cards.length > 0 ? [{ concept, level, cards }] : [];
+    })) : [];
+    return reviewDue.length > 0 ? { kind: 'done', reviewDue } : { kind: 'done' };
+  }
+  return {
+    kind: 'no content',
+    concepts: [...new Set(calibrated.map((entry) => entry.concept))],
+    ...(exhausted.length > 0 ? { exhausted } : {}),
+  };
+}
+
+// --- The phases of nextStep, each a small pure function. -------------------------------------------------------
+
+interface PickContext {
+  items: readonly ModuleItem[];
+  lastId: string | undefined;
+  history: StepHistory;
+  random: () => number;
+  upTo: readonly ThinkingLevel[];
+  today: StudyClock | undefined;
+}
+
+/** A concept at a level that might be offered, with what ranks it. */
+interface Candidate {
+  concept: string;
+  level: ThinkingLevel;
+  evidence: LevelEvidence | undefined;
+  rank: readonly [levelIndex: number, missedLast: number, order: number];
+}
+
+/** Level lists are compared by content: the same levels in any order mean the same policy. */
+function sameLevels(a: readonly ThinkingLevel[], b: readonly ThinkingLevel[]): boolean {
+  return a.length === b.length && a.every((level) => b.includes(level)) && b.every((level) => a.includes(level));
+}
+
+/** Phase 1. Complete means every concept has no calibrated unfinished level (and there is at least one concept). */
+function isComplete(shape: ModuleShape, start: ReadonlyMap<string, ThinkingLevel | undefined>): boolean {
+  return shape.concepts.length > 0 && shape.concepts.every((concept) => start.get(concept) === undefined);
+}
+
+function candidate(progress: ModuleProgress, shape: ModuleShape, concept: string, level: ThinkingLevel): Candidate {
+  const evidence = progress.concepts.get(concept)?.[level];
+  const missedLast = evidence?.recent.filter(isDirect).at(-1)?.correct === false;
+  return { concept, level, evidence, rank: [THINKING_LEVELS.indexOf(level), missedLast ? 0 : 1, shape.concepts.indexOf(concept)] };
+}
+
+/** Every (concept, level) whose tier was lowered by fading, so a due card at any of them is found, not only the lowest. */
+function dueCandidates(shape: ModuleShape, progress: ModuleProgress, upTo: readonly ThinkingLevel[], today: StudyClock | undefined): Candidate[] {
+  if (!today) return [];
+  return shape.concepts.flatMap((concept) => upTo
+    .filter((level) => levelAssessment(progress.concepts.get(concept)?.[level], today).due)
+    .map((level) => candidate(progress, shape, concept, level)));
+}
+
+/** For each concept, the level calibration says is still unfinished. */
+function calibratedCandidates(shape: ModuleShape, progress: ModuleProgress, start: ReadonlyMap<string, ThinkingLevel | undefined>, today: StudyClock | undefined): Candidate[] {
+  void today;
+  return shape.concepts.flatMap((concept) => {
+    const level = start.get(concept);
+    return level ? [candidate(progress, shape, concept, level)] : [];
+  });
+}
+
+/** Levels holding overdue cards that are neither lowered nor the calibrated one: reviewed only when nothing else is usable. */
+function optionalReviewCandidates(
+  shape: ModuleShape, progress: ModuleProgress, start: ReadonlyMap<string, ThinkingLevel | undefined>,
+  due: readonly Candidate[], upTo: readonly ThinkingLevel[], today: StudyClock | undefined,
+): Candidate[] {
+  if (!today) return [];
+  return shape.concepts.flatMap((concept) => upTo.flatMap((level) => {
+    const evidence = progress.concepts.get(concept)?.[level];
+    const taken = level === start.get(concept) || due.some((entry) => entry.concept === concept && entry.level === level);
+    return evidence && !taken && levelAssessment(evidence, today).overdue > 0 ? [candidate(progress, shape, concept, level)] : [];
+  }));
+}
+
+/** Foundations first, a recent miss first within a level, then module order; then the interleave rule. */
+function orderCandidates(candidates: readonly Candidate[], history: StepHistory): Candidate[] {
+  const sorted = [...candidates].sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.rank[2] - b.rank[2]);
+  // Interleave (brief #1281): a concept that has just had two steps in a row waits behind the others that need work.
+  const run = (history.recentConcepts ?? []).slice(-SAME_CONCEPT_RUN);
+  const streak = run.length === SAME_CONCEPT_RUN && run.every((c) => c === run[0]) ? run[0] : undefined;
+  if (streak === undefined || !sorted.some((entry) => entry.concept !== streak)) return sorted;
+  return [...sorted.filter((entry) => entry.concept !== streak), ...sorted.filter((entry) => entry.concept === streak)];
+}
+
+/** Items of a level that fit its techniques, other than the one just shown. */
+function levelPool(entry: Candidate, context: PickContext): ModuleItem[] {
+  const fitting = TECHNIQUES_FOR_LEVEL[entry.level];
+  return context.items.filter((item) => item.concept === entry.concept && item.level === entry.level && item.id !== context.lastId && fitting.includes(item.technique));
+}
+
+/** A review step from the level's answered, overdue cards present in the pool, the most faded first. */
+function reviewStep(entry: Candidate, context: PickContext): NextStep | undefined {
+  const { today } = context;
+  const cards = entry.evidence?.cards;
+  if (!today || !cards) return undefined;
+  const eligible = levelPool(entry, context).filter((item) => cards[item.id] !== undefined && cardOverdue(cards[item.id]!, today));
+  if (eligible.length === 0) return undefined;
+  const weakest = eligible.reduce((a, b) => (predictedRecall(cards[a.id]!, today) <= predictedRecall(cards[b.id]!, today) ? a : b));
+  return { id: weakest.id, concept: entry.concept, level: entry.level, technique: weakest.technique, reason: 'due for review' };
+}
+
+/** Phase 2/4: the first candidate with an eligible due card. */
+function firstDueCard(candidates: readonly Candidate[], context: PickContext): ({ kind: 'step' } & NextStep) | undefined {
+  for (const entry of candidates) {
+    const step = reviewStep(entry, context);
+    if (step) return { kind: 'step', ...step };
+  }
+  return undefined;
+}
+
+/**
+ * Phase 3/4: new material for the first calibrated candidate that has any. A level's own overdue cards come first at
+ * its turn; outside a review only items not yet answered there are offered, because a repeat carries no weight.
+ * Levels that have items but none unseen are recorded in `exhausted`.
+ */
+function firstNewMaterial(candidates: readonly Candidate[], context: PickContext, exhausted: { concept: string; level: ThinkingLevel }[]): ({ kind: 'step' } & NextStep) | undefined {
+  const { history, random, upTo } = context;
   const run = history.recentTechniques.slice(-SAME_TECHNIQUE_RUN);
   const tired = run.length === SAME_TECHNIQUE_RUN && run.every((technique) => technique === run[0]) ? run[0] : undefined;
-
-  const ranked = shape.concepts
-    .flatMap((concept, order) => {
-      // Candidate levels for the concept: the due one (reviewed first) and the calibrated one (new material).
-      const levels = [dueOverride.get(concept), start.get(concept)].filter((level, at, all): level is ThinkingLevel => level !== undefined && all.indexOf(level) === at);
-      return levels.map((level) => {
-      const evidence = progress.concepts.get(concept)?.[level];
-      const missedLast = evidence?.recent.filter(isDirect).at(-1)?.correct === false;
-      const assessment = levelAssessment(evidence, today);
-      const due = assessment.due;
-      const overdue = assessment.overdue > 0;
-      const levelIndex = THINKING_LEVELS.indexOf(level);
-      // Review that is due first (so the loop keeps re-locating the student), then lower levels (foundations before
-      // application), a recent miss first within a level, then module order.
-      return { concept, level, evidence, due, overdue, rank: [due ? 0 : 1, levelIndex, missedLast ? 0 : 1, order] as const };
-      });
-    })
-    .sort((a, b) => a.rank[0] - b.rank[0] || a.rank[1] - b.rank[1] || a.rank[2] - b.rank[2] || a.rank[3] - b.rank[3]);
-
-  // Interleave: a concept that has just had two steps in a row waits behind the others that need work.
-  const runConcepts = (history.recentConcepts ?? []).slice(-SAME_CONCEPT_RUN);
-  const streakConcept = runConcepts.length === SAME_CONCEPT_RUN && runConcepts.every((c) => c === runConcepts[0]) ? runConcepts[0] : undefined;
-  if (streakConcept !== undefined && ranked.some((entry) => entry.concept !== streakConcept)) {
-    ranked.splice(0, ranked.length, ...ranked.filter((entry) => entry.concept !== streakConcept), ...ranked.filter((entry) => entry.concept === streakConcept));
-  }
-
-  const exhausted: { concept: string; level: ThinkingLevel }[] = [];
-  // Levels that are shown, not lowered, but hold overdue cards. They never block "done" (they come back on it as
-  // `reviewDue`) and never crowd out new material, but when the remaining work has nothing to offer they are reviewed.
-  const optionalReviews = ranked.length === 0 || !today ? [] : shape.concepts.flatMap((concept) =>
-    // Collected independently of the calibrated start: a concept can be working on one level while another holds overdue cards.
-    upTo.flatMap((level) => {
-      const evidence = progress.concepts.get(concept)?.[level];
-      return evidence && level !== start.get(concept) && level !== dueOverride.get(concept) && levelAssessment(evidence, today).overdue > 0 ? [{ concept, level, evidence }] : [];
-    }));
-  // Actual due cards come first: a lowered tier with an eligible overdue card is reviewed before any new item, whichever
-  // concept it belongs to. The ranked order (and so the interleave rule) still decides among several of them.
-  if (today) {
-    for (const { concept, level, evidence, due } of ranked) {
-      if (!due || !evidence) continue;
-      const fitting = TECHNIQUES_FOR_LEVEL[level];
-      const reviewable = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique) &&
-        evidence.cards[item.id] !== undefined && cardOverdue(evidence.cards[item.id]!, today));
-      if (reviewable.length > 0) {
-        const weakest = reviewable.reduce((a, b) => (predictedRecall(evidence.cards[a.id]!, today) <= predictedRecall(evidence.cards[b.id]!, today) ? a : b));
-        return { kind: 'step', id: weakest.id, concept, level, technique: weakest.technique, reason: 'due for review' };
-      }
-    }
-  }
-  for (const { concept, level, evidence, overdue } of ranked) {
-    const fitting = TECHNIQUES_FOR_LEVEL[level];
-    const all = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique));
-    // A level that is due is reviewed with items already answered there, the most faded first, so the review is
-    // what brings it back; new items come once nothing there is left to review.
-    const cards = evidence?.cards ?? {};
-    const reviewable = overdue && today ? all.filter((item) => cards[item.id] !== undefined && cardOverdue(cards[item.id]!, today)) : [];
-    if (reviewable.length > 0) {
-      const weakest = reviewable.reduce((a, b) => (predictedRecall(cards[a.id]!, today!) <= predictedRecall(cards[b.id]!, today!) ? a : b));
-      return { kind: 'step', id: weakest.id, concept, level, technique: weakest.technique, reason: 'due for review' };
-    }
-    // Outside a review, only items not yet answered here can add evidence: a repeat carries no weight, so offering
-    // one would loop forever ("one more to lock it in" with nothing to gain).
-    const answered = new Set(evidence?.seen ?? []);
+  for (const entry of candidates) {
+    const review = reviewStep(entry, context);
+    if (review) return { kind: 'step', ...review };
+    const all = levelPool(entry, context);
+    const answered = new Set(entry.evidence?.seen ?? []);
     const pool = all.filter((item) => !answered.has(item.id));
     if (pool.length === 0) {
-      if (all.length > 0) exhausted.push({ concept, level });
+      if (all.length > 0 && !exhausted.some((e) => e.concept === entry.concept && e.level === entry.level)) exhausted.push({ concept: entry.concept, level: entry.level });
       continue;
     }
     // Variety first: drop the technique that has just run twice whenever another one fits, and only then prefer
     // items not used this session.
     const varied = pool.filter((item) => item.technique !== tired);
-    const candidates = varied.length > 0 ? varied : pool;
-    const fresh = candidates.filter((item) => !history.usedIds.includes(item.id));
-    const choices = fresh.length > 0 ? fresh : candidates;
+    const choices0 = varied.length > 0 ? varied : pool;
+    const fresh = choices0.filter((item) => !history.usedIds.includes(item.id));
+    const choices = fresh.length > 0 ? fresh : choices0;
+    const fitting = TECHNIQUES_FOR_LEVEL[entry.level];
     // Best-fitting technique first; ties broken by the caller's randomness.
     const best = Math.min(...choices.map((item) => fitting.indexOf(item.technique)));
     const top = choices.filter((item) => fitting.indexOf(item.technique) === best);
     const pick = top[Math.min(top.length - 1, Math.floor(random() * top.length))]!;
-    const asked = (evidence?.right ?? 0) + (evidence?.wrong ?? 0);
-    const reason: NextStep['reason'] = evidence?.recent.filter(isDirect).at(-1)?.correct === false
+    const asked = (entry.evidence?.right ?? 0) + (entry.evidence?.wrong ?? 0);
+    const reason: NextStep['reason'] = entry.evidence?.recent.filter(isDirect).at(-1)?.correct === false
       ? 'you missed this recently'
       : asked === 0
-        ? (level === upTo[0] || level === 'remember' ? 'not practised yet' : 'next level up')
+        ? (entry.level === upTo[0] || entry.level === 'remember' ? 'not practised yet' : 'next level up')
         : 'one more to lock it in';
-    return { kind: 'step', id: pick.id, concept, level, technique: pick.technique, reason };
+    return { kind: 'step', id: pick.id, concept: entry.concept, level: entry.level, technique: pick.technique, reason };
   }
-  // A module with no concepts has shown nothing, so it is never "done" (stageOf keeps it out of "ready" too).
-  if (shape.concepts.length === 0) return { kind: 'no content', concepts: [] };
-  for (const { concept, level, evidence } of optionalReviews) {
-    const fitting = TECHNIQUES_FOR_LEVEL[level];
-    const reviewable = items.filter((item) => item.concept === concept && item.level === level && item.id !== lastId && fitting.includes(item.technique) &&
-      evidence.cards[item.id] !== undefined && cardOverdue(evidence.cards[item.id]!, today!));
-    if (reviewable.length > 0) {
-      const weakest = reviewable.reduce((a, b) => (predictedRecall(evidence.cards[a.id]!, today!) <= predictedRecall(evidence.cards[b.id]!, today!) ? a : b));
-      return { kind: 'step', id: weakest.id, concept, level, technique: weakest.technique, reason: 'due for review' };
-    }
-  }
-  if (ranked.length === 0) {
-    const reviewDue = today ? shape.concepts.flatMap((concept) => upTo.flatMap((level) => {
-      const cards = overdueCards(progress.concepts.get(concept)?.[level] ?? { right: 0, wrong: 0, recent: [], seen: [], cards: {}, lastEventAt: {} }, today);
-      return cards.length > 0 ? [{ concept, level, cards }] : [];
-    })) : [];
-    return reviewDue.length > 0 ? { kind: 'done', reviewDue } : { kind: 'done' };
-  }
-  return { kind: 'no content', concepts: [...new Set(ranked.map((entry) => entry.concept))], ...(exhausted.length > 0 ? { exhausted } : {}) };
+  return undefined;
 }
 
 export interface ModuleSummary {
