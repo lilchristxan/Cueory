@@ -10,9 +10,13 @@ export function reviewDue(
   const last = dayNumber(memory.lastDay);
   const today = dayNumber(clock.day);
   if (today < last) throw new RangeError('Today cannot precede the last answer.');
-  const interval = memory.lastCorrect
-    ? Math.min(14, Math.max(1, Math.ceil(-Math.log2(RECALL_TARGET) * memory.halfLifeDays)))
-    : 1;
+  // A lapse clears spaced successes even when a familiar card still has a long half-life.
+  // Open up the interval again as the student recalls it on separate days.
+  let interval = 1;
+  if (memory.lastCorrect && memory.spacedSuccesses > 0) {
+    const cap = memory.spacedSuccesses === 1 ? 3 : 14;
+    interval = Math.min(cap, Math.max(1, Math.ceil(-Math.log2(RECALL_TARGET) * memory.halfLifeDays)));
+  }
   const normalDue = last + interval;
   const exam = examDay === undefined ? undefined : dayNumber(examDay);
   if (exam === undefined || exam < today || exam <= last + 1) return calendarDay(normalDue);
