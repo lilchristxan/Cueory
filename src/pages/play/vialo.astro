@@ -18,6 +18,6 @@ const name = gameName('vialo');
   </article>
 </Layout>
 <script>
-  import { followOldVialoAddress } from '../../scripts/oldvialoaddress';
-  followOldVialoAddress(window.location);
+  import { followOldVialoAddressWhenSettled } from '../../scripts/oldvialoaddress';
+  followOldVialoAddressWhenSettled(window, document);
 </script>

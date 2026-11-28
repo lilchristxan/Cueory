@@ -86,6 +86,8 @@ for (const route of routes) {
     const response = await page.goto(route, { waitUntil: 'load' });
     expect(response?.status(), route + ': expected document response')
       .toBe(route === CONSOLE_MISSING_ROUTE ? 404 : 200);
+    // The old wordpill address is a redirect page: follow it, and keep recording, so a request it cancels still counts.
+    if (route === '/play/vialo') await page.waitForURL(/\/play\/wordpill$/, { timeout: 10_000 });
     // Client-only components and secondary sample-data fetches can start after load.
     // Waiting for both hydration and network quiescence exercises those requests too.
     await page.waitForFunction(() => document.querySelectorAll('astro-island[ssr]').length === 0,
