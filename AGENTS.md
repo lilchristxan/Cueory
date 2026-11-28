@@ -68,11 +68,13 @@ Read [CLAUDE.md](CLAUDE.md) (project rules) and [SECURITY.md](SECURITY.md) first
 - Right/wrong is never shown by color alone (word or icon too). Text contrast meets WCAG AA.
 
 ### Design and content
-- Daily puzzles (Task 7) use original names, rules and look. Never the names Wordle, Connections or NYT, and never a
-  copy of their design. This is a Blocker.
+- Daily puzzles match the gameplay, settings, help tools, scoring, stats and controls of leading daily puzzle games.
+  Never copy their names, terms, look, colors, tile shapes, layout or colored-square share grids. `forbiddenGameWords`
+  stays; our own share is a plain one-line result, or symbols in our own style. Brand colors only. This is a Blocker.
 - Components use design tokens from `src/styles/tokens.css`, never raw colors, fonts or spacing values.
-- Only exact brand colors from `docs/BRAND.md`; Inter for text, Bodoni Moda only for marketing headings (D-41); the
-  logo stays lowercase "cueory", never retyped in another font, never narrower than 96px.
+- Only exact brand colors from `docs/BRAND.md`; Lato for body, interface, buttons and study-screen text (line spacing at
+  least 1.5), Bodoni Moda only for marketing headings (D-41). Accent lines are plain upright Lato, never italic or
+  script. The logo stays lowercase "cueory", never retyped in another font, never narrower than 96px.
 - Study screens stay plain: no texture, embossing or frosted panels behind lesson or question text (D-41). Text on
   marketing backgrounds must pass the worst-case contrast tests in `tests/unit/tokens.test.ts`.
 - Content (lessons, items, cards, scripts) lives in the database, or in `/content` as labeled samples and approved
@@ -87,7 +89,15 @@ Read [CLAUDE.md](CLAUDE.md) (project rules) and [SECURITY.md](SECURITY.md) first
 
 ### Process
 - Pull request is small and on one topic, and targets `staging` (only `staging` → `main` pull requests target `main`).
-- `docs/STATUS.md` is updated.
+- The pull request adds its own status note: one new file, `docs/status/in-review/<branch-name-with-dashes>.md`, with
+  one `status:` line and, only when it makes a decision, one `decision:` line. For example:
+  ```
+  status: Task 77, motion and depth foundation (#153): shared classes for lift, flip, progress and entrances.
+  decision: D-pending (Task 77) Motion uses 150-400 ms soft easing and is always off with reduced motion. Reason: the brand bar.
+  ```
+  Feature pull requests don't edit `docs/STATUS.md` or `docs/DECISIONS.md` directly; the director moves the notes into
+  them (and numbers the decisions) in its docs batch, which is how so many parallel pull requests avoid clashing
+  (Christian, 2026-11-01). A pull request that already edits `docs/STATUS.md` directly is also fine.
 - Nothing reaches `main` without first being on the locked staging site.
 
 ## Sensitive areas (Christian approves)

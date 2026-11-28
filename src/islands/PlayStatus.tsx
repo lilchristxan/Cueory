@@ -1,0 +1,230 @@
+import { useEffect, useState } from 'react';
+import { browserStorage } from '../scripts/storage';
+import { GAME_RESULT_EVENT, GAME_STATS_CHANGED_EVENT, heldRounds, loadStats, localDay, STATS_STORAGE_KEY, type SavedStats } from './gameresults';
+import { sameGame } from './gamestats';
+import { gameLogos, type GameLogoKey } from '../config/gamelogos';
+import { canPrintToday, openPrint, type PrintGame } from '../scripts/printgate';
+import { playedLabel, statusWords } from './playhub';
+import { GAME_PROGRESS_EVENT, readHeard, statusFor, type GameId, type HeardToday } from './playstatus';
+
+/** Sudoku reports its finish with its own event, whose detail has the day but no game id. */
+const SUDOKU_SOLVED_EVENT = 'cueory:sudoku-solved';
+
+interface Row {
+  /** Inside the code only. 'hello-cards' has no daily status. */
+  id: GameId | 'hello-cards';
+  /** Keeps the data-testid the hub has always had (vialo is "pulse", piccline is "suture"). */
+  testId: string;
+  name: string;
+  /** The game's one-line description, from src/config/games.ts. */
+  line: string;
+  /** The game's own page. */
+  href: string;
+  /** False while the game is closed in this build: "coming soon", no button, not a link. */
+  open: boolean;
+  /** The game's logo artwork (src/config/gamelogos.ts), the same source the home page's game cards read. */
+  art?: GameLogoKey;
+  /** Keeps a data-testid the hub's link has always had (tachyyy-link, hello-cards-link). */
+  linkTestId?: string;
+  /** hello cards: how many cards it has, shown instead of a daily status. */
+  cards?: number;
+  /** The game's printable paper sheet. A finished game with one offers "print for a patient"; an unfinished one shows only "play"; a played game with none shows its status only. */
+  printGame?: PrintGame;
+}
+
+interface Props {
+  /** The games in the order the page shows them. */
+  games: readonly Row[];
+}
+
+const BUTTON = 'inline-flex min-h-11 min-w-24 items-center justify-center rounded-pill border-2 px-6 font-bold no-underline after:absolute after:inset-0';
+const PLAY = `${BUTTON} border-button bg-button text-on-button hover:border-button-hover hover:bg-button-hover`;
+/** A game played today is not replayed (Christian, 2026-11-25): its row offers its paper sheet instead. D-pending. */
+export const PRINT = 'print for a patient';
+/** The print button sits above the row's whole-row link so it stays its own target. */
+const PRINT_BUTTON = 'relative z-10 inline-flex min-h-11 min-w-24 items-center justify-center py-1 text-center leading-tight @4xl:whitespace-nowrap rounded-pill border-2 border-ink bg-transparent px-6 font-bold text-ink hover:bg-surface';
+
+/** The game's tile: its icon, or the glyph it draws for a game with none. */
+function Tile({ row }: { row: Row }) {
+  const art = row.art ? gameLogos[row.art] : undefined;
+  if (art?.kind === 'image') {
+    const { day, evening } = art.icon;
+    // One file when the game's icon reads the same in both palettes; otherwise Daytime and Evening swap (global.css .logo).
+    if (day === evening) return <img className="play-hub-pip" src={day} alt="" aria-hidden="true" loading="lazy" width="100" height="100" decoding="async" />;
+    return (
+      <span className="logo play-hub-pip" aria-hidden="true">
+        <img className="logo-day" src={day} alt="" aria-hidden="true" loading="lazy" width="100" height="100" decoding="async" />
+        <img className="logo-evening" src={evening} alt="" aria-hidden="true" loading="lazy" width="100" height="100" decoding="async" />
+      </span>
+    );
+  }
+  if (art?.kind === 'grid') {
+    return (
+      <span aria-hidden="true" className="play-hub-pip play-hub-pip-glyph">
+        <span className="play-hub-pip-grid">
+          {[true, false, false, false, true, false, false, false, true].map((dark, index) => (
+            <span key={index} className={dark ? 'play-hub-pip-cell-dark' : 'play-hub-pip-cell-light'} />
+          ))}
+        </span>
+      </span>
+    );
+  }
+  if (art?.kind === 'text') {
+    return (
+      <span aria-hidden="true" className={`play-hub-pip play-hub-pip-glyph ${'italic' in art && art.italic ? 'play-hub-pip-hello' : 'play-hub-pip-sudoku'}`}>
+        {art.text}
+      </span>
+    );
+  }
+  return (
+    <span aria-hidden="true" className="play-hub-pip play-hub-pip-glyph play-hub-pip-hello">
+      {row.name.slice(0, 1)}
+    </span>
+  );
+}
+
+/** The game's wordmark (Evening swaps to its ivory version), or the serif name where the card has none. */
+function Name({ row }: { row: Row }) {
+  const art = row.art ? gameLogos[row.art] : undefined;
+  if (art?.kind !== 'image') {
+    return <span className="display text-(length:--play-hub-name-size-phone) leading-none text-ink wrap-anywhere @4xl:text-(length:--play-hub-name-size)">{row.name}</span>;
+  }
+  const { wordmark } = art;
+  // Only one of the two images is displayed at a time (global.css .logo), so the name is read out once, as on the card.
+  return (
+    <span className="logo play-hub-wordmark block h-(--play-hub-wordmark-height-phone) @4xl:h-(--play-hub-wordmark-height)">
+      <img className="logo-day h-full w-auto max-w-full object-contain object-left" src={wordmark.day} alt={row.name} loading="lazy" width={wordmark.width} height={wordmark.height} decoding="async" />
+      <img className="logo-evening h-full w-auto max-w-full object-contain object-left" src={wordmark.evening} alt={row.name} loading="lazy" width={wordmark.width} height={wordmark.height} decoding="async" />
+    </span>
+  );
+}
+
+/**
+ * The /play hub's game rows (option B, Christian 2026-11-23). Server-rendered with a dash for each status, so the page
+ * never jumps; once it loads in the browser each row shows today's status from this device only (nothing is sent):
+ * "new today" + play, "in progress" + play, or "solved in 4" + print for a patient (where the game has a paper sheet). A game closed in this build says
+ * "coming soon", has no button and is not a link. A browser that cannot save shows every open game as "new today".
+ */
+export default function PlayStatus({ games }: Props) {
+  const ids = games.flatMap((game) => (game.id === 'hello-cards' ? [] : [game.id]));
+  const [loaded, setLoaded] = useState(false);
+  const [today, setToday] = useState('');
+  const [saved, setSaved] = useState<SavedStats>({ on: false, stats: [] });
+  const [heard, setHeard] = useState<HeardToday>({ started: new Set(), finished: new Set() });
+
+  useEffect(() => {
+    const read = () => setSaved(loadStats(browserStorage(), localDay(new Date())));
+    const add = (kind: keyof HeardToday, key: string | undefined) => {
+      if (!key) return;
+      setHeard((now) => (now[kind].has(key) ? now : { ...now, [kind]: new Set([...now[kind], key]) }));
+    };
+    // Rounds that ended before this island loaded are still waiting in memory.
+    for (const round of heldRounds()) add('finished', readHeard(round, ids));
+    setToday(localDay(new Date()));
+    read();
+    setLoaded(true);
+
+    const finished = (event: Event) => add('finished', readHeard((event as CustomEvent).detail, ids));
+    const sudoku = (event: Event) => add('finished', readHeard((event as CustomEvent).detail, ids, 'triage'));
+    const started = (event: Event) => add('started', readHeard((event as CustomEvent).detail, ids));
+    const storage = (event: StorageEvent) => {
+      if (event.key === null || event.key === STATS_STORAGE_KEY) read();
+    };
+    // Coming back to the tab may be a new day, or the stats may have changed elsewhere.
+    const visible = () => {
+      if (document.visibilityState !== 'visible') return;
+      setToday(localDay(new Date()));
+      read();
+    };
+    window.addEventListener(GAME_RESULT_EVENT, finished);
+    window.addEventListener(SUDOKU_SOLVED_EVENT, sudoku);
+    window.addEventListener(GAME_PROGRESS_EVENT, started);
+    window.addEventListener(GAME_STATS_CHANGED_EVENT, read);
+    window.addEventListener('storage', storage);
+    document.addEventListener('visibilitychange', visible);
+    return () => {
+      window.removeEventListener(GAME_RESULT_EVENT, finished);
+      window.removeEventListener(SUDOKU_SOLVED_EVENT, sudoku);
+      window.removeEventListener(GAME_PROGRESS_EVENT, started);
+      window.removeEventListener(GAME_STATS_CHANGED_EVENT, read);
+      window.removeEventListener('storage', storage);
+      document.removeEventListener('visibilitychange', visible);
+    };
+  }, []);
+
+  /**
+   * Print is offered only for a finished game, and the stored result is read again at the moment of pressing: if the day
+   * rolled over since the page loaded and the new day has no result, no sheet opens and the row refreshes (the button goes).
+   */
+  const print = (row: Row) => {
+    const day = localDay(new Date());
+    if (row.printGame && canPrintToday(browserStorage(), row.printGame, day)) {
+      openPrint(row.printGame);
+      return;
+    }
+    setToday(day);
+    setSaved(loadStats(browserStorage(), day));
+  };
+
+  return (
+    <section aria-labelledby="today-status-heading" data-testid="play-status">
+      <h2 id="today-status-heading" className="sr-only">today</h2>
+      <ul className="flex flex-col gap-3 @4xl:gap-0 @4xl:border-b @4xl:border-line">
+        {games.map((row) => {
+          const daily = row.id !== 'hello-cards';
+          const status = loaded && daily && row.open ? statusFor(row.id as GameId, today, saved.stats, heard) : undefined;
+          const result = status === 'done' ? saved.stats.find((entry) => entry.day === today && sameGame(entry.game, row.id)) : undefined;
+          // What the status column says: coming soon, the card count, today's status, or a dash until the page has loaded.
+          let words: string | undefined;
+          if (!row.open) words = 'coming soon';
+          else if (!daily) words = row.cards === undefined ? undefined : `${row.cards} cards`;
+          else if (status) words = statusWords(status, playedLabel(row.id, result));
+          // Played today: no replay, so no "play". Only a finished game that has a paper sheet offers "print for a patient".
+          const played = status === 'done';
+          const showPlay = row.open && !played;
+          const showPrint = row.open && Boolean(row.printGame) && played;
+          return (
+            <li
+              key={row.id}
+              data-testid={`play-status-${row.testId}`}
+              data-status={status}
+              data-closed={row.open ? undefined : 'true'}
+              className="relative grid grid-cols-(--play-hub-cols-stacked) bg-page items-center gap-x-4 gap-y-3 rounded-xl border border-line p-4 @4xl:grid-cols-(--play-hub-cols) @4xl:gap-x-6 @4xl:rounded-none @4xl:border-0 @4xl:border-t @4xl:px-0 @4xl:py-5"
+            >
+              <Tile row={row} />
+              <span className="min-w-0 @4xl:col-span-1">
+                <Name row={row} />
+              </span>
+              <p className="col-span-2 text-base text-ink @4xl:col-span-1">{row.line}</p>
+              {/* Status on the left and the button on the right; they wrap under each other when text is enlarged. */}
+              <div className="col-span-2 flex flex-wrap items-center justify-between gap-3 @4xl:contents">
+                <p className="text-sm font-medium text-ink-soft" data-testid="play-status-words">
+                  {words ?? <span aria-hidden="true">–</span>}
+                </p>
+                {(showPlay || showPrint) && (
+                  <div className="flex flex-wrap items-center gap-3 @4xl:flex-col @4xl:items-end @4xl:justify-self-end">
+                    {showPlay && (
+                      <a href={row.href} className={PLAY} aria-label={`play ${row.name}`} data-testid={row.linkTestId}>
+                        play
+                      </a>
+                    )}
+                    {showPrint && (
+                      <button type="button" className={PRINT_BUTTON} aria-label={`${PRINT} (${row.name})`} data-testid={`print-${row.testId}`} onClick={() => print(row)}>
+                        {PRINT}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {loaded && !saved.on && (
+        <p className="mt-4 text-sm text-ink-soft" data-testid="play-status-note">
+          checked on this device only. this browser won't keep stats, so finished games aren't marked after you leave.
+        </p>
+      )}
+    </section>
+  );
+}

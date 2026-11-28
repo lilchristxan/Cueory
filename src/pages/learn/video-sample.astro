@@ -1,19 +1,24 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import LessonVideo from '../../islands/LessonVideo';
+import { lessonEntryHref } from '../../lessons/draftgate';
+const entryHref = lessonEntryHref();
 ---
 
 <!-- Test page for the video island (D-82): a made-up video id and the drawn cover. Not linked, not indexed. -->
 <Layout title="Video player sample" description="A sample of the lesson video player." variant="study" noindex>
   <div class="mx-auto max-w-prose pt-8">
-    <h1 class="text-2xl">Video player sample</h1>
+    <h1 class="text-2xl">video player sample</h1>
     <div class="mt-section">
       <LessonVideo
         client:only="react"
         videoId="sampleVid01"
         title="Sample video"
-        transcriptUrl="/learn/study-skills"
+        transcriptUrl={entryHref}
       />
+      <noscript>
+        <p class="mt-3 text-ink-soft">the sample video player needs javascript. you can still <a href={entryHref}>{entryHref === '/learn' ? 'browse the lessons' : 'read the study-skills lesson'}</a>.</p>
+      </noscript>
     </div>
   </div>
 </Layout>

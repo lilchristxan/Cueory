@@ -1,0 +1,1 @@
+status: Vialo share card (Christian's designs, 25 Nov 2026): two canvas-drawn transparent PNG stickers, one adaptive share button, save to gallery, copy sticker, a visible solve timer with a "show the timer" setting, and signed-in-only stats on the sticker; replaces "copy my result" after a vialo game.

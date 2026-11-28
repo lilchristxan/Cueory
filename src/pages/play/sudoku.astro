@@ -1,0 +1,317 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import GamePage from '../../components/GamePage.astro';
+import SudokuGame from '../../islands/SudokuGame';
+import SudokuSheet from '../../components/SudokuSheet.astro';
+import SudokuPrint from '../../islands/SudokuPrint';
+import { dailyGames, gamePagesBareHeader } from '../../config/games';
+
+const game = dailyGames.find((item) => item.id === 'triage')!;
+---
+<Layout title={game.name} description={game.line} socialImage="/share/games-scene.png" bareHeader={gamePagesBareHeader}>
+<GamePage game={game} framed>
+  <label slot="controls" class="sr-only" for="game-frame-sudoku-difficulty">difficulty</label>
+  <select slot="controls" id="game-frame-sudoku-difficulty" data-testid="game-frame-sudoku-difficulty" aria-label="difficulty" class="game-frame-select">
+    <option value="easy">easy</option>
+    <option value="medium">medium</option>
+    <option value="hard">hard</option>
+  </select>
+  <h1 slot="title" id="sudoku-heading" class="display mt-4 text-center text-title wrap-anywhere sm:text-title-lg">{game.name}</h1>
+  {/* sudoku-section and sudoku-mount: sudoku's print rules (global.css) print only the mount. */}
+  <section class="sudoku-section mt-6" aria-labelledby="sudoku-heading" data-testid="sudoku-section">
+    <div class="sudoku-mount">
+      <SudokuGame client:only="react" framed />
+      <noscript><p>{game.name} needs JavaScript.</p></noscript>
+    </div>
+  </section>
+</GamePage>
+<SudokuSheet />
+<SudokuPrint client:only="react" />
+<noscript><p>printing the {game.name} sheet needs JavaScript.</p></noscript>
+</Layout>
+
+<script>
+  const picker = document.querySelector<HTMLSelectElement>('#game-frame-sudoku-difficulty');
+  if (picker) {
+    picker.addEventListener('change', () => window.dispatchEvent(new CustomEvent('cueory:game-frame-sudoku-level', { detail: picker.value })));
+    window.addEventListener('cueory:game-frame-sudoku-level-change', (event) => {
+      const level = (event as CustomEvent<string>).detail;
+      if (level === 'easy' || level === 'medium' || level === 'hard') picker.value = level;
+    });
+    window.addEventListener('cueory:sudoku-paused', (event) => { picker.disabled = Boolean((event as CustomEvent<boolean>).detail); });
+  }
+</script>
+
+<style>
+  /* P10 surface: keep the existing game structure and interaction contract, but bring the board into the approved
+   * copper/glass visual language. Shared settings, print rules and reduced-motion rules remain owned elsewhere. */
+  :global(.sudoku-section) {
+    container-type: inline-size;
+  }
+
+  :global(.game-frame-select) {
+    min-block-size: var(--game-frame-btn-size);
+    inline-size: min(100%, var(--game-frame-sidebar-width));
+    padding-inline: var(--spacing);
+    border: var(--game-frame-btn-border);
+    border-radius: var(--radius-pill);
+    background: var(--game-frame-btn-bg);
+    box-shadow: var(--game-frame-btn-shadow);
+    color: var(--color-ink);
+  }
+
+  :global(.sudoku-game) {
+    color: var(--color-ink);
+  }
+
+  :global(.sudoku-panel) {
+    max-inline-size: var(--sudoku-board-max);
+    inline-size: 100%;
+    box-sizing: border-box;
+    margin-inline: auto;
+    /* Christian's board: the grid, keys and tools sit straight on the page, with no card around them. */
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  :global(.sudoku-levels) {
+    border-color: var(--cueory-result-card-border);
+    background: var(--color-page);
+  }
+
+  :global(.sudoku-levels .segmented-option[aria-pressed="true"]) {
+    border-radius: var(--radius-pill);
+    background: var(--cueory-copper-start);
+    color: var(--cueory-copper-ink);
+  }
+
+  :global(.sudoku-levels .segmented-option[aria-pressed="false"]) {
+    background: var(--color-page);
+    color: var(--color-ink);
+  }
+
+  :global(.sudoku-toolbar) {
+    padding-block: var(--spacing);
+    --toolbar-width: min(calc(100% + var(--sudoku-box-line)), var(--sudoku-board-width));
+    inline-size: var(--toolbar-width);
+  }
+
+  /* Center each row from a whole CSS pixel. Fractional origins otherwise cause Firefox
+   * to report a 44px pause button as just under 44px when it computes the two edges. */
+  @supports (margin-inline-start: round(nearest, 1%, 1%)) {
+    :global(.game-frame-board:has(.sudoku-section)) {
+      align-self: flex-start;
+      justify-self: start; /* the play area is a grid now: the same left edge on its column axis */
+      margin-inline-start: round(nearest, max(0%, (100% - var(--game-frame-max-board)) / 2), var(--sudoku-line));
+    }
+
+    :global(.sudoku-toolbar) {
+      align-self: flex-start;
+      margin-inline-start: round(nearest, (100% - var(--toolbar-width)) / 2, var(--sudoku-line));
+    }
+  }
+
+  /* The pseudo-element starts at the padding edge. Leave room for Firefox to round
+   * a fractional pointer coordinate down without missing the vertical hit area. */
+  :global(.sudoku-section .sudoku-pause-button:enabled::before) {
+    inset-block: calc(-1 * (2 * var(--sudoku-line) + var(--spacing) / 2));
+  }
+
+  /* The framed stats table must reflow inside the shared settings card when text is enlarged. Its five columns retain
+   * their semantics and values, but may wrap instead of contributing an intrinsic minimum wider than the card. */
+  :global(.sudoku-stats-table) {
+    inline-size: 100%;
+    max-inline-size: 100%;
+    table-layout: fixed;
+    overflow-wrap: anywhere;
+  }
+
+  :global(.sudoku-stats-table th),
+  :global(.sudoku-stats-table td) {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  :global(.sudoku-icon-button) {
+    border-color: var(--cueory-result-card-border);
+    background: var(--color-page);
+    box-shadow: var(--shadow-button);
+  }
+
+  :global(.sudoku-icon-button:hover),
+  :global(.sudoku-icon-button:focus-visible) {
+    border-color: var(--cueory-copper-start);
+    color: var(--cueory-copper-start);
+  }
+
+  /* The board keeps Daytime's structure in both palettes: light squares with dark lines and numbers (in Evening, Sand
+   * squares with Charcoal), so Evening never reads as an inverted board. The board's own tokens stand in for the page
+   * ones inside it, so the shared board rules pick them up. */
+  :global(.sudoku-board) {
+    --color-page: var(--color-sudoku-cell);
+    --color-surface: var(--color-sudoku-paused);
+    --color-ink: var(--color-sudoku-ink);
+    --color-ink-soft: var(--color-sudoku-ink-soft);
+    border-color: var(--color-ink);
+    border-radius: var(--sudoku-board-radius);
+    box-shadow: none;
+  }
+
+  /* The corners are rounded on the four corner squares, not by clipping the grid: a clip with rounded corners cuts the
+   * last square's corner in some engines (Safari measured 97.8 % of it visible at 390 px). The squares' radius is the
+   * board's inner radius (its radius minus the outer box line), so the look is the same and nothing clips a square. */
+  :global(.sudoku-row:first-child .sudoku-cell:first-child) { border-start-start-radius: var(--sudoku-board-inner-radius); }
+  :global(.sudoku-row:first-child .sudoku-cell:last-child) { border-start-end-radius: var(--sudoku-board-inner-radius); }
+  :global(.sudoku-row:last-child .sudoku-cell:first-child) { border-end-start-radius: var(--sudoku-board-inner-radius); }
+  :global(.sudoku-row:last-child .sudoku-cell:last-child) { border-end-end-radius: var(--sudoku-board-inner-radius); }
+
+  :global(:root[data-theme="dark"] .sudoku-levels) {
+    border-color: var(--cueory-glass-border);
+    background: color-mix(in srgb, var(--cueory-glass-bg) 82%, transparent);
+  }
+
+  :global(:root[data-theme="dark"] .sudoku-icon-button),
+  :global(:root[data-theme="dark"] .sudoku-number-row button),
+  :global(:root[data-theme="dark"] .sudoku-tool-button),
+  :global(:root[data-theme="dark"] .sudoku-setting-button) {
+    border-color: var(--cueory-glass-border);
+    color: var(--color-ink);
+    background: var(--color-surface);
+  }
+
+  :global(.sudoku-cell.is-related) {
+    background: var(--color-sudoku-related);
+  }
+
+  :global(.sudoku-cell.is-box-related) {
+    background: var(--color-sudoku-box-related);
+  }
+
+  /* The route tint rules are later than the shared board rules. Keep a matching number's strong fill and ink when it
+   * is also in the selected row, column or box; selection stays above all tint and conflict keeps its dashed ring. */
+  :global(.sudoku-cell.is-identical.is-related),
+  :global(.sudoku-cell.is-identical.is-box-related) {
+    background: var(--color-sudoku-identical);
+    color: var(--color-on-sudoku-identical);
+    font-weight: 700;
+  }
+
+  :global(.sudoku-cell) { border-color: var(--color-ink); }
+
+  /* The selected square (Sudoku.png): a thin deep-copper outline on Copper Shine, with no extra inset ring. The outline
+   * is a shape cue as well as a colour (3:1 or more against every square it touches), and aria-selected names it. */
+  :global(.sudoku-cell.is-selected) {
+    background: var(--color-sudoku-selected-fill);
+    color: var(--color-ink);
+    outline-color: var(--color-sudoku-selected);
+    box-shadow: none;
+  }
+
+  :global(.sudoku-cell.is-selected .sudoku-mark) { color: inherit; }
+
+  :global(.sudoku-number-row button),
+  :global(.sudoku-tool-button),
+  :global(.sudoku-setting-button) {
+    border-color: var(--cueory-result-card-border);
+    background: var(--color-page);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :global(:root:not([data-theme="light"]) .sudoku-levels) {
+      border-color: var(--cueory-glass-border);
+      background: color-mix(in srgb, var(--cueory-glass-bg) 82%, transparent);
+    }
+
+    :global(:root:not([data-theme="light"]) .sudoku-icon-button),
+    :global(:root:not([data-theme="light"]) .sudoku-number-row button),
+    :global(:root:not([data-theme="light"]) .sudoku-tool-button),
+    :global(:root:not([data-theme="light"]) .sudoku-setting-button) {
+      border-color: var(--cueory-glass-border);
+      background: var(--color-surface);
+      color: var(--color-ink);
+    }
+  }
+
+  :global(.sudoku-number-row button:hover),
+  :global(.sudoku-tool-button:hover),
+  :global(.sudoku-setting-button:hover) {
+    border-color: var(--cueory-copper-start);
+  }
+
+  /* The two digit groups share one row where all nine keys fit and wrap in order on a phone. */
+  :global(.sudoku-pad-wrap) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+  }
+
+  :global(.sudoku-number-row),
+  :global(.sudoku-pad-digits) {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: calc(var(--spacing) * 1.5);
+    max-inline-size: 100%;
+  }
+
+  :global(.sudoku-number-row),
+  :global(.sudoku-tools) {
+    order: 0;
+    flex: none;
+    inline-size: 100%;
+  }
+
+  :global(.sudoku-number-row button) {
+    inline-size: var(--tap-min);
+    min-block-size: calc(var(--spacing) * 12);
+    border: 0;
+    border-radius: var(--sudoku-pad-radius);
+    background: var(--color-surface);
+    font-size: var(--sudoku-pad-text);
+  }
+
+  :global(.sudoku-tools) {
+    gap: calc(var(--spacing) * 2.5);
+  }
+
+  /* The board's tool pills: page-coloured with a 1.5 px Charcoal outline and 15 px bold text. */
+  :global(:root .sudoku-pad-wrap .sudoku-tool-button) {
+    padding-inline: clamp(calc(var(--spacing) * 2), 3cqi, var(--sudoku-pill-pad));
+    border: var(--sudoku-pill-line) solid var(--color-ink);
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-size: var(--sudoku-pill-text);
+    font-weight: 700;
+  }
+
+  /* A digit with all nine on the board: a dashed outline and a line through it (not colour alone), the same size, still
+   * focusable (aria-disabled), and the soft ink colour, which keeps the contrast of the other disabled controls. */
+  :global(:root .sudoku-pad-wrap .sudoku-number-row button.is-done) {
+    border: var(--sudoku-line) dashed var(--color-ink-soft);
+    color: var(--color-ink-soft);
+    text-decoration: line-through;
+    cursor: not-allowed;
+  }
+
+  :global(:root .sudoku-pad-wrap .sudoku-tool-button:disabled) {
+    color: var(--color-ink-soft);
+  }
+
+  :global(.sudoku-game .game-settings select) {
+    max-inline-size: 100%;
+    min-block-size: var(--tap-min);
+    font: inherit;
+  }
+
+  :global(.sudoku-solved) {
+    border-color: var(--cueory-result-card-border);
+    background: var(--cueory-result-card-bg);
+    color: var(--color-ink);
+    box-shadow: var(--cueory-result-card-shadow);
+  }
+
+  :global(.sudoku-solved .text-ink-soft) { color: var(--color-ink); }
+</style>

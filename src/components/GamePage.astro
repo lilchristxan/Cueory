@@ -1,0 +1,57 @@
+---
+/**
+ * The inside of one daily game's own page (each page wraps it in Layout, so the site's page checks see it) (Christian's decision, 2026-11-17): /play/pillo, /play/sudoku, /play/crossword and
+ * /play/word-path. A link back to all games, the game's name centred at the top, the game
+ * itself (the page passes it in as its only island), this game's private stats and the result dialog. The game's
+ * description and rules are in its own help (the "?" button), so the page stays plain.
+ *
+ * The wrappers keep the same shape as on /play, so each game's print rules (crossword.css, global.css for sudoku,
+ * wordpath.css) still print only the game.
+ */
+import GameFrame from './GameFrame.astro';
+import { GameStatsPersistence } from '../islands/GameStatsPanel';
+import GameResultsHost from '../islands/GameResultsHost';
+import type { DailyGame } from '../config/games';
+import { site } from '../config/site';
+import { flagMailto } from '../scripts/footer';
+// Keeps one screen of room for the game until it renders, so nothing below it jumps (performance, 2026-11-19).
+import '../styles/gamepage.css';
+
+interface Props {
+  game: DailyGame;
+  /** A wider column from tablet width up, so the crossword's 15 by 15 board fits without scrolling (2026-11-17). */
+  wide?: boolean;
+  /** Opt-in: the width of the redesign's game panel (word path), wider than the default column from tablet width up. */
+  showcase?: boolean;
+  /** Explicit route opt-in for GameFrame page controls and sidebar stats. */
+  framed?: boolean;
+}
+const { game, wide = false, showcase = false, framed = false } = Astro.props;
+---
+<article class="game-page-frame" data-game-page={game.id}>
+  <GameFrame game={game.id} wide={wide} showcase={showcase} framed={framed} bridge={framed} stats>
+  <Fragment slot="flag">
+    <a
+      href={flagMailto(site.contactEmail, Astro.url.pathname)}
+      data-game-flag
+      class="corner-button corner-button-quiet shrink-0"
+      aria-label={`flag or comment on ${game.name}`}
+    >
+      <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
+        <path d="M5 21V4M5 4h12l-3 4.5 3 4.5H5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </a>
+  </Fragment>
+    <slot name="cue" slot="cue" />
+    <slot name="controls" slot="controls" />
+    <slot name="title" slot="title" />
+    <h2 class="sr-only">today's puzzle</h2>
+    <slot />
+    <slot name="deck" slot="deck" />
+    <slot name="footer" slot="footer" />
+  </GameFrame>
+  <GameStatsPersistence client:only="react" />
+  <noscript><p>finish a game with JavaScript to keep its result in this browser.</p></noscript>
+</article>
+<GameResultsHost client:only="react" />
+<noscript><p>game results and sharing need JavaScript.</p></noscript>

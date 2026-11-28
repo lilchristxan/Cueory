@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ComingSoonPanel from './ComingSoonPanel.astro';
+
+// The live build holds sample and placeholder lessons back (src/lessons/draftgate.ts). Only the address words appear
+// here, never the lesson's own text, so the title and description stay neutral and unique for each page.
+const label = Astro.url.pathname.replace(/^\/learn\//, '').replace(/\/+$/, '').replace(/\.html$/, '').replaceAll('/', ' · ').replaceAll('-', ' ');
+---
+
+<Layout
+  title={`coming soon: ${label}`}
+  description={`${label} is not open yet and is coming soon to cueory. the daily games are open in the meantime.`}
+  variant="study"
+  noindex
+  promo={false}
+>
+  <ComingSoonPanel message="this lesson is coming soon." messageTestId="lesson-soon" />
+</Layout>

@@ -1,0 +1,476 @@
+/*
+  pillo (Task 114), the word game on /play. The board is a foil blister pack: six rows of five pockets with dashed
+  perforations between them. A guessed letter is a glossy capsule pill with a capital letter and its mark under it
+  (● in place, ○ elsewhere in the word, · not in the word), and each guess is also said in words for screen readers,
+  so color is never the only signal. In place is Espresso (Evening: Walnut), elsewhere is Taupe (Evening: Sand), and not
+  in the word is Ivory with a faded Bronze letter (Evening: frosted Ivory). The row being typed shows plain Ivory pills
+  and rings the next empty pocket. Every color, size and shadow is a token (tokens.css, "pillo"); the foil is drawn
+  with gradients, so there is no image file and nothing the content security policy has to allow.
+*/
+@layer components {
+  .pillo {
+    /* The foil's grey: Ivory greyed with Bronze by day, Charcoal lit with Sand in the evening. */
+    --pillo-foil-color: color-mix(in srgb, var(--color-pillo-foil-tint) var(--pillo-foil-mix), var(--color-pillo-foil));
+    --pillo-hatch-color: color-mix(in srgb, var(--color-pillo-hatch) var(--pillo-hatch-mix), transparent);
+    --pillo-gloss-color: color-mix(in srgb, var(--color-pillo-gloss) var(--pillo-gloss-mix), transparent);
+    --pillo-perforation: color-mix(in srgb, var(--color-pillo-hatch) 22%, transparent);
+    /*
+      The clear end of each gradient is the same color at zero opacity, never the "transparent" keyword (clear black):
+      Safari's full-page screenshots and PDF export blend toward that black, which drew a solid black triangle over the
+      board where the gloss fades out.
+    */
+    --pillo-gloss-clear: rgb(from var(--color-pillo-gloss) r g b / 0);
+    --pillo-hatch-clear: rgb(from var(--color-pillo-hatch) r g b / 0);
+  }
+
+  .pillo-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
+    max-inline-size: var(--pillo-board);
+  }
+
+  .pillo-status {
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-ink-soft);
+  }
+
+  .pillo-status strong {
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+
+  /* The foil itself: a fine cross-hatch and a soft sheen over the grey, rounded like a real blister card. */
+  .pillo-pack,
+  .pillo-strip {
+    background-color: var(--pillo-foil-color);
+    background-image:
+      linear-gradient(135deg, var(--pillo-gloss-color), var(--pillo-gloss-clear) 45%),
+      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
+  }
+
+  .pillo-pack {
+    max-inline-size: var(--pillo-board);
+    padding: calc(var(--spacing) * 2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-pillo-pack);
+  }
+
+  /* One row of five pockets. Dashed perforations run between rows and between pockets. */
+  .pillo-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    border-block-end: var(--border-pillo-perforation) dashed var(--pillo-perforation);
+  }
+
+  .pillo-row-last {
+    border-block-end: none;
+  }
+
+  .pillo-pocket {
+    display: grid;
+    place-items: stretch;
+    block-size: var(--pillo-pocket);
+    padding: var(--pillo-pill-inset);
+    border-inline-end: var(--border-pillo-perforation) dashed var(--pillo-perforation);
+  }
+
+  .pillo-pocket:last-of-type {
+    border-inline-end: none;
+  }
+
+  @media (width >= 40rem) {
+    .pillo-pocket {
+      block-size: var(--pillo-pocket-lg);
+    }
+  }
+
+  /* The pill, or the empty pocket where a pill will sit. */
+  .pillo-pill {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-pill);
+    line-height: var(--text-sm--line-height);
+    box-shadow: var(--shadow-pillo-pocket);
+  }
+
+  .pillo-pill.pillo-here,
+  .pillo-pill.pillo-elsewhere,
+  .pillo-pill.pillo-absent,
+  .pillo-pill.pillo-typed {
+    box-shadow: var(--shadow-pillo-pill);
+  }
+
+  /* The gloss: a small highlight at the top left of each filled pill. */
+  .pillo-pill.pillo-here::before,
+  .pillo-pill.pillo-elsewhere::before,
+  .pillo-pill.pillo-absent::before,
+  .pillo-pill.pillo-typed::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background-image: radial-gradient(ellipse 30% 22% at 26% 24%, var(--pillo-gloss-color), var(--pillo-gloss-clear));
+    pointer-events: none;
+  }
+
+  .pillo-pill.pillo-here {
+    background-color: var(--color-pillo-here);
+    color: var(--color-on-pillo-here);
+  }
+
+  .pillo-pill.pillo-elsewhere {
+    background-color: var(--color-pillo-elsewhere);
+    color: var(--color-on-pillo-elsewhere);
+  }
+
+  .pillo-pill.pillo-absent {
+    background-color: color-mix(in srgb, var(--color-pillo-absent) var(--pillo-absent-mix), var(--pillo-foil-color));
+    color: var(--color-on-pillo-absent);
+  }
+
+  .pillo-pill.pillo-typed {
+    background-color: var(--color-pillo-typed);
+    color: var(--color-on-pillo-typed);
+    animation: pillo-pop var(--duration-fast) var(--ease-emphasis);
+  }
+
+  /* The next empty pocket in the row being typed. */
+  .pillo-pill.pillo-next {
+    box-shadow: var(--shadow-pillo-pocket), inset 0 0 0 var(--pillo-ring) var(--color-pillo-ring);
+  }
+
+  .pillo-letter {
+    font-size: var(--pillo-letter);
+    font-weight: 700;
+    line-height: var(--text-sm--line-height);
+  }
+
+  @media (width >= 40rem) {
+    .pillo-letter {
+      font-size: var(--pillo-letter-lg);
+    }
+  }
+
+  /* A guessed letter sits a little higher, so its mark fits under it inside the pill. */
+  .pillo-pill:has(.pillo-mark) .pillo-letter {
+    transform: translateY(var(--pillo-letter-lift));
+  }
+
+  .pillo-mark {
+    position: absolute;
+    inset-block-end: var(--pillo-mark-drop);
+    font-size: var(--pillo-mark);
+    line-height: var(--text-sm--line-height);
+  }
+
+  @keyframes pillo-pop {
+    from {
+      transform: scale(var(--pillo-pop));
+    }
+  }
+
+  /*
+    The field for typing a guess lies over the row being typed, so a click or tap there types into it and its focus
+    ring is drawn around that row. Its own text is see-through: the pills under it show the letters.
+  */
+  .pillo-field {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: transparent;
+    caret-color: transparent;
+    font-size: var(--text-base);
+    line-height: var(--text-sm--line-height);
+    cursor: text;
+  }
+
+  .pillo-field::selection {
+    background: transparent;
+  }
+
+  .pillo-field:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: var(--focus-offset);
+    border-radius: var(--radius-md);
+  }
+
+  /* Guesses left: a small blister strip of six pills; each guess used leaves an empty pocket. */
+  .pillo-strip {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 1);
+    max-inline-size: 100%;                /* with enlarged text on a narrow phone the pockets narrow; the page never scrolls sideways */
+    block-size: var(--pillo-strip-height);
+    padding-inline: calc(var(--spacing) * 1.5);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-pillo-pack);
+  }
+
+  .pillo-strip-pocket {
+    inline-size: var(--pillo-strip-pill);
+    block-size: calc(var(--pillo-strip-height) - var(--spacing) * 2);
+    border-radius: var(--radius-pill);
+    box-shadow: var(--shadow-pillo-pocket);
+  }
+
+  .pillo-strip-pill {
+    background-color: var(--color-pillo-here);
+    box-shadow: var(--shadow-pillo-pill);
+  }
+
+  /*
+    The letter keys look and lie out like the crossword's (Christian, 2026-11-17): plain squared keys a to z in rows
+    that wrap, each at least 44 × 44, with ⌫ and enter in the same style on their own row. Each key still shows the best
+    mark its letter has had, as a color and its symbol. Nothing is squeezed: at any width or text size the rows wrap.
+  */
+  .pillo-keys {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+    max-inline-size: var(--pillo-keys-width);
+    margin-inline: auto;
+  }
+
+  /* On a tablet or desktop the game column is wider than the pack: the pack, its status line and the keys are centred
+     in it, like the other daily boards. */
+  @media (width >= 40rem) {
+    .pillo-top,
+    .pillo-pack,
+    .pillo-keys {
+      margin-inline: auto;
+    }
+  }
+
+  .pillo-key-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--spacing);
+  }
+
+  .pillo-key {
+    position: relative;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: var(--tap-min);
+    min-block-size: var(--tap-min);
+    padding-inline: calc(var(--spacing) * 3);
+    border: var(--border-pillo-key) solid var(--color-control);
+    border-radius: var(--radius-md);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-ink);
+    background-color: var(--color-page);
+  }
+
+  .pillo-key.pillo-here {
+    border-color: var(--color-pillo-ring);
+    color: var(--color-on-pillo-here);
+    background-color: var(--color-pillo-here);
+  }
+
+  .pillo-key.pillo-elsewhere {
+    color: var(--color-on-pillo-elsewhere);
+    background-color: var(--color-pillo-elsewhere);
+  }
+
+  /* Not in the word: no fill, a thin edge and a faded letter, so the keys still to try stand out. */
+  .pillo-key.pillo-absent {
+    border-color: var(--color-line);
+    color: var(--color-ink-soft);
+    background-color: var(--color-page);
+    box-shadow: none;
+  }
+
+  .pillo-key-mark {
+    font-size: var(--pillo-mark);
+    line-height: var(--text-sm--line-height);
+  }
+
+  /* "how to play": one sample pill for each mark, with its symbol and its meaning in words. */
+  .pillo-legend {
+    max-inline-size: var(--pillo-board);
+    padding: calc(var(--spacing) * 5);
+    border: var(--border-pillo-legend) solid var(--color-line);
+    border-radius: var(--radius-lg);
+  }
+
+  /* In pillo's help (the ? dialog) the legend sits in the same column as the steps. It lives
+     here, not in gamehelp.css, so other games' pages never load pillo selectors. */
+  .game-help .pillo-legend {
+    max-inline-size: none;
+    margin-block-start: calc(var(--spacing) * 4);
+  }
+
+  .pillo-legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+    align-items: center;
+    gap: calc(var(--spacing) * 3);
+  }
+
+  .pillo-legend .pillo-pill {
+    flex: none;
+    inline-size: var(--pillo-swatch);
+    block-size: calc(var(--pillo-swatch) * 0.6);
+  }
+
+  .pillo-legend .pillo-mark {
+    position: static;
+  }
+
+  /* Settings (Task 719): a plain disclosure with one switch per setting, each at least 44 px tall. */
+  .pillo-settings {
+    max-inline-size: var(--pillo-board);
+  }
+  .pillo-settings-summary {
+    display: flex;
+    align-items: center;
+    min-block-size: var(--tap-min);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .pillo-switch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 3);
+    min-block-size: var(--tap-min);
+    max-inline-size: 100%;
+    padding: calc(var(--spacing) * 2.5) calc(var(--spacing) * 5);
+    border: var(--border-pillo-key) solid var(--color-control);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    text-align: start;
+  }
+  /* In the gear's settings dialog (#823) a switch fills the row and its label wraps, so the card never scrolls sideways
+     at 320 px with enlarged text. */
+  .game-settings .pillo-switch {
+    inline-size: 100%;
+    padding-inline: calc(var(--spacing) * 3);
+    text-align: start;
+  }
+
+  .game-settings .pillo-switch > span:first-child {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .pillo-switch[aria-disabled="true"] {
+    border-style: dashed;
+    color: var(--color-ink-soft);
+    cursor: not-allowed;
+  }
+
+  /* The finish screen's stats: four numbers, then one row per guess count with today's row named in words. */
+  .pillo-stat-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--spacing) * 2);
+  }
+  .pillo-stat {
+    padding: calc(var(--spacing) * 2) calc(var(--spacing) * 4);
+    border: var(--border-pillo-legend) solid var(--color-line);
+    border-radius: var(--radius-pill);
+  }
+  .pillo-distribution {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 1);
+  }
+  .pillo-dist-row {
+    display: grid;
+    grid-template-columns: calc(var(--spacing) * 4) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+  }
+  /* --pillo-share (0 to 1) is this row's count against the most common row; the island sets it on each bar. */
+  .pillo-dist-bar {
+    --pillo-share: 0;
+    display: block;
+    inline-size: calc(var(--pillo-bar-min) + (100% - var(--pillo-bar-min)) * var(--pillo-share));
+    block-size: var(--pillo-strip-pill);
+    border: var(--border-pillo-key) solid var(--color-line);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-pillo-elsewhere);
+  }
+  .pillo-dist-today .pillo-dist-bar {
+    border-color: var(--color-pillo-ring);
+    background-color: var(--color-pillo-here);
+  }
+  .pillo-dist-today .pillo-dist-label {
+    font-weight: 700;
+  }
+
+  /*
+    High contrast (Task 719): no foil texture behind the pills, a solid rim on "elsewhere", a dashed rim on "not in the
+    word", full-strength letters and larger marks, so the three marks differ by shape as well as by fill.
+  */
+  .pillo-contrast .pillo-pack {
+    background-color: var(--color-page);
+    background-image: none;
+    border: var(--border-pillo-legend) solid var(--color-ink);
+  }
+  .pillo-contrast .pillo-pill.pillo-elsewhere,
+  .pillo-contrast .pillo-key.pillo-elsewhere {
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    box-shadow: inset 0 0 0 var(--pillo-contrast-rim) var(--color-ink);
+  }
+  .pillo-contrast .pillo-pill.pillo-absent,
+  .pillo-contrast .pillo-key.pillo-absent {
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    border: var(--border-pillo-key) dashed var(--color-ink);
+    box-shadow: none;
+  }
+  .pillo-contrast .pillo-pill::before {
+    display: none;
+  }
+  .pillo-contrast .pillo-mark,
+  .pillo-contrast .pillo-key-mark {
+    font-size: var(--pillo-mark-contrast);
+    font-weight: 700;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pillo-pill.pillo-typed {
+      animation: none;
+      transition: none;
+    }
+  }
+}
+
+/* On paper the foil keeps its plain grey and fine cross-hatch; the shine is a screen effect and is left out. */
+@media print {
+  .pillo-pack,
+  .pillo-strip {
+    background-image:
+      repeating-linear-gradient(45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--pillo-hatch-color) 0 var(--pillo-hatch-width), var(--pillo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
+  }
+
+  .pillo-pill::before {
+    display: none;
+  }
+}

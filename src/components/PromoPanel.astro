@@ -10,7 +10,7 @@
  *   this browser's local storage and never sent to us; a browser that can't remember never sees the panel.
  * - It waits while the ☰ panel, a study-mode preview or the account menu is open (and until the ☰ panel or the preview
  *   has finished closing and put focus back), while the visitor is typing in a field, and while the tab is in the
- *   background.
+ *   background or the visitor is using the Home games carousel by keyboard.
  * - Keyboard focus moves to the panel's close button without scrolling the page, so screen readers announce the
  *   panel's heading and text, and goes back where it was when the panel closes (the close button or Escape). Tab can
  *   leave the panel: it doesn't trap focus or block the page.
@@ -31,7 +31,7 @@ import { accountHref, promo, site } from '../config/site';
 >
   <div class="flex items-start justify-between gap-4">
     <h2 id="promo-heading" class="display pt-2 text-xl">{promo.heading}</h2>
-    <button type="button" class="corner-button corner-button-panel shrink-0" aria-label="close" data-promo-close>
+    <button type="button" class="corner-button corner-button-panel shrink-0" aria-label="close launch updates panel" data-promo-close>
       <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
         <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
       </svg>
@@ -42,7 +42,7 @@ import { accountHref, promo, site } from '../config/site';
     <a href={accountHref} class="promo-button">{promo.joinLabel}</a>
     {
       site.tipPageUrl && (
-        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="promo-link">
+        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="promo-link" data-new-tab-cue>
           {promo.supportLabel}
           <span class="sr-only"> (opens in a new tab)</span>
           <svg viewBox="0 0 24 24" class="size-4 shrink-0" aria-hidden="true" focusable="false">
@@ -93,12 +93,25 @@ import { accountHref, promo, site } from '../config/site';
       true,
     );
 
+    // On a game page (/play/<game>) the panel never opens over the board mid-play: it waits until the game has shown a
+    // result dialog, then follows the usual rules below (it still waits while that dialog is open).
+    const onGamePage = /^\/play\/[^/]/.test(location.pathname);
+    let gameFinished = false;
+    if (onGamePage) {
+      const sawResult = () => { if (document.querySelector('[data-result-dialog]')) gameFinished = true; };
+      new MutationObserver(sawResult).observe(document.body, { childList: true, subtree: true });
+      sawResult();
+    }
+
     /** Something else has the visitor's attention: the panel waits instead of interrupting it. */
     const busy = () =>
+      (onGamePage && !gameFinished) ||
       document.hidden ||
       document.querySelector('dialog[open]') !== null ||
       closingDialogs.size > 0 ||
       document.querySelector('#account-menu:not([hidden])') !== null ||
+      document.querySelector('[data-result-dialog]') !== null ||
+      document.querySelector('[data-footer-flag] button[aria-expanded="true"]') !== null ||
       isTextEntry(document.activeElement as HTMLElement | null);
 
     /** Closes the panel. Focus goes back where it was, unless a link took the visitor somewhere else. */
@@ -145,12 +158,28 @@ import { accountHref, promo, site } from '../config/site';
       document.addEventListener('keydown', onKeydown);
     };
 
+    // Set by a click on a report opener (the footer's flag or a game's corner flag), before any retry can run.
+    let reportOpened = false;
+    document.addEventListener('click', (event) => {
+      if (event.target instanceof Element && event.target.closest('a[data-game-flag], [data-footer-flag] button')) reportOpened = true;
+    }, true);
+
     /** Opens the panel as soon as nothing else has the visitor's attention. */
     const trigger = () => {
       if (triggered) return;
       triggered = true;
       stopWatching();
-      const attempt = () => (busy() ? window.setTimeout(attempt, 500) : open());
+      // A visitor who has just opened the report panel was asking for something else: once they close it the
+      // promo stays away rather than pulling focus from where Escape put it back.
+      const attempt = () => {
+        if (reportOpened) return;
+        // Only defer opening. Escape must still close a promo that is already open.
+        const homeCardHasKeyboardFocus = document.activeElement?.matches(
+          '#daily-games [data-games-carousel] a[data-game-card]:focus-visible',
+        );
+        if (busy() || homeCardHasKeyboardFocus) window.setTimeout(attempt, 500);
+        else open();
+      };
       attempt();
     };
 

@@ -1,0 +1,190 @@
+---
+/**
+ * The course library publishes only the source-checked curriculum unit and topic titles.
+ * Planning notes, internal statuses and unreleased nursing lessons remain private.
+ * All counts on the page come from actual content, never the approved design's sample numbers.
+ * Task 300: "open now" lists every lesson the site builds (src/lessons/catalog.ts), each with its own deck's progress.
+ */
+import { getEntry } from 'astro:content';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import Layout from '../../layouts/Layout.astro';
+import UnitCard from '../../components/UnitCard.astro';
+import EmptyState from '../../components/EmptyState.astro';
+import { parseLessonMap } from '../../islands/lessonmap';
+import { lessonCatalog } from '../../lessons/load';
+import { lessonIsHeldBack } from '../../lessons/holdback';
+import { sampleLessonShown } from '../../lessons/draftgate';
+
+const csvText = readFileSync(resolve('docs/curriculum/medsurg-lesson-map.csv'), 'utf8');
+const { units, problems } = parseLessonMap(csvText);
+if (problems.length) {
+  throw new Error('the curriculum map cannot be published: ' + problems.map((problem) =>
+    'row ' + problem.row + ': ' + problem.message).join('; '));
+}
+const lessonCount = units.reduce((sum, unit) =>
+  sum + unit.topics.reduce((count, topic) => count + topic.lessons.length, 0), 0);
+const catalog = await lessonCatalog();
+const openLessons = await Promise.all(catalog.lessons.map(async (lesson) => {
+  const deck = lesson.cards ? await getEntry('cards', lesson.cards.id) : undefined;
+  return {
+    lesson,
+    deckId: deck?.id,
+    cardIds: deck ? deck.data.cards.map((card) => card.id) : [],
+    sampleCards: !!lesson.cards?.labeled,
+    held: await lessonIsHeldBack(lesson.id),
+  };
+}));
+---
+
+<Layout
+  title="course library"
+  description={sampleLessonShown() ? "start with a free study-skills sample and explore cueory's planned nursing lessons." : "explore the nursing lessons cueory is planning. the first lessons are coming soon."}
+  variant="study"
+>
+  <div class="mx-auto max-w-page pb-section pt-8 sm:pt-12">
+    <div class="mx-auto max-w-prose">
+      <header>
+        <p class="text-sm font-medium text-ink-soft">course library</p>
+        <h1 class="mt-2 font-bold text-title sm:text-title-lg">med-surg i</h1>
+        <p class="mt-2 text-ink-soft" data-testid="curriculum-summary">
+          {units.length} planned units · {lessonCount} lessons coming soon.
+        </p>
+      </header>
+
+      <section class="mt-6" aria-labelledby="available-lessons-title">
+        <h2 id="available-lessons-title" class="sr-only">open lessons</h2>
+        {openLessons.length === 0 ? (
+          <EmptyState
+            title="no lessons yet"
+            description="new lessons are coming soon. explore the planned units below."
+            headingLevel={3}
+          />
+        ) : (
+          <ul class="space-y-4" data-testid="open-lessons">
+          {openLessons.map(({ lesson, deckId, cardIds, sampleCards, held }, index) => {
+            const cardCount = cardIds.length;
+            const progressId = `library-progress-${index + 1}`;
+            return (
+              <li data-open-lesson={lesson.id}>
+                <article class="featured-lesson lift rounded-xl border border-line bg-surface p-5 sm:p-6">
+                  <span class="inline-block rounded-full border border-control px-3 py-1 text-sm font-medium">
+                    {held ? 'coming soon' : lesson.labeled ? 'open now · sample' : 'open now'}
+                  </span>
+                  <h3 class="mt-3 text-lg font-semibold">{lesson.name}</h3>
+                  {!held && (
+                  <p class="mt-2 text-sm text-ink-soft">
+                    {lesson.modes.length} {lesson.modes.length === 1 ? 'way' : 'ways'} to study
+                    {deckId && ` · ${cardCount} ${sampleCards ? 'sample ' : ''}${cardCount === 1 ? 'card' : 'cards'}`}
+                  </p>
+                  )}
+                  {!held && deckId && (
+                    <div class="mt-4">
+                      <label for={progressId} class="sr-only">cards studied on this device</label>
+                      <progress
+                        id={progressId}
+                        class="library-progress block w-full"
+                        data-testid="library-progress-bar"
+                        data-library-progress-bar
+                        data-deck-id={deckId}
+                        data-card-ids={cardIds.join(',')}
+                        value="0"
+                        max={cardCount || 1}
+                      ></progress>
+                      <output class="mt-2 block text-sm text-ink-soft" for={progressId} data-testid="library-progress-text" data-library-progress-text>
+                        0 of {cardCount} cards studied on this device
+                      </output>
+                    </div>
+                  )}
+                  {!held && (
+                  <a href={lesson.href} aria-label={`start the lesson: ${lesson.name}`}
+                    class="mt-4 inline-flex min-h-(--tap-min) items-center font-medium underline underline-offset-4">start the lesson</a>
+                  )}
+                </article>
+              </li>
+            );
+          })}
+          </ul>
+        )}
+      </section>
+
+      <section class="mt-8" aria-labelledby="planned-units-title">
+        <h2 id="planned-units-title" class="mb-4 text-lg font-semibold">planned units</h2>
+        <p class="mb-4 text-sm text-ink-soft">
+          these are topics we're planning, not published nursing lessons. open a unit to see its topics.
+        </p>
+        <ol class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3"
+          data-testid="unit-grid" aria-label="planned nursing units">
+          {units.map((unit, index) => (
+            <li class="min-w-0">
+              <UnitCard unit={unit} position={index + 1} lessons={catalog.lessons} />
+            </li>
+          ))}
+        </ol>
+      </section>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .featured-lesson {
+    box-shadow: var(--shadow-card, var(--shadow-soft));
+  }
+  .featured-lesson:hover,
+  .featured-lesson:focus-within {
+    box-shadow: var(--shadow-card-hover, var(--shadow-soft));
+  }
+  .library-progress {
+    appearance: none;
+    height: calc(var(--spacing) * 2);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    background-color: var(--color-soft);
+    accent-color: var(--color-ink-soft);
+  }
+  .library-progress::-webkit-progress-bar {
+    background-color: var(--color-soft);
+    border-radius: var(--radius-pill);
+  }
+  .library-progress::-webkit-progress-value {
+    background-color: var(--color-ink-soft);
+    border-radius: var(--radius-pill);
+  }
+  .library-progress::-moz-progress-bar {
+    background-color: var(--color-ink-soft);
+    border-radius: var(--radius-pill);
+  }
+</style>
+
+<script>
+  import { deckProgress, PROGRESS_STORAGE_KEY, readProgress } from '../../scripts/progress';
+
+  function refreshLibraryProgress(): void {
+    let saved: ReturnType<typeof readProgress> | undefined;
+    try {
+      saved = readProgress(window.localStorage);
+    } catch {
+      // Blocked storage: the published card counts still show, without exposing private data.
+    }
+    for (const progressBar of document.querySelectorAll<HTMLProgressElement>('[data-library-progress-bar]')) {
+      const progressLabel = progressBar.parentElement?.querySelector<HTMLOutputElement>('[data-library-progress-text]');
+      if (!progressLabel) continue;
+      const cardIds = (progressBar.dataset.cardIds ?? '').split(',').filter(Boolean);
+      let studied = 0;
+      if (saved) {
+        const deck = deckProgress(saved, progressBar.dataset.deckId ?? '');
+        const recorded = new Set([...deck.know, ...deck.learning]);
+        studied = cardIds.filter((id) => recorded.has(id)).length;
+      }
+      progressBar.max = cardIds.length || 1;
+      progressBar.value = studied;
+      progressLabel.textContent = studied + ' of ' + cardIds.length + ' cards studied on this device';
+    }
+  }
+
+  refreshLibraryProgress();
+  window.addEventListener('pageshow', refreshLibraryProgress);
+  window.addEventListener('storage', (event) => {
+    if (event.key === null || event.key === PROGRESS_STORAGE_KEY) refreshLibraryProgress();
+  });
+</script>

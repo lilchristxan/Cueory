@@ -1,22 +1,336 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
-import { socials } from '../../src/config/site';
+import { writeFile } from 'node:fs/promises';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { accountLaunch, accountsOpen, newsletter, showsHeroJoin, socials } from '../../src/config/site';
+import { REST_MS } from '../../src/scripts/carousel';
+import { isDesktopOfEachEngine, sizeOf } from './projects';
+import { lessonRoutes } from '../lessonroutes';
+import { markGameRulesSeen } from './clock';
 
-// The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, which would interrupt these
-// tests part-way, so every page here starts as if it had already been shown. tests/e2e/promo.spec.ts tests the panel.
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
+
+// The once-only promo panel (D-59) slides down after 5 seconds and takes keyboard focus, and the launch-updates pop-up
+// (lane 14) opens as a modal after 10, either of which would interrupt these tests part-way, so every page here starts
+// as if both had just been shown. tests/e2e/promo.spec.ts and tests/e2e/signup-popup.spec.ts test them.
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
       localStorage.setItem('cueory-promo-seen', String(Date.now()));
+      localStorage.setItem('cueory-signup-popup-seen', String(Date.now()));
     } catch {
       // Storage is blocked: the panel never shows then anyway.
     }
   });
 });
 
+/** The footer's links panel (motto, links, socials, theme switch) is closed until its chevron opens it (Task 85). */
+async function openFooterLinks(page: Page) {
+  const chevron = page.getByRole('contentinfo').locator('[data-footer-toggle]');
+  await expect(chevron).toBeVisible();
+  if ((await chevron.getAttribute('aria-expanded')) !== 'true') await chevron.click();
+  await expect(chevron).toHaveAttribute('aria-expanded', 'true');
+}
+
+// Firefox reports sizes in 1/60 px steps, so a 44 px box can read 43.99994. Allow that rounding in Firefox only.
+const FIREFOX_ROUNDING_PX = 0.01;
+
 /** The name of the card in the middle of the "ways to study" merry-go-round (D-60). */
 const middleCard = (page: Page) =>
   page.locator('#ways-to-study [data-mode-card][data-offset="0"]').getAttribute('data-name');
+
+/**
+ * Puts the ring in manual mode on the first vial (video): Home on the card group is a keyboard use, which takes the
+ * ring over (data-autoplay turns off), so the six-second slideshow cannot move the vial in front while a slow machine
+ * is still scrolling or waiting for a button. The tests that start from "video in front" call this first.
+ */
+async function holdOnVideo(page: Page) {
+  const carousel = page.locator('#ways-to-study');
+  await carousel.getByRole('group', { name: 'study mode cards' }).press('Home');
+  await expect(carousel).toHaveAttribute('data-autoplay', 'off');
+  await expect.poll(() => middleCard(page)).toBe('video');
+}
+
+/** Failure-only Firefox and WebKit desktop evidence for the carousel autoplay assertion. */
+async function installAutoplayPointerParkDiagnostic(page: Page) {
+  await page.addInitScript(() => {
+    type Rect = { left: number; top: number; right: number; bottom: number; width: number; height: number } | null;
+    type Target = { tag: string | null; id: string | null; mode: string | null };
+    type Detail = {
+      event?: string;
+      eventT?: number;
+      trusted?: boolean;
+      pointerType?: string;
+      x?: number;
+      y?: number;
+      target?: Target;
+      related?: Target;
+      hit?: Target;
+      trackHover?: boolean;
+      controlsHover?: boolean;
+    };
+    type Entry = {
+      phase: string;
+      t: number;
+      autoplay: string | null;
+      hold: string | null;
+      active: string | null;
+      track: Rect;
+      viewport: { width: number; height: number };
+      intersection: number | null;
+      visibility: string;
+      reducedMotion: boolean;
+      detail?: Detail;
+    };
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: Entry[]; mark: (phase: string) => void } };
+    const entries: Entry[] = [];
+    const cap = 120;
+    let intersection: number | null = null;
+    let postHover = false;
+    let lastMouse: { x: number; y: number } | undefined;
+    const target = (value: EventTarget | null): Target => {
+      const element = value instanceof Element ? value : null;
+      return {
+        tag: element?.tagName.toLowerCase() ?? null,
+        id: element?.id ?? null,
+        mode: element?.closest<HTMLElement>('[data-mode-card]')?.dataset.name ?? null,
+      };
+    };
+    const push = (entry: Entry) => {
+      entries.push(entry);
+      if (entries.length > cap) entries.splice(0, entries.length - cap);
+    };
+    const sample = () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]') ?? null;
+      const rect = track?.getBoundingClientRect();
+      return {
+        autoplay: root?.dataset.autoplay ?? null,
+        hold: root?.dataset.autoplayHold ?? null,
+        active: root?.querySelector<HTMLElement>('[data-mode-card][data-offset="0"]')?.dataset.name ?? null,
+        track: rect ? { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height } : null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        intersection,
+        visibility: document.visibilityState,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      };
+    };
+    const note = (phase: string, detail?: Detail) => {
+      push({ phase, t: performance.now(), ...sample(), detail });
+    };
+    const notePostDispatch = (phase: string, detail: Detail, track: HTMLElement, controls: HTMLElement | null) => {
+      window.setTimeout(() => {
+        const hit = lastMouse ? document.elementFromPoint(lastMouse.x, lastMouse.y) : null;
+        note(`${phase}:post-dispatch`, {
+          ...detail,
+          hit: target(hit),
+          trackHover: track.matches(':hover'),
+          controlsHover: controls?.matches(':hover') ?? false,
+        });
+      }, 0);
+    };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic = {
+      entries,
+      mark: (phase) => {
+        if (phase === 'intentional-hover:before') postHover = true;
+        note(phase);
+      },
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const root = document.querySelector<HTMLElement>('[data-modes]');
+      const track = root?.querySelector<HTMLElement>('[data-modes-track]');
+      if (!root || !track) return note('carousel:missing');
+      const controls = root.querySelector<HTMLElement>('[data-modes-controls]');
+      const isPauseArea = (value: EventTarget | null) =>
+        value instanceof Node && [track, controls].some((area) => area?.contains(value));
+      // Event capture must not force layout ahead of the carousel's own listener.
+      const eventState = () => ({
+        autoplay: root.dataset.autoplay ?? null,
+        hold: root.dataset.autoplayHold ?? null,
+        active: root.querySelector<HTMLElement>('[data-mode-card][data-offset="0"]')?.dataset.name ?? null,
+        track: null,
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        intersection,
+        visibility: document.visibilityState,
+        reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      });
+      const recordPointer = (event: PointerEvent) => {
+        if (!postHover || event.pointerType !== 'mouse' || (!isPauseArea(event.target) && !isPauseArea(event.relatedTarget))) return;
+        lastMouse = { x: event.clientX, y: event.clientY };
+        const detail: Detail = {
+          event: event.type,
+          eventT: event.timeStamp,
+          trusted: event.isTrusted,
+          pointerType: event.pointerType,
+          x: event.clientX,
+          y: event.clientY,
+          target: target(event.target),
+          related: target(event.relatedTarget),
+        };
+        // Capture only event fields synchronously. Geometry and hit testing run after the carousel's listener.
+        push({ phase: `pointer:${event.type}`, t: performance.now(), ...eventState(), detail });
+        notePostDispatch(`pointer:${event.type}`, detail, track, controls);
+      };
+      const recordMouseOut = (event: MouseEvent) => {
+        if (!postHover || (!isPauseArea(event.target) && !isPauseArea(event.relatedTarget))) return;
+        const detail: Detail = {
+          event: event.type,
+          eventT: event.timeStamp,
+          trusted: event.isTrusted,
+          x: event.clientX,
+          y: event.clientY,
+          target: target(event.target),
+          related: target(event.relatedTarget),
+        };
+        push({ phase: 'mouse:mouseout', t: performance.now(), ...eventState(), detail });
+        notePostDispatch('mouse:mouseout', detail, track, controls);
+      };
+      note('carousel:ready');
+      new MutationObserver((mutations) => {
+        for (const mutation of mutations) note(`attribute:${mutation.attributeName}`);
+      }).observe(root, { attributes: true, attributeFilter: ['data-autoplay', 'data-autoplay-hold'] });
+      new IntersectionObserver((observations) => {
+        for (const observation of observations) {
+          intersection = observation.intersectionRatio;
+          note('intersection');
+        }
+      }, { threshold: [0, 0.01, 1] }).observe(track);
+      for (const type of ['pointerenter', 'pointerleave', 'pointermove', 'pointerover', 'pointerout'] as const) {
+        window.addEventListener(type, recordPointer, { capture: true, passive: true });
+      }
+      window.addEventListener('mouseout', recordMouseOut, { capture: true, passive: true });
+      window.addEventListener('scroll', (event) => {
+        if (!postHover) return;
+        const detail: Detail = { event: 'scroll', eventT: event.timeStamp, trusted: event.isTrusted };
+        // The product's capture listener reconciles hover from elementFromPoint. Sample only after it has returned.
+        push({ phase: 'scroll', t: performance.now(), ...eventState(), detail });
+        notePostDispatch('scroll', detail, track, controls);
+      }, { capture: true, passive: true });
+    });
+  });
+}
+
+async function markAutoplayPointerParkDiagnostic(page: Page, phase: string) {
+  await page.evaluate((label) => {
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { mark: (phase: string) => void } };
+    (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.mark(label);
+  }, phase).catch(() => {});
+}
+
+async function attachAutoplayPointerParkDiagnostic(page: Page, testInfo: TestInfo) {
+  const entries = await page.evaluate(() => {
+    type ProbeWindow = Window & { __cueoryAutoplayPointerParkDiagnostic?: { entries: unknown[] } };
+    return (window as ProbeWindow).__cueoryAutoplayPointerParkDiagnostic?.entries ?? [];
+  }).catch(() => []);
+  await testInfo.attach('carousel-autoplay-pointer-park-path', {
+    body: JSON.stringify({ entries }, null, 2),
+    contentType: 'application/json',
+  });
+}
+/** Test-only D-51 close observation; it captures IDs and event state, never DOM content or user text. */
+async function installPreviewCloseDiagnostic(page: Page) {
+  await page.addInitScript(() => {
+    type Entry = { phase: string; t: number; open: boolean | null; detail?: Record<string, boolean | string | null> };
+    type ProbeWindow = Window & { __cueoryD51Diagnostic?: Entry[] };
+    const state = window as ProbeWindow;
+    const entries: Entry[] = [];
+    state.__cueoryD51Diagnostic = entries;
+    const identity = (node: EventTarget | null) => {
+      const element = node instanceof Element ? node : null;
+      return { tag: element?.tagName ?? null, id: element?.id ?? null };
+    };
+    const note = (phase: string, detail?: Entry['detail']) => {
+      entries.push({ phase, t: performance.now(), open: document.querySelector<HTMLDialogElement>('[data-mode-preview]')?.open ?? null, detail });
+    };
+    const showModal = HTMLDialogElement.prototype.showModal;
+    HTMLDialogElement.prototype.showModal = function (...args) {
+      note('showModal:enter', identity(this));
+      try { const result = showModal.apply(this, args); note('showModal:return', identity(this)); return result; }
+      catch (error) { note('showModal:throw', { ...identity(this), name: error instanceof Error ? error.name : 'non-error' }); throw error; }
+    };
+    const close = HTMLDialogElement.prototype.close;
+    HTMLDialogElement.prototype.close = function (...args) {
+      note('dialog.close:enter', identity(this));
+      try { const result = close.apply(this, args); note('dialog.close:return', identity(this)); return result; }
+      catch (error) { note('dialog.close:throw', { ...identity(this), name: error instanceof Error ? error.name : 'non-error' }); throw error; }
+    };
+    const focus = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function (...args) { note('focus', identity(this)); return focus.apply(this, args); };
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (...args) {
+      const animation = animate.apply(this, args);
+      const element = identity(this);
+      note('animation:created', element);
+      void animation.finished.then(() => note('animation:fulfilled', element), () => note('animation:rejected', element));
+      return animation;
+    };
+    document.addEventListener('DOMContentLoaded', () => {
+      const dialog = document.querySelector<HTMLDialogElement>('[data-mode-preview]');
+      if (!dialog) return note('dialog:missing');
+      for (const type of ['keydown', 'cancel', 'close']) {
+        dialog.addEventListener(type, (event) => note(`dialog:${type}`, { key: event instanceof KeyboardEvent ? event.key : null, defaultPrevented: event.defaultPrevented, ...identity(event.target) }), true);
+      }
+      note('dialog:observed', identity(dialog));
+    });
+  });
+}
+
+/** Failure-only D-51 navigation evidence. The assertions and timing remain the test's existing contract. */
+async function capturePreviewNavigationFailure(page: Page, lastAction: string) {
+  return page.evaluate((lastAction) => {
+    const describe = (element: Element | null) => {
+      if (!(element instanceof HTMLElement)) return null;
+      const bounds = element.getBoundingClientRect();
+      return {
+        tag: element.tagName.toLowerCase(),
+        id: element.id || null,
+        classes: [...element.classList],
+        previewPart: element.getAttribute('data-mode-preview') ?? null,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+      };
+    };
+    const dialog = document.querySelector<HTMLDialogElement>('[data-mode-preview]');
+    const animations = dialog?.getAnimations({ subtree: true }).map((animation, index) => {
+      const effect = animation.effect;
+      const timing = effect?.getComputedTiming();
+      const localTime = typeof timing?.localTime === 'number' ? timing.localTime : null;
+      const delay = typeof timing?.delay === 'number' ? timing.delay : null;
+      const endTime = typeof timing?.endTime === 'number' ? timing.endTime : null;
+      const phase = localTime === null || delay === null || endTime === null ? null :
+        localTime < delay ? 'before' : localTime >= endTime ? 'after' : 'active';
+      return {
+        index,
+        playState: animation.playState,
+        pending: animation.pending,
+        currentTime: animation.currentTime,
+        phase,
+        progress: timing?.progress ?? null,
+        duration: timing?.activeDuration ?? null,
+        delay,
+        endTime,
+        target: describe(effect instanceof KeyframeEffect ? effect.target : null),
+      };
+    }) ?? [];
+    return {
+      lastAction,
+      activeElement: describe(document.activeElement),
+      preview: {
+        open: dialog?.open ?? false,
+        bounds: describe(dialog)?.bounds ?? null,
+        carouselState: document.querySelector<HTMLElement>('[data-modes]')?.dataset.carouselState ?? null,
+      },
+      animations,
+    };
+  }, lastAction);
+}
+
+/** Measure cards only after their turn transitions finish, including on a loaded runner. */
+const waitForCardTurn = async (page: Page) => {
+  await expect.poll(() => page.locator('#ways-to-study [data-mode-card]').evaluateAll((cards) =>
+    cards.flatMap((card) => card.getAnimations()).filter((animation) =>
+      animation.playState === 'running' || animation.pending,
+    ).length,
+  )).toBe(0);
+};
 
 const pages = [
   '/',
@@ -37,16 +351,27 @@ const pages = [
   '/start',
   '/progress',
   '/learn/video-sample',
+  // Every lesson page generated from /content (Task 300), so a new lesson is checked without editing this list.
+  ...lessonRoutes,
 ];
 
-for (const path of pages) {
+for (const path of [...new Set(pages)]) {
   test(`${path} loads, shows the notice, and passes accessibility checks`, async ({ page }) => {
     const errors: string[] = [];
     page.on('console', (msg) => msg.type() === 'error' && errors.push(msg.text()));
 
     const res = await page.goto(path);
     expect(res?.status()).toBe(200);
-    await expect(page.getByTestId('building-notice')).toHaveText("we're still building. more coming soon.");
+    const notice = page.getByTestId('building-notice');
+    await expect(notice).toHaveText("we're still building. please support (opens in a new tab) our development. more coming soon!");
+    const support = notice.getByRole('link', { name: /^support/ });
+    await expect(support).toHaveAttribute('href', 'https://ko-fi.com/cueory');
+    await expect(support).toHaveAttribute('target', '_blank');
+    await expect(support).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(await support.evaluate((el) => ({ weight: getComputedStyle(el).fontWeight, line: getComputedStyle(el).textDecorationLine, h: el.getBoundingClientRect().height })))
+      .toMatchObject({ weight: '700', line: 'underline' });
+    expect((await support.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(notice.locator('.building-strip-icon')).toHaveCount(2);
     await expect(page.locator('h1')).toHaveCount(1);
 
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
@@ -59,20 +384,20 @@ for (const path of pages) {
 
 test('lesson can be stepped through with the keyboard', async ({ page }) => {
   await page.goto('/learn/study-skills');
-  await expect(page.getByText('Sentence 1 of')).toBeVisible();
+  await expect(page.getByText('sentence 1 of')).toBeVisible();
 
-  const nextButton = page.getByRole('button', { name: 'Next sentence' });
+  const nextButton = page.getByRole('button', { name: 'next sentence' });
   await nextButton.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByText('Sentence 2 of')).toBeVisible();
+  await expect(page.getByText('sentence 2 of')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Show all' }).click();
-  await expect(page.getByText("That's the whole lesson for now.")).toBeVisible();
+  await page.getByRole('button', { name: 'show all' }).click();
+  await expect(page.getByText("that's the whole lesson for now.")).toBeVisible();
 });
 
 test('cards can be sorted with the keyboard, and "Still learning" cards come back next round', async ({ page }) => {
   await page.goto('/learn/study-skills');
-  await page.getByRole('link', { name: 'Practice this lesson with cards' }).click();
+  await page.getByRole('link', { name: 'practice this lesson with cards' }).click();
   await expect(page).toHaveURL(/\/learn\/study-skills\/cards$/);
   await expect(page.getByText('Card 1 of 3 · Know it: 0 · Still learning: 0')).toBeVisible();
   await expect(page.getByText('Question', { exact: true })).toBeVisible();
@@ -168,9 +493,9 @@ test('Learn mode brings back what you miss until you know every card', async ({ 
     'Placeholder card 3, front.': { back: 'Placeholder card 3, back.' },
   };
   await page.goto('/learn/study-skills');
-  await page.getByRole('link', { name: "Learn this lesson's cards in Learn mode" }).click();
+  await page.getByRole('link', { name: "learn this lesson's cards in learn mode" }).click();
   await expect(page).toHaveURL(/\/learn\/study-skills\/learn-mode$/);
-  await expect(page.getByText('Mastered 0 of 3')).toBeVisible();
+  await expect(page.getByText('recalled today 0 of 3')).toBeVisible();
 
   const steps: string[] = [];
   let missedOnce = false;
@@ -226,12 +551,12 @@ test('Learn mode brings back what you miss until you know every card', async ({ 
   expect(steps.filter((s) => s === 'Type the answer')).toHaveLength(2);
 
   await page.getByRole('button', { name: 'Start again' }).click();
-  await expect(page.getByText('Mastered 0 of 3')).toBeVisible();
+  await expect(page.getByText('recalled today 0 of 3')).toBeVisible();
 });
 
 test('Matching pairs terms with meanings by keyboard, counting misses', async ({ page }) => {
   await page.goto('/learn/study-skills');
-  await page.getByRole('link', { name: "Match this lesson's terms and meanings" }).click();
+  await page.getByRole('link', { name: "match this lesson's terms and meanings" }).click();
   await expect(page).toHaveURL(/\/learn\/study-skills\/matching$/);
   await expect(page.getByText('Matched 0 of 3 · Misses: 0')).toBeVisible();
 
@@ -282,8 +607,8 @@ test.describe('without JavaScript', () => {
 
   test('the lesson shows every sentence once and no stepper controls', async ({ page }) => {
     await page.goto('/learn/study-skills');
-    await expect(page.getByText('Sentence 1 of')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Next sentence' })).toHaveCount(0);
+    await expect(page.getByText('sentence 1 of')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'next sentence' })).toHaveCount(0);
     const items = page.locator('ol > li');
     const texts = await items.allTextContents();
     expect(texts.length).toBeGreaterThan(1);
@@ -302,7 +627,7 @@ test.describe('without JavaScript', () => {
     await expect(page.getByRole('button')).toHaveCount(0);
     // Playwright's text matching skips <noscript>, so these use CSS.
     await expect(page.locator('noscript p')).toHaveText(
-      'Learn mode needs JavaScript. You can read every card and its answer on the cards page.',
+      'learn mode needs JavaScript. you can read every card and its answer on the cards page.',
     );
     await page.locator('noscript a[href="/learn/study-skills/cards"]').click();
     await expect(page).toHaveURL(/\/learn\/study-skills\/cards$/);
@@ -313,7 +638,7 @@ test.describe('without JavaScript', () => {
     await expect(page.getByRole('button')).toHaveCount(0);
     // Playwright's text matching skips <noscript>, so these use CSS.
     await expect(page.locator('noscript p')).toHaveText(
-      'Matching needs JavaScript. You can read every card and its answer on the cards page.',
+      'matching needs JavaScript. you can read every card and its answer on the cards page.',
     );
     await page.locator('noscript a[href="/learn/study-skills/cards"]').click();
     await expect(page).toHaveURL(/\/learn\/study-skills\/cards$/);
@@ -329,17 +654,15 @@ test.describe('without JavaScript', () => {
     }
   });
 
-  test('"ways to study" is a row of all eleven cards that scrolls sideways, and the buttons keep their space', async ({
+  test('"ways to study" is the vial platter: all eleven vials are built and the front one shows without scripts', async ({
     page,
   }) => {
     await page.goto('/');
-    await expect(page.locator('[data-mode-card]')).toHaveCount(11);
-    const row = page.getByRole('group', { name: 'study mode cards' });
-    await row.scrollIntoViewIfNeeded();
-    expect(await row.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
-    await row.evaluate((el) => el.scrollTo({ left: el.scrollWidth, behavior: 'instant' }));
-    await expect(page.locator('#mode-level-test')).toBeInViewport();
-    await expect(page.locator('#ways-to-study').getByRole('button', { name: 'next study mode' })).toBeHidden();
+    const platter = page.locator('#ways-to-study');
+    await expect(platter.locator('[data-platter-vial]')).toHaveCount(11);
+    await platter.scrollIntoViewIfNeeded();
+    await expect(platter.getByRole('heading', { level: 2, name: 'one lesson, multiple ways to study' })).toBeVisible();
+    await expect(platter.locator('[data-platter-vial][data-active]')).toBeVisible();
   });
 });
 
@@ -355,18 +678,21 @@ test('keyboard focus is visible', async ({ page }) => {
 
 test('home page has a launch-updates signup that works by keyboard', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Get launch updates' })).toBeVisible();
-  const form = page.getByTestId('signup-form');
+  const signup = page.locator('#signup');
+  await expect(signup.getByRole('heading', { name: 'coming soon', exact: true })).toBeVisible();
+  const form = page.getByTestId('soon-form');
   if ((await form.count()) === 0) {
-    await expect(page.getByTestId('signup-pending')).toBeVisible();
+    // Before the Kit form exists: a link to Kit's landing page, or the pending line when there is none.
+    if (await page.getByTestId('soon-landing').count()) await expect(page.getByTestId('soon-landing')).toBeVisible();
+    else await expect(page.getByTestId('soon-pending')).toBeVisible();
     return;
   }
-  const email = page.getByLabel('Email address');
+  const email = form.getByLabel('Email address');
   await expect(email).toHaveAttribute('type', 'email');
   await expect(email).toHaveAttribute('required', '');
   await email.focus();
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: 'Sign up' })).toBeFocused();
+  await expect(form.getByRole('button', { name: 'join the list', exact: true })).toBeFocused();
 });
 
 test.describe('theme switch', () => {
@@ -377,7 +703,10 @@ test.describe('theme switch', () => {
 
   test('Light, Dark and Follow device change the palette and are remembered', async ({ page }, testInfo) => {
     const deviceIsDark = testInfo.project.use.colorScheme === 'dark';
-    await page.goto('/');
+    // Not the home page: since the home boards (2026-11-24) its Light ground is one even Linen-and-Mocha beige rather than
+    // the Ivory page colour, so the palette check starts on a page that still uses the plain page colour.
+    await page.goto('/privacy');
+    await openFooterLinks(page);
     const picker = page.getByRole('group', { name: 'Theme' });
     await expect(picker.getByRole('radio', { name: 'Follow device' })).toBeChecked();
     expect(await pageBackground(page)).toBe(deviceIsDark ? charcoal : ivory);
@@ -388,11 +717,14 @@ test.describe('theme switch', () => {
     // The pick carries over to other pages and survives a reload.
     await page.goto('/privacy');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await openFooterLinks(page);
     await expect(page.getByRole('radio', { name: 'Dark' })).toBeChecked();
     expect(await pageBackground(page)).toBe(charcoal);
 
     await page.getByRole('radio', { name: 'Light' }).check();
     expect(await pageBackground(page)).toBe(ivory);
+    // The footer slider's thumb eases over a short moment; check contrast once it has settled.
+    await page.waitForFunction(() => document.querySelector('footer')!.getAnimations({ subtree: true }).every((a) => a.playState !== 'running'));
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
@@ -404,6 +736,7 @@ test.describe('theme switch', () => {
 
   test('can be used with the keyboard', async ({ page }) => {
     await page.goto('/');
+    await openFooterLinks(page);
     const followDevice = page.getByRole('radio', { name: 'Follow device' });
     await followDevice.focus();
     await page.keyboard.press('ArrowLeft');
@@ -413,29 +746,34 @@ test.describe('theme switch', () => {
 });
 
 test.describe('marketing look (D-41)', () => {
-  test('the home hero fills the first screen: logo, a one-line serif headline, the accent line, one button', async ({
+  test('the home hero: logo, motto, a serif headline (two lines on phone and one on larger screens) with a copper accent, the start link (P5)', async ({
     page,
   }) => {
     await page.goto('/');
     await page.evaluate(() => document.fonts.ready);
     const height = page.viewportSize()!.height;
     const headline = page.getByRole('heading', { level: 1 });
-    await expect(headline).toHaveText('nursing school is hard enough.');
-    await expect(page.getByText('cueory makes studying simpler.')).toBeVisible();
+    await expect(headline).toHaveText('nursing school made simpler.');
     await expect(page.getByText('Short, clear lessons')).toHaveCount(0);
-    const button = page.getByRole('link', { name: 'create your free account', exact: true });
-    await expect(button).toHaveAttribute('href', '/#signup');
-    await expect(page.getByText('save your progress and pick up where you left off.')).toBeVisible();
-    // A calmer hero (D-55): no course link, no motto line and no embossed logo behind the headline.
     const hero = page.locator('.scene-hero');
-    await expect(hero.getByRole('link')).toHaveCount(1);
-    await expect(hero.getByText('by nursing students, for nursing students.')).toHaveCount(0);
-    await expect(hero.locator('.logo')).toHaveCount(1);
+    await expect(hero.getByText('by nursing students, for nursing students')).toBeVisible();
+    // The call to action follows the draft gate: this build may show drafts, so it is a copper link to the open sample
+    // lesson. (The live build's closed, "coming soon" button is checked in tests/unit/home-sections.test.ts.)
+    const button = hero.getByTestId('hero-start');
+    await expect(button).toHaveAttribute('href', '/learn/study-skills');
+    await expect(button).toHaveText(/start studying for free/);
+    await expect(button).toHaveClass(/copper-button/);
+    // The old quiet join link and play button went away with the old hero; the explore row and the Ko-fi card remain.
+    await expect(page.getByTestId('hero-join')).toHaveCount(0);
+    await expect(hero.getByTestId('hero-play')).toHaveCount(0);
+    await expect(hero.locator('.glass-button')).toHaveCount(0);
+    await expect(hero.locator('.logo')).toHaveCount(0);
+    await expect(page.locator('.home-board-header .logo')).toHaveCount(1);
     for (const element of [headline, button]) {
       const box = (await element.boundingBox())!;
       expect(box.y + box.height).toBeLessThanOrEqual(height);
     }
-    // One straight line at every width (D-46): one line tall, nothing cut off, inside the screen.
+    // The 390 board wraps into two lines; the wide board fits the headline on one.
     const fit = await headline.evaluate((el) => {
       const style = getComputedStyle(el);
       const box = el.getBoundingClientRect();
@@ -445,10 +783,13 @@ test.describe('marketing look (D-41)', () => {
         inside: box.left >= 0 && box.right <= window.innerWidth,
       };
     });
-    expect(fit.lines).toBeLessThan(1.5);
+    expect(Math.round(fit.lines)).toBe(page.viewportSize()!.width < 640 ? 2 : 1);
     expect(fit.clipped).toBe(false);
     expect(fit.inside).toBe(true);
     expect(await headline.evaluate((el) => getComputedStyle(el).fontFamily)).toMatch(/^"?Bodoni Moda/);
+    // "simpler." is copper (Copper Deep in Daytime), not just heavier: its colour differs from the headline's.
+    const colours = await headline.evaluate((el) => ({ own: getComputedStyle(el).color, accent: getComputedStyle(el.querySelector('.hero-accent')!).color }));
+    expect(colours.accent).not.toBe(colours.own);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 
@@ -462,24 +803,32 @@ test.describe('marketing look (D-41)', () => {
           .map((img) => ({ src: (img as HTMLImageElement).currentSrc, alt: img.getAttribute('alt') })),
       );
     await page.goto('/');
-    const hero = page.locator('.scene-hero');
+    const hero = page.locator('.home-board-header .home-brand');
+    await openFooterLinks(page);
     await page.getByRole('radio', { name: 'Light' }).check();
+    // The Home header renders the official full logo in the selected palette at each board width.
+    const heroWide = page.viewportSize()!.width >= 640;
+    const heroFile = (palette: 'light' | 'dark') =>
+      new RegExp(`\\/brand\\/v1\\/logo-full-${palette}-\\d+\\.png$`);
     let images = await shown(hero);
     expect(images).toHaveLength(1);
-    expect(images[0]!.src).toMatch(/\/brand\/v1\/logo-full-light-\d+\.png$/);
+    expect(images[0]!.src).toMatch(heroFile('light'));
     expect(images[0]!.alt).toBe('');
     expect(await hero.locator('.logo img').first().evaluate((img) => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
-    const width = (await hero.locator('.logo').boundingBox())!.width;
-    expect(width).toBeGreaterThanOrEqual(239);
+    const width = (await hero.locator('.logo:visible').boundingBox())!.width;
+    const font = await page.locator('html').evaluate(el => parseFloat(getComputedStyle(el).fontSize));
+    expect(width).toBeCloseTo(font * (heroWide ? 10.25 : 7.5), 0);
 
     await page.getByRole('radio', { name: 'Dark' }).check();
     images = await shown(hero);
     expect(images).toHaveLength(1);
-    expect(images[0]!.src).toMatch(/\/brand\/v1\/logo-full-dark-\d+\.png$/);
+    expect(images[0]!.src).toMatch(heroFile('dark'));
 
     await expect(page.locator('footer').getByText('by nursing students, for nursing students.')).toBeVisible();
     await expect(page.locator('link[rel="icon"][sizes="32x32"]')).toHaveAttribute('href', '/brand/v1/icon-32.png');
     await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute('href', '/brand/v1/icon-180.png');
+    await expect(page.locator('link[rel="manifest"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest');
 
     // Other pages: the logo in the header, named by its link. The full logo where it fits (640px and wider), the
     // emblem on phones, and the header never wider than the screen.
@@ -495,15 +844,67 @@ test.describe('marketing look (D-41)', () => {
     expect(account.x + account.width).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
 
-  test('the glassy button is see-through glass with a blur, and its text stays readable', async ({ page }) => {
+  test('canonical and Open Graph URLs match the public extensionless routes', async ({ page }) => {
+    // Check nested generated lesson pages as well as root and top-level static HTML files.
+    for (const route of ['/', '/privacy', '/support', '/learn', '/learn/study-skills', '/learn/study-skills/cards']) {
+      await page.goto(route);
+      const expected = new URL(route, 'https://cueory.app').href;
+      await expect(page.locator('head link[rel="canonical"]')).toHaveAttribute('href', expected);
+      await expect(page.locator('head meta[property="og:url"]')).toHaveAttribute('content', expected);
+    }
+  });
+  test('Open Graph and Twitter previews use the same page identity', async ({ page }) => {
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({ colorScheme });
+      for (const [route, status] of [['/', 200], ['/about', 200], ['/support', 200], ['/social-preview-page-does-not-exist', 404]] as const) {
+        // The second pass visits the same pages again. WebKit then revalidates them and reports the conditional
+        // answer's 304 as the navigation's status (webkit-desktop: "Expected: 200, Received: 304"), though the page is
+        // the same. A different query makes each visit a fresh fetch, so the 200 or 404 is the page's own answer.
+        const response = await page.goto(route + (colorScheme === 'dark' ? '?scheme=dark' : ''));
+        expect(response?.status()).toBe(status);
+        const title = await page.title();
+        const description = await page.locator('head meta[name="description"]').getAttribute('content');
+        const canonical = await page.locator('head link[rel="canonical"]').getAttribute('href');
+        const image = 'https://cueory.app/share/study-ivory.png';
+        expect(description).toBeTruthy();
+        expect(canonical).toBeTruthy();
+        for (const [property, content] of [
+          ['og:type', 'website'],
+          ['og:title', title],
+          ['og:description', description],
+          ['og:url', canonical],
+          ['og:image', image],
+        ]) {
+          const tag = page.locator(`head meta[property="${property}"]`);
+          await expect(tag).toHaveCount(1);
+          await expect(tag).toHaveAttribute('content', content!);
+        }
+        for (const [name, content] of [
+          ['twitter:card', 'summary_large_image'],
+          ['twitter:title', title],
+          ['twitter:description', description],
+          ['twitter:image', image],
+        ]) {
+          const tag = page.locator(`head meta[name="${name}"]`);
+          await expect(tag).toHaveCount(1);
+          await expect(tag).toHaveAttribute('content', content!);
+        }
+      }
+    }
+  });
+
+  test('the copper call to action is an opaque copper gradient with Charcoal ink, and its text stays readable', async ({ page }) => {
     await page.goto('/');
-    const button = page.getByRole('link', { name: 'create your free account', exact: true });
+    const button = page.locator('.scene-hero').getByTestId('hero-start');
     const look = await button.evaluate((el) => {
       const style = getComputedStyle(el);
-      return { background: style.backgroundColor, blur: style.backdropFilter || style.getPropertyValue('-webkit-backdrop-filter') };
+      return { image: style.backgroundImage, ink: style.color, opacity: style.opacity };
     });
-    expect(look.background).toMatch(/^rgba\(\d+, \d+, \d+, 0\.\d+\)$/);
-    expect(look.blur).toContain('blur(');
+    // One shared class (.copper-button): the copper gradient, the Charcoal ink and no opacity at all.
+    expect(look.image).toContain('linear-gradient(');
+    expect(look.image).toContain('rgb(184, 115, 72)');
+    expect(look.ink).toBe('rgb(28, 25, 23)');
+    expect(look.opacity).toBe('1');
     const results = await new AxeBuilder({ page }).include('#hero-heading ~ *').withRules(['color-contrast']).analyze();
     expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
@@ -520,6 +921,9 @@ test.describe('marketing look (D-41)', () => {
 
   test('nothing on the home page jumps while it loads', async ({ page }) => {
     await page.goto('/', { waitUntil: 'load' });
+    // Only Chromium measures layout shift today; elsewhere the count would be an empty zero, so say so instead.
+    const measured = await page.evaluate(() => PerformanceObserver.supportedEntryTypes.includes('layout-shift'));
+    test.skip(!measured, 'this browser does not report layout-shift entries (Chromium runs it on every pull request)');
     await page.evaluate(() => document.fonts.ready);
     const shift = await page.evaluate(
       () =>
@@ -541,23 +945,33 @@ test.describe('marketing look (D-41)', () => {
   }) => {
     await page.goto('/');
     const sections = page.locator('[data-reveal-section]');
-    // "ways to study", daily games (D-61) and the launch-updates panel.
-    await expect(sections).toHaveCount(3);
+    // Home v3: the games row and the coming-soon panel fade in; the vial platter and the social row do not wait.
+    await expect(sections).toHaveCount(2);
+    expect(await sections.evaluateAll((items) => items.map((item) => item.closest('section')?.id))).toEqual([
+      'daily-games', 'signup',
+    ]);
+    const all = [0, 1];
+    const lower = 1;
     const look = (index: number) =>
       sections.nth(index).evaluate((el) => [el.getAttribute('data-reveal'), getComputedStyle(el).opacity, getComputedStyle(el).translate]);
-    // All three start below the first screen, so they wait, lowered and clear.
-    for (const index of [0, 1, 2]) expect(await look(index)).toEqual(['waiting', '0', '0px 10px']);
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    await expect.poll(() => look(0)).toEqual(['shown', '1', 'none']);
+    // The ones that start below the first screen wait, lowered and clear. The Home v3 hero is compact, so on a tall
+    // tablet screen (820 x 1180) the first games row already begins inside the first screen and is simply there, never waiting.
+    const belowFirstScreen = await sections.evaluateAll((items) => items.map((item) => item.getBoundingClientRect().top >= window.innerHeight));
+    expect(belowFirstScreen[lower]).toBe(true);
+    for (const index of all) {
+      expect(await look(index)).toEqual(belowFirstScreen[index] ? ['waiting', '0', '0px 10px'] : [null, '1', 'none']);
+    }
+    await page.locator('#signup').scrollIntoViewIfNeeded();
+    await expect.poll(() => look(lower)).toEqual(['shown', '1', 'none']);
     // Once only: scrolling away and back changes nothing.
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    expect(await look(0)).toEqual(['shown', '1', 'none']);
+    await page.locator('#signup').scrollIntoViewIfNeeded();
+    expect(await look(lower)).toEqual(['shown', '1', 'none']);
 
     // With reduced motion nothing waits or moves.
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.reload();
-    for (const index of [0, 1, 2]) expect(await look(index)).toEqual([null, '1', 'none']);
+    for (const index of all) expect(await look(index)).toEqual([null, '1', 'none']);
   });
 
   test('study screens stay plain, with no texture behind lesson text', async ({ page }) => {
@@ -568,277 +982,8 @@ test.describe('marketing look (D-41)', () => {
   });
 });
 
-test.describe('"ways to study" merry-go-round (D-50, D-60)', () => {
-  const section = (page: Page) => page.locator('#ways-to-study');
-  /** The names of the cards on screen, left to right. */
-  const onScreen = (page: Page) =>
-    section(page)
-      .locator('[data-mode-card]')
-      .evaluateAll((cards) =>
-        cards
-          .filter((card) => getComputedStyle(card).visibility === 'visible')
-          .sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left)
-          .map((card) => (card as HTMLElement).dataset.name),
-      );
-
-  test('the card in the middle has neighbours on both sides, and the arrows, keys and side cards turn it, endlessly', async ({
-    page,
-  }, testInfo) => {
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    await expect(page.getByRole('heading', { name: 'ways to study' })).toBeVisible();
-    // The first card in the middle, with the last card as its left neighbour: one on each side, two on wider screens.
-    await expect
-      .poll(() => onScreen(page))
-      .toEqual(
-        testInfo.project.name === 'desktop'
-          ? ['adaptive quiz', 'level test', 'video', 'cards', 'learn']
-          : ['level test', 'video', 'cards'],
-      );
-    await expect(section(page).getByRole('group', { name: '1 of 11', exact: true })).toHaveAttribute('data-active', '');
-
-    // Previous from the first card goes round to the last, and next from the last comes back to the first.
-    await section(page).getByRole('button', { name: 'previous study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('level test');
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('cards');
-
-    // A tap on a side card brings it to the middle (on phones only its edge shows, so the tap is near its edge).
-    await section(page).getByRole('button', { name: 'show learn' }).click({ position: { x: 16, y: 120 } });
-    await expect.poll(() => middleCard(page)).toBe('learn');
-    await expect(section(page).getByRole('button', { name: 'preview learn' })).toBeVisible();
-
-    // The arrow keys, Home and End, round and round.
-    await page.getByRole('group', { name: 'study mode cards' }).focus();
-    await page.keyboard.press('End');
-    await expect.poll(() => middleCard(page)).toBe('level test');
-    await page.keyboard.press('ArrowRight');
-    await expect.poll(() => middleCard(page)).toBe('video');
-    await page.keyboard.press('ArrowLeft');
-    await expect.poll(() => middleCard(page)).toBe('level test');
-
-    // Once the visitor is using it, the card where it comes to rest is announced.
-    const live = section(page).locator('[data-modes-live]');
-    await expect(live).toHaveAttribute('aria-live', 'polite');
-    await expect(live).toHaveText('level test, 11 of 11');
-
-    // Only the card in the middle is in the Tab order; side cards are a tap or an arrow key away.
-    const tabbable = await section(page)
-      .locator('[data-mode-card] :is(button, a)')
-      .evaluateAll((items) => items.filter((item) => (item as HTMLElement).tabIndex === 0).length);
-    expect(tabbable).toBe(1);
-
-    const axe = await new AxeBuilder({ page })
-      .include('#ways-to-study')
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
-      .analyze();
-    expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-  });
-
-  test("neighbours step back, smaller, turned away and quieter, but no card's words are ever faded", async ({
-    page,
-  }, testInfo) => {
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('cards');
-    await page.waitForTimeout(400);
-    const look = (id: string) =>
-      page.locator(`#mode-${id}`).evaluate((card) => ({
-        width: card.getBoundingClientRect().width,
-        turn: (card as HTMLElement).style.getPropertyValue('--ring-turn'),
-        heading: getComputedStyle(card.querySelector('h3')!).color,
-        shadow: getComputedStyle(card).boxShadow,
-      }));
-    const front = await look('cards');
-    const near = await look('learn');
-    const left = await look('video');
-    expect(near.width / front.width).toBeGreaterThan(0.78);
-    expect(near.width / front.width).toBeLessThan(0.9);
-    expect([front.turn, near.turn, left.turn]).toEqual(['0', '10', '-10']);
-    expect(near.heading).not.toBe(front.heading);
-    expect(near.shadow).toBe('none');
-    if (testInfo.project.name === 'desktop') {
-      const far = await look('fill-in');
-      expect(far.width / front.width).toBeGreaterThan(0.6);
-      expect(far.width / front.width).toBeLessThan(0.78);
-    }
-
-    // Nothing fades a card's words: from each card's words up to the page there is no mask, no filter and full
-    // opacity, so the text keeps the frosted-panel contrast checked in tests/unit/tokens.test.ts. (First the section's
-    // own fade-in, the first time it comes into view, has to finish: D-62.)
-    await expect
-      .poll(() => section(page).locator('[data-reveal-section]').evaluate((el) => getComputedStyle(el).opacity))
-      .toBe('1');
-    const faded = await page.locator('[data-mode-card] h3, [data-mode-card] p, [data-mode-card] a').evaluateAll((texts) =>
-      texts.flatMap((text) => {
-        const found: string[] = [];
-        for (let el: Element | null = text; el; el = el.parentElement) {
-          const style = getComputedStyle(el);
-          const mask = style.maskImage || style.getPropertyValue('-webkit-mask-image');
-          if (style.opacity !== '1' || style.filter !== 'none' || (mask && mask !== 'none')) {
-            found.push(`${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`);
-          }
-        }
-        return found;
-      }),
-    );
-    expect(faded).toEqual([]);
-  });
-
-  /** Every text the live region is given from now on. */
-  const listen = (page: Page) =>
-    page.locator('#ways-to-study [data-modes-live]').evaluate((live) => {
-      const heard: string[] = [];
-      (window as unknown as { heard: string[] }).heard = heard;
-      new MutationObserver(() => heard.push(live.textContent ?? '')).observe(live, {
-        childList: true,
-        characterData: true,
-        subtree: true,
-      });
-    });
-  const heard = (page: Page) => page.evaluate(() => (window as unknown as { heard: string[] }).heard);
-
-  test('a run of quick presses announces only the card where it comes to rest', async ({ page }) => {
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    await listen(page);
-    const next = section(page).getByRole('button', { name: 'next study mode' });
-    for (let i = 0; i < 4; i++) await next.click({ force: true });
-    await expect(section(page).locator('[data-modes-live]')).toHaveText('matching, 5 of 11');
-    await page.waitForTimeout(600);
-    expect(await heard(page)).toEqual(['matching, 5 of 11']);
-  });
-
-  test('a sideways swipe turns it one card each way; a short or mostly up-and-down one does not', async ({
-    page,
-  }, testInfo) => {
-    test.skip(!testInfo.project.use.hasTouch, 'a touch-screen gesture');
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    const cdp = await page.context().newCDPSession(page);
-    const swipe = async (dx: number, dy = 0) => {
-      const box = (await page.getByRole('group', { name: 'study mode cards' }).boundingBox())!;
-      const x = Math.round(box.x + box.width / 2);
-      const y = Math.round(box.y + box.height / 2);
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
-      for (let step = 1; step <= 6; step++) {
-        const point = { x: Math.round(x + (dx * step) / 6), y: Math.round(y + (dy * step) / 6) };
-        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [point] });
-      }
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    };
-    await swipe(-120);
-    await expect.poll(() => middleCard(page)).toBe('cards');
-    await swipe(120);
-    await expect.poll(() => middleCard(page)).toBe('video');
-    await swipe(-30);
-    await swipe(-30, 160);
-    await page.waitForTimeout(500);
-    expect(await middleCard(page)).toBe('video');
-    // A swipe is never a tap: no preview opened on the way.
-    await expect(page.locator('#mode-preview')).toBeHidden();
-  });
-
-  test('each card links to its mode when it is open, and says "coming soon" otherwise', async ({ page }) => {
-    await page.goto('/');
-    const open: Record<string, [string, string]> = {
-      cards: ['try the cards', '/learn/study-skills/cards'],
-      learn: ['try learn mode', '/learn/study-skills/learn-mode'],
-      matching: ['try matching', '/learn/study-skills/matching'],
-      organizer: ['try the organizer', '/learn/study-skills/organizer'],
-      'fill-in': ['try fill-in', '/learn/study-skills/fill-in'],
-      'label-it': ['try label it', '/learn/study-skills/label-it'],
-      questions: ['try the questions', '/learn/study-skills/questions'],
-    };
-    const modes = [
-      ['video', 'video'],
-      ['cards', 'cards'],
-      ['learn', 'learn'],
-      ['fill-in', 'fill-in'],
-      ['matching', 'matching'],
-      ['organizer', 'organizer'],
-      ['questions', 'questions'],
-      ['review', 'review'],
-      ['label-it', 'label it'],
-      ['adaptive-quiz', 'adaptive quiz'],
-      ['level-test', 'level test'],
-    ];
-    for (const [id, name] of modes) {
-      const card = page.locator(`#mode-${id}`);
-      await expect(card.locator('h3')).toHaveText(name!);
-      const link = open[id!];
-      if (link) await expect(card.locator(`a[href="${link[1]}"]`)).toHaveText(link[0]);
-      else await expect(card.getByText('coming soon', { exact: true })).toHaveCount(1);
-    }
-  });
-
-  test('the pause button stops the motion, and with reduced motion it just switches, without a glide or a turn', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    const press = section(page).locator('#mode-video .ill-video-press');
-    await expect.poll(() => press.evaluate((el) => getComputedStyle(el).animationName)).toBe('ill-video-press');
-    await section(page).getByRole('button', { name: 'pause the slideshow' }).click();
-    await expect(section(page).getByRole('button', { name: 'play the slideshow' })).toBeVisible();
-    expect(await press.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
-    await section(page).getByRole('button', { name: 'play the slideshow' }).click();
-    await expect(section(page).getByRole('button', { name: 'pause the slideshow' })).toBeVisible();
-
-    // A turn glides, and the side cards are turned away.
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    const learn = section(page).locator('#mode-learn');
-    expect(await learn.evaluate((el) => getComputedStyle(el).transitionDuration)).toContain('0.24s');
-    expect(await learn.evaluate((el) => el.style.getPropertyValue('--ring-turn'))).toBe('10');
-
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.reload();
-    await expect(section(page).getByRole('button', { name: 'next study mode' })).toBeVisible();
-    await expect(section(page).locator('[data-modes-pause]')).toBeHidden();
-    expect(
-      await section(page)
-        .locator('#mode-video .ill-video-press')
-        .evaluate((el) => getComputedStyle(el).animationName),
-    ).toBe('none');
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('cards');
-    const still = await section(page)
-      .locator('#mode-learn')
-      .evaluate((el) => [getComputedStyle(el).transitionDuration, el.style.getPropertyValue('--ring-turn')]);
-    // Instant: no transition at all (the site-wide reduced-motion rule leaves 0.01 ms at most).
-    expect(Math.max(...still[0]!.split(',').map((d) => parseFloat(d)))).toBeLessThan(0.001);
-    expect(still[1]).toBe('0');
-  });
-
-  test('auto-advance moves on after about six seconds, pauses on the cards, and stops once the visitor takes over', async ({
-    page,
-  }, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop', 'one size is enough for a timing test');
-    test.slow();
-    await page.goto('/');
-    await section(page).scrollIntoViewIfNeeded();
-    // The mouse over the section's words, not its cards: that doesn't pause it.
-    await page.mouse.move(0, 0);
-    await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('cards');
-
-    // Resting on the cards pauses it; moving off lets it go on.
-    await page.getByRole('group', { name: 'study mode cards' }).hover();
-    await page.waitForTimeout(7000);
-    expect(await middleCard(page)).toBe('cards');
-    await page.mouse.move(0, 0);
-    await expect.poll(() => middleCard(page), { timeout: 9000 }).toBe('learn');
-
-    await section(page).getByRole('button', { name: 'next study mode' }).click();
-    await expect.poll(() => middleCard(page)).toBe('fill-in');
-    await page.mouse.move(0, 0);
-    await page.waitForTimeout(7000);
-    expect(await middleCard(page)).toBe('fill-in');
-  });
-});
-
 test.describe('silk scenes down the home page (D-53)', () => {
-  test('three scenes in order, each its own layer behind its section, with no section numbers or decorative lines', async ({
+  test('the scenes in order, each its own layer behind its section, with no section numbers or decorative lines', async ({
     page,
   }) => {
     await page.goto('/');
@@ -853,7 +998,10 @@ test.describe('silk scenes down the home page (D-53)', () => {
         };
       }),
     );
-    expect(scenes.map((scene) => scene.kind)).toEqual(['scene-hero', 'scene-tint', 'scene-play', 'scene-low']);
+    // Home v3: the hero, daily games and the vial platter are silk scenes; the coming-soon panel and the social row sit on the page itself.
+    expect(scenes.map((scene) => scene.kind)).toEqual([
+      'scene-hero', 'scene-play', 'scene-tint',
+    ]);
     for (const scene of scenes) expect(scene).toMatchObject({ drawn: true, behind: '-20', fades: true });
 
     // Calm, not a template (D-60): no numbered labels, no figure caption, no rhythm line.
@@ -875,230 +1023,82 @@ test.describe('silk scenes down the home page (D-53)', () => {
         probe.remove();
         return size;
       };
-      const bands: Array<[number, number]> = [];
+      const bands: Array<{ scene: string; edge: 'top' | 'bottom'; from: number; to: number }> = [];
       for (const section of document.querySelectorAll('.scene')) {
         const box = section.getBoundingClientRect();
         const top = length(section, '--scene-fade-top');
         const bottom = length(section, '--scene-fade-bottom');
-        if (top > 0) bands.push([box.top - top, box.top]);
-        if (bottom > 0) bands.push([box.bottom - bottom, box.bottom]);
+        const scene = [...section.classList].find((name) => name.startsWith('scene-'))!;
+        if (top > 0) bands.push({ scene, edge: 'top', from: box.top - top, to: box.top });
+        if (bottom > 0) bands.push({ scene, edge: 'bottom', from: box.bottom - bottom, to: box.bottom });
       }
       const hits: string[] = [];
+      // Text that is clipped away (the keyboard-only "play today's" button and the screen-reader date line, which the
+      // boards draw nothing for) is not on screen, so no word of it can sit in a fade. The focused button is checked below.
+      const drawn = (node: Node) => {
+        for (let el = node.parentElement; el && el.tagName !== 'MAIN'; el = el.parentElement) {
+          if (getComputedStyle(el).clipPath === 'inset(50%)') return false;
+        }
+        return true;
+      };
       const walker = document.createTreeWalker(document.querySelector('main')!, NodeFilter.SHOW_TEXT);
       for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        if (!node.textContent?.trim()) continue;
+        if (!node.textContent?.trim() || !drawn(node)) continue;
         const range = document.createRange();
         range.selectNodeContents(node);
         for (const rect of range.getClientRects()) {
           if (rect.width === 0 || rect.height === 0) continue;
-          if (bands.some(([from, to]) => rect.bottom > from && rect.top < to)) hits.push(node.textContent.trim());
+          if (bands.some(({ from, to }) => rect.bottom > from && rect.top < to)) hits.push(node.textContent.trim());
         }
       }
-      return { bands: bands.length, hits };
+      return { bands, hits };
     });
-    expect(covered.bands).toBe(4);
+    expect(covered.bands.map(({ scene, edge }) => [scene, edge])).toEqual([
+      ['scene-play', 'top'], ['scene-tint', 'top'],
+    ]); // Two top fades between the three scenes (Home v3: the coming-soon panel is not a scene).
     expect(covered.hits).toEqual([]);
+
+    // The one drawn exception: Tab reveals the "play today's" button over the dots' row, which lies in the fade above the
+    // next scene. Its words must then sit on the button's own solid page-colour fill, never on the fading silk.
+    await page.getByTestId('games-link').focus();
+    const revealed = await page.getByTestId('games-link').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { clip: style.clipPath, fill: style.backgroundColor, order: style.zIndex };
+    });
+    expect(revealed.clip).toBe('none');
+    expect(revealed.fill).toMatch(/^rgb\(\d+, \d+, \d+\)$/); // fully opaque (no alpha channel)
+    expect(Number(revealed.order)).toBeGreaterThan(0);
   });
 });
 
-test.describe('study-mode preview (D-51)', () => {
-  const dialog = (page: Page) => page.locator('#mode-preview');
-  /** Turns the merry-go-round until `name` is in the middle, where a tap opens its preview. */
-  const bringToMiddle = async (page: Page, name: string) => {
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    for (let i = 0; i < 11 && (await middleCard(page)) !== name; i++) {
-      await page.locator('#ways-to-study').getByRole('button', { name: 'next study mode' }).click();
-    }
-    await expect.poll(() => middleCard(page)).toBe(name);
-  };
-  const openPreview = async (page: Page, name: string) => {
-    await page.goto('/');
-    await bringToMiddle(page, name);
-    await page.getByRole('button', { name: `preview ${name}` }).click();
-    await expect(page.getByRole('dialog', { name })).toBeVisible();
-  };
-
-  test('the card in the middle grows into its preview, which passes axe; Escape shrinks it back and focus returns', async ({
-    page,
-  }) => {
-    await page.goto('/');
-    await bringToMiddle(page, 'cards');
-    // Let the turn finish, so the card has come to rest before it is measured.
-    await page.waitForTimeout(400);
-    // The grow starts with the panel exactly over the card it came from. (A click without moving the mouse there, so
-    // the hover zoom doesn't change the card while it is measured.)
-    const start = await page.evaluate(() => {
-      const card = document.querySelector('#mode-cards')!.getBoundingClientRect();
-      document.querySelector<HTMLButtonElement>('#mode-cards [data-mode-open]')!.click();
-      const panel = document.querySelector<HTMLElement>('[data-mode-preview-panel]')!;
-      const [grow] = panel.getAnimations();
-      if (!grow) return undefined;
-      grow.pause();
-      grow.currentTime = 0;
-      const box = panel.getBoundingClientRect();
-      grow.play();
-      return [box.left - card.left, box.top - card.top, box.width - card.width, box.height - card.height];
-    });
-    expect(start).toBeDefined();
-    for (const gap of start!) expect(Math.abs(gap)).toBeLessThan(2);
-
-    const preview = page.getByRole('dialog', { name: 'cards' });
-    await expect(preview).toBeVisible();
-    await expect(preview.getByRole('heading', { level: 2, name: 'cards' })).toBeVisible();
-    await expect(preview.getByText('flip a card to check yourself')).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'try it' })).toHaveAttribute('href', '/learn/study-skills/cards');
-    await expect(preview.getByRole('link', { name: 'create your free account to save progress' })).toHaveAttribute(
-      'href',
-      '/#signup',
-    );
-    await expect(preview.getByRole('button', { name: 'close preview' })).toBeFocused();
-    // Its illustration plays in the preview too.
-    await expect
-      .poll(() => preview.locator('.ill-flip-front').evaluate((el) => getComputedStyle(el).animationName))
-      .toBe('ill-flip-front');
-    await expect.poll(() => page.evaluate(() => document.querySelector('[data-mode-preview-panel]')!.getAnimations().length)).toBe(0);
-
-    const axe = await new AxeBuilder({ page })
-      .include('#mode-preview')
-      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
-      .analyze();
-    expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-
-    await page.keyboard.press('Escape');
-    await expect(dialog(page)).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview cards' })).toBeFocused();
-  });
-
-  test('previous and next move through the modes with the row behind; the X and the darkened page close it', async ({
-    page,
-  }) => {
-    await openPreview(page, 'cards');
-    const preview = dialog(page);
-    await preview.getByRole('button', { name: 'next study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'learn' })).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'try it' })).toHaveAttribute('href', '/learn/study-skills/learn-mode');
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('learn, 3 of 11');
-
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await preview.getByRole('button', { name: 'previous study mode' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await expect(preview.getByText('coming soon')).toBeVisible();
-    await expect(preview.getByRole('link', { name: 'try it' })).toBeHidden();
-    await expect(preview.locator('[data-mode-preview-live]')).toHaveText('video, 1 of 11');
-    // The merry-go-round behind follows, so closing shrinks the preview into the video card.
-    await expect(page.locator('#mode-video')).toHaveAttribute('data-active', '');
-
-    await preview.getByRole('button', { name: 'close preview' }).click();
-    await expect(preview).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
-
-    await page.getByRole('button', { name: 'preview video' }).click();
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await page.mouse.click(4, 4);
-    await expect(preview).toBeHidden();
-  });
-
-  test('moving to a mode that is not open yet keeps focus in the preview when "try it" had it', async ({ page }) => {
-    await openPreview(page, 'cards');
-    const preview = dialog(page);
-    await preview.getByRole('link', { name: 'try it' }).focus();
-    await page.keyboard.press('ArrowLeft');
-    await expect(page.getByRole('dialog', { name: 'video' })).toBeVisible();
-    await expect(preview.getByRole('button', { name: 'previous study mode' })).toBeFocused();
-    // The arrow keys still work from there, round to the last card.
-    await page.keyboard.press('ArrowLeft');
-    await expect(page.getByRole('dialog', { name: 'level test' })).toBeVisible();
-  });
-
-  test('closing in the middle of the grow still shrinks the preview exactly back into its card', async ({ page }) => {
-    await page.goto('/');
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    const gaps = await page.evaluate(async () => {
-      document.querySelector<HTMLButtonElement>('#mode-video [data-mode-open]')!.click();
-      // Escape a tenth of a second into the 320 ms grow.
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      const card = document.querySelector('#mode-video')!.getBoundingClientRect();
-      document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      const panel = document.querySelector<HTMLElement>('[data-mode-preview-panel]')!;
-      const [shrink] = panel.getAnimations();
-      if (!shrink) return undefined;
-      shrink.pause();
-      shrink.currentTime = Number(shrink.effect!.getComputedTiming().endTime);
-      const box = panel.getBoundingClientRect();
-      return [box.left - card.left, box.top - card.top, box.width - card.width, box.height - card.height];
-    });
-    expect(gaps).toBeDefined();
-    for (const gap of gaps!) expect(Math.abs(gap)).toBeLessThan(2);
-  });
-
-  test('keyboard focus stays inside the open preview', async ({ page }) => {
-    await openPreview(page, 'cards');
-    for (let i = 0; i < 9; i++) {
-      await page.keyboard.press(i % 3 === 2 ? 'Shift+Tab' : 'Tab');
-      expect(await page.evaluate(() => !!document.activeElement?.closest('#mode-preview'))).toBe(true);
-    }
-  });
-
-  test('with reduced motion it opens and closes at once', async ({ page }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await openPreview(page, 'video');
-    expect(await page.evaluate(() => document.querySelector('[data-mode-preview-panel]')!.getAnimations().length)).toBe(0);
-    await page.keyboard.press('Escape');
-    expect(await dialog(page).evaluate((el) => (el as HTMLDialogElement).open)).toBe(false);
-  });
-
-  test('a swipe down closes it on touch screens, a short one does not', async ({ page }, testInfo) => {
-    test.skip(!testInfo.project.use.hasTouch, 'a touch-screen gesture');
-    await openPreview(page, 'video');
-    const swipe = (distance: number) =>
-      page.locator('[data-mode-preview-panel]').evaluate((panel, down) => {
-        const touch = (y: number) => new Touch({ identifier: 1, target: panel, clientX: 200, clientY: y });
-        panel.dispatchEvent(new TouchEvent('touchstart', { touches: [touch(300)], changedTouches: [touch(300)], bubbles: true }));
-        panel.dispatchEvent(new TouchEvent('touchend', { touches: [], changedTouches: [touch(300 + down)], bubbles: true }));
-      }, distance);
-    await swipe(40);
-    await page.waitForTimeout(500);
-    await expect(dialog(page)).toBeVisible();
-    await swipe(120);
-    await expect(dialog(page)).toBeHidden();
-    await expect(page.getByRole('button', { name: 'preview video' })).toBeFocused();
-  });
-
-  test('with a mouse, the card in the middle grows a little under the pointer, and side cards stay as they are', async ({
-    page,
-  }, testInfo) => {
-    test.skip(testInfo.project.name !== 'desktop', 'hover needs a mouse');
-    await page.goto('/');
-    await page.locator('#ways-to-study').scrollIntoViewIfNeeded();
-    const card = page.locator('#mode-video');
-    expect(await card.evaluate((el) => getComputedStyle(el).scale)).toBe('none');
-    await card.hover();
-    await expect.poll(() => card.evaluate((el) => getComputedStyle(el).scale)).toBe('1.04');
-    const side = page.locator('#mode-cards');
-    await side.hover();
-    await page.waitForTimeout(300);
-    expect(await side.evaluate((el) => getComputedStyle(el).scale)).toBe('none');
-  });
-});
+export function homeMenuOpener(page: Page) {
+  const name = page.viewportSize()!.width >= 640 ? 'search the site' : 'open site menu';
+  return page.getByRole('button', { name, exact: true });
+}
 
 test.describe('☰ side panel and account corner (D-46)', () => {
   for (const path of ['/', '/privacy', '/learn/study-skills']) {
     test(`☰ opens the side panel on ${path}, keeps focus inside, and Escape brings focus back`, async ({ page }) => {
       await page.goto(path);
-      const open = page.getByRole('button', { name: 'menu', exact: true });
+      const open = path === '/' ? homeMenuOpener(page) : page.getByRole('button', { name: 'open site menu', exact: true });
       await expect(open).toHaveAttribute('aria-expanded', 'false');
       await open.click();
       const panel = page.getByTestId('site-menu');
       await expect(panel).toBeVisible();
       await expect(open).toHaveAttribute('aria-expanded', 'true');
-      await expect(panel.getByRole('button', { name: 'close menu' })).toBeFocused();
+      const initialFocus = path === '/' && page.viewportSize()!.width >= 640
+        ? panel.getByRole('searchbox', { name: 'search the site' })
+        : panel.getByRole('button', { name: 'close site menu' });
+      await expect(initialFocus).toBeFocused();
 
       const nav = panel.getByRole('navigation', { name: 'site' });
-      for (const name of ['home', 'ways to study', 'lessons', 'daily games', 'my progress', 'support cueory']) {
-        await expect(nav.getByRole('link', { name })).toBeVisible();
+      // The bar holds exactly study, anatomy lab (drafts builds only), games, support and about; the other pages,
+      // legal pages included, are linked from the about page (checked in about.spec.ts).
+      for (const name of ['study', 'games', 'support', 'about']) {
+        await expect(nav.getByRole('link', { name, exact: true })).toBeVisible();
       }
-      await expect(panel.getByRole('link', { name: 'privacy' })).toBeVisible();
-      await expect(panel.getByRole('link', { name: 'terms' })).toBeVisible();
+      await expect(nav.getByRole('link')).toHaveCount(5); // the drafts build also shows the anatomy lab
+      await expect(panel.getByRole('link', { name: 'privacy' })).toHaveCount(0);
 
       // Tab never leaves the panel while it is open.
       for (let i = 0; i < 9; i++) {
@@ -1117,21 +1117,21 @@ test.describe('☰ side panel and account corner (D-46)', () => {
   }
 
   test('the current page is marked in the side panel by more than color', async ({ page }) => {
-    await page.goto('/learn/study-skills/cards');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.goto('/support');
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     const current = page.getByTestId('site-menu').locator('[aria-current="page"]');
     await expect(current).toHaveCount(1);
-    await expect(current).toHaveText('lessons');
+    await expect(current).toHaveText('support');
     // A short line beside the link, drawn by ::before.
     expect(await current.evaluate((el) => getComputedStyle(el, '::before').content)).not.toBe('none');
   });
 
   test('the close button and a tap on the dimmed page close the side panel', async ({ page }) => {
     await page.goto('/');
-    const open = page.getByRole('button', { name: 'menu', exact: true });
+    const open = homeMenuOpener(page);
     const panel = page.getByTestId('site-menu');
     await open.click();
-    await panel.getByRole('button', { name: 'close menu' }).click();
+    await panel.getByRole('button', { name: 'close site menu' }).click();
     await expect(panel).toBeHidden();
     await expect(open).toBeFocused();
 
@@ -1142,24 +1142,27 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     await expect(panel).toBeHidden();
   });
 
-  test('a side-panel link to a spot on the home page closes the panel and goes there', async ({ page }) => {
+  test('a side-panel row opens its page (the bar has no links to spots on the home page any more)', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
-    await page.getByTestId('site-menu').getByRole('link', { name: 'ways to study' }).click();
-    await expect(page.getByTestId('site-menu')).toBeHidden();
-    await expect(page).toHaveURL(/#ways-to-study$/);
-    await expect(page.getByRole('heading', { name: 'ways to study' })).toBeInViewport();
+    await homeMenuOpener(page).click();
+    const panel = page.getByTestId('site-menu');
+    await expect(panel.locator('a[href*="#"]')).toHaveCount(0);
+    await panel.getByRole('navigation', { name: 'site' }).getByRole('link', { name: 'about', exact: true }).click();
+    await expect(page).toHaveURL(/\/about$/);
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 
   test('the account corner offers "create free account" and "sign in", both coming soon', async ({ page }) => {
     await page.goto('/');
-    const account = page.getByRole('button', { name: 'account', exact: true });
+    const account = page.locator('[data-account-toggle]');
     const menu = page.getByTestId('account-menu');
     await expect(menu).toBeHidden();
+    await expect(account).toHaveAttribute('aria-label', 'sign in, open account menu');
     await account.focus();
     await page.keyboard.press('Enter');
     await expect(menu).toBeVisible();
     await expect(account).toHaveAttribute('aria-expanded', 'true');
+    await expect(account).toHaveAttribute('aria-label', 'sign in, close account menu');
     await expect(menu.getByRole('link', { name: /create free account/ })).toHaveAttribute('href', '/#signup');
     await expect(menu.getByRole('link', { name: /sign in/ })).toHaveAttribute('href', '/#signup');
     await expect(menu.getByText('coming soon')).toHaveCount(2);
@@ -1181,19 +1184,25 @@ test.describe('☰ side panel and account corner (D-46)', () => {
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
     await expect(account).toBeFocused();
+    await expect(account).toHaveAttribute('aria-label', 'sign in, open account menu');
 
     // A tap anywhere else closes it too.
     await account.click();
     await expect(menu).toBeVisible();
-    await page.getByRole('heading', { level: 1 }).click();
+    await expect(account).toHaveAttribute('aria-label', 'sign in, close account menu');
+    // The headline's top-left corner: on a phone the open account menu now covers the rest of the (higher) headline.
+    await page.getByRole('heading', { level: 1 }).click({ position: { x: 5, y: 5 } });
     await expect(menu).toBeHidden();
+    await expect(account).toHaveAttribute('aria-label', 'sign in, open account menu');
   });
 
   test('corner buttons are at least 44 by 44 px', async ({ page }) => {
     for (const path of ['/', '/learn/study-skills']) {
       await page.goto(path);
-      for (const name of ['menu', 'account']) {
-        const box = (await page.getByRole('button', { name, exact: true }).boundingBox())!;
+      // The Home v3 header opens the menu from search on screens 640 px and wider (see homeMenuOpener).
+      const menuOpener = path === '/' ? homeMenuOpener(page).first() : page.getByRole('button', { name: 'open site menu', exact: true });
+      for (const opener of [menuOpener, page.getByRole('button', { name: path === '/' ? 'sign in, open account menu' : 'open account menu', exact: true })]) {
+        const box = (await opener.boundingBox())!;
         expect(box.width).toBeGreaterThanOrEqual(44);
         expect(box.height).toBeGreaterThanOrEqual(44);
       }
@@ -1204,16 +1213,16 @@ test.describe('☰ side panel and account corner (D-46)', () => {
 test.describe('site search in the ☰ panel (D-49)', () => {
   test('finds pages as you type, works by keyboard, and goes to the result', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     await expect(field).toHaveAttribute('placeholder', 'search');
 
-    await field.fill('privacy');
+    await field.fill('support');
     const results = panel.getByRole('list', { name: 'search results' });
-    const privacy = results.getByRole('link', { name: /^privacy/ });
-    await expect(privacy).toBeVisible();
-    await expect(privacy).toHaveAttribute('href', '/privacy');
+    const support = results.getByRole('link', { name: /^support/ });
+    await expect(support).toBeVisible();
+    await expect(support).toHaveAttribute('href', '/support');
     await expect(panel.locator('#site-search-status')).toHaveText(/^(1 result|\d+ results|\d+ of \d+ results)$/);
     // The matched word is marked by weight, not color alone.
     const mark = results.locator('mark').first();
@@ -1229,14 +1238,14 @@ test.describe('site search in the ☰ panel (D-49)', () => {
     await page.keyboard.press('ArrowUp');
     await expect(field).toBeFocused();
 
-    await privacy.focus();
+    await support.focus();
     await page.keyboard.press('Enter');
-    await expect(page).toHaveURL(/\/privacy$/);
+    await expect(page).toHaveURL(/\/support$/);
   });
 
   test('a new search while a result has keyboard focus keeps focus in the panel', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await homeMenuOpener(page).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     const results = panel.getByRole('list', { name: 'search results' });
@@ -1251,9 +1260,9 @@ test.describe('site search in the ☰ panel (D-49)', () => {
     await expect(results.getByRole('link').nth(1)).toBeVisible();
     // Focus moves onto a result before the next search's results arrive (Codex review on #27).
     await results.getByRole('link').nth(1).focus();
-    await search('privacy');
-    // The new results are in once the privacy page leads the list ("card" never puts it first).
-    await expect(results.getByRole('link').first()).toHaveAccessibleName(/^privacy/);
+    await search('support');
+    // Confirm the latest indexed result arrived without depending on the ranking order.
+    await expect(results.getByRole('link', { name: /^support/ })).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => document.activeElement?.closest('[aria-label="search results"]') !== null))
       .toBe(true);
@@ -1265,7 +1274,7 @@ test.describe('site search in the ☰ panel (D-49)', () => {
 
   test('says "no results" plainly, and clearing the field clears the results', async ({ page }) => {
     await page.goto('/learn/study-skills');
-    await page.getByRole('button', { name: 'menu', exact: true }).click();
+    await page.getByRole('button', { name: 'open site menu', exact: true }).click();
     const panel = page.getByTestId('site-menu');
     const field = panel.getByRole('searchbox', { name: 'search the site' });
     const status = panel.locator('#site-search-status');
@@ -1285,8 +1294,11 @@ test.describe('site search in the ☰ panel (D-49)', () => {
 test.describe('social links (D-54)', () => {
   test("the footer and the ☰ panel link to cueory's profiles in a new tab, only where an address is set", async ({
     page,
+    browserName,
   }) => {
+    const minimum = browserName === 'firefox' ? 44 - FIREFOX_ROUNDING_PX : 44;
     await page.goto('/privacy');
+    await openFooterLinks(page);
     const footer = page.getByRole('contentinfo');
     const expected = Object.fromEntries(socials.filter((social) => social.href).map((social) => [social.id, social.href]));
     await expect(footer.locator('[data-social]')).toHaveCount(Object.keys(expected).length);
@@ -1298,12 +1310,12 @@ test.describe('social links (D-54)', () => {
       // The mark is drawn inline from our own page, never loaded from the platform.
       await expect(link.locator('svg path')).toHaveCount(1);
       const box = (await link.boundingBox())!;
-      expect(box.width).toBeGreaterThanOrEqual(44);
-      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(minimum);
+      expect(box.height).toBeGreaterThanOrEqual(minimum);
     }
     await expect(footer.getByRole('link', { name: 'cueory on Instagram (opens in a new tab)' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'menu' }).click();
+    await page.getByRole('button', { name: 'open site menu' }).click();
     await expect(page.getByTestId('site-menu').locator('[data-social]')).toHaveCount(Object.keys(expected).length);
     const axe = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
     expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
@@ -1315,9 +1327,11 @@ test.describe('without JavaScript, the corners', () => {
 
   test('stay hidden but keep their space, so nothing moves', async ({ page }) => {
     await page.goto('/privacy');
-    await expect(page.getByRole('button', { name: 'menu', exact: true })).toBeHidden();
-    await expect(page.getByRole('button', { name: 'account', exact: true })).toBeHidden();
-    await expect(page.getByRole('navigation', { name: 'footer' }).getByRole('link', { name: 'support cueory' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'open site menu', exact: true })).toBeHidden();
+    await expect(page.getByRole('button', { name: 'open account menu', exact: true })).toBeHidden();
+    // Without scripts the footer's extras panel is simply open (its chevron stays hidden), so its links are all there.
+    await expect(page.getByRole('navigation', { name: 'more pages' }).getByRole('link', { name: 'support cueory' })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'footer' }).getByRole('link', { name: 'privacy', exact: true })).toBeVisible();
   });
 });
 
@@ -1411,6 +1425,8 @@ test.describe('fill-in at 320 px', () => {
     await expect(page.getByTestId('fill-in-sample-note')).toBeVisible();
 
     const board = page.getByTestId('fill-in');
+    // Switch to type mode to test typing and keyboard flow
+    await board.getByRole('button', { name: 'type instead' }).click();
     const field = board.getByRole('textbox', { name: 'the missing word' });
     const next = board.getByRole('button', { name: 'next' });
     const axe = async () => {

@@ -1,13 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { deletionSummary, confirmState, afterDeletion } from '../../src/islands/deleteaccount';
-import type { ExportData } from '../../src/islands/exportdata';
+import {
+  deletionSummary, confirmState, afterDeletion, DELETE_MAX_SIGN_IN_AGE_SECONDS, DELETE_RETURN_PATH, deleteOutcome,
+  freshForDeletion, reauthHref, tokenIssuedAt, tokenRecentAuthAt,
+} from '../../src/islands/deleteaccount';
+import { safeNext } from '../../src/islands/signin';
+import { GUEST_IMPORT_MARKER_PREFIX } from '../../src/islands/guestimportrun';
+import { RESUME_STORAGE_KEY } from '../../src/scripts/resume';
+import { BREAK_STORAGE_KEY } from '../../src/scripts/breakstore';
+import { NOTE_SOUND_STORAGE_KEY } from '../../src/scripts/notesound';
+import { LAST_WELCOME_STORAGE_KEY, VISIT_STORAGE_KEY } from '../../src/islands/stickynote';
+import {
+  AUTH_STORAGE_KEY, PKCE_FLOW_LIST_STORAGE_KEY, PKCE_VERIFIER_STORAGE_KEY, pkceFlowStorageKey,
+} from '../../src/islands/supabaseclient';
+import { getCodeChallengeAndMethod } from '@supabase/auth-js/dist/module/lib/helpers.js';
+import { StudyEventPages, type ExportData, type StudyEventRow } from '../../src/islands/exportdata';
 import {
   emptyProgress, forgetProgress, legacyStarsKey, loadDeckStars, migrateLegacyStars, PROGRESS_STORAGE_KEY,
   saveProgress, withOnboarding, withPile, withStars,
 } from '../../src/scripts/progress';
 import { PROMO_STORAGE_KEY } from '../../src/scripts/promo';
 import { THEME_STORAGE_KEY } from '../../src/scripts/theme';
+import { GAME_SETTINGS_STORAGE_KEY } from '../../src/islands/gamesettings';
+import { GAME_HELP_STORAGE_KEY } from '../../src/islands/gamehelpkeys';
 import { STATS_STORAGE_KEY } from '../../src/islands/gameresults';
+import { CROSSWORD_SETTINGS_KEY } from '../../src/islands/cueword';
 import type { KeyValueStorage } from '../../src/scripts/storage';
 
 class MemoryStorage implements KeyValueStorage {
@@ -200,9 +216,81 @@ describe('afterDeletion', () => {
     expect(afterDeletion(new MemoryStorage())).toContain(STATS_STORAGE_KEY);
   });
 
+  it('includes the crossword settings key (Task 721)', () => {
+    expect(afterDeletion(new MemoryStorage())).toContain(CROSSWORD_SETTINGS_KEY);
+  });
+
+  it('includes the shared game settings key (#734)', () => {
+    expect(afterDeletion(new MemoryStorage())).toContain(GAME_SETTINGS_STORAGE_KEY);
+  });
+
+  it('includes the game help seen key (#736)', () => {
+    expect(afterDeletion(new MemoryStorage())).toContain(GAME_HELP_STORAGE_KEY);
+  });
+
+  it('includes the study resume key (Task 104)', () => {
+    expect(afterDeletion(new MemoryStorage())).toContain(RESUME_STORAGE_KEY);
+  });
+
+  it('includes both persistent glove-note preferences', () => {
+    const keys = afterDeletion(new MemoryStorage());
+    expect(keys).toContain(LAST_WELCOME_STORAGE_KEY);
+    expect(keys).toContain(NOTE_SOUND_STORAGE_KEY);
+  });
+
+  it('separates tab-only keys and leaves the auth key to Task 59', () => {
+    const keys = afterDeletion(new MemoryStorage());
+    expect(keys.sessionKeys).toEqual([VISIT_STORAGE_KEY, BREAK_STORAGE_KEY]);
+    expect(new Set(keys.sessionKeys).size).toBe(keys.sessionKeys.length);
+    expect(keys).not.toContain(VISIT_STORAGE_KEY);
+    expect(keys).not.toContain(BREAK_STORAGE_KEY);
+    expect(keys).not.toContain(AUTH_STORAGE_KEY);
+    expect(keys.sessionKeys).not.toContain(AUTH_STORAGE_KEY);
+  });
+
+  it('includes every guest-import marker, and nothing else that merely looks similar', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(`${GUEST_IMPORT_MARKER_PREFIX}abc`, '1');
+    storage.setItem(`${GUEST_IMPORT_MARKER_PREFIX}def`, '1');
+    storage.setItem('not-cueory-guest-imported:abc', '1');
+    const keys = afterDeletion(storage);
+    expect(keys).toContain(`${GUEST_IMPORT_MARKER_PREFIX}abc`);
+    expect(keys).toContain(`${GUEST_IMPORT_MARKER_PREFIX}def`);
+    expect(keys).not.toContain('not-cueory-guest-imported:abc');
+  });
+
   it('has no duplicates', () => {
     const keys = afterDeletion(new MemoryStorage());
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('includes the PKCE sign-in verifier keys, and each sign-in slot found in storage', () => {
+    const storage = new MemoryStorage();
+    storage.setItem(pkceFlowStorageKey('0123456789abcdef0123456789abcdef'), '"sample"');
+    storage.setItem('cueory-authx-code-verifier', '"sample"');
+    storage.setItem('other-cueory-auth-code-verifier', '"sample"');
+    const keys = afterDeletion(storage);
+    expect(PKCE_VERIFIER_STORAGE_KEY).toBe('cueory-auth-code-verifier');
+    expect(PKCE_FLOW_LIST_STORAGE_KEY).toBe('cueory-auth-flows-code-verifier');
+    expect(keys).toContain(PKCE_VERIFIER_STORAGE_KEY);
+    expect(keys).toContain(PKCE_FLOW_LIST_STORAGE_KEY);
+    expect(keys).toContain('cueory-auth-flow-0123456789abcdef0123456789abcdef-code-verifier');
+    expect(keys).not.toContain('cueory-authx-code-verifier');
+    expect(keys).not.toContain('other-cueory-auth-code-verifier');
+    expect(keys).not.toContain(AUTH_STORAGE_KEY);
+  });
+
+  it('covers every key the installed supabase-js writes when a PKCE sign-in starts', async () => {
+    const storage = new MemoryStorage();
+    // Two abandoned sign-ins, written by the library itself under Cueory's storage key.
+    await getCodeChallengeAndMethod(storage, AUTH_STORAGE_KEY);
+    await getCodeChallengeAndMethod(storage, AUTH_STORAGE_KEY);
+    const written = [...storage.values.keys()];
+    expect(written.length).toBeGreaterThanOrEqual(3);
+    const keys = afterDeletion(storage);
+    for (const key of written) expect(keys, key).toContain(key);
+    for (const key of keys) storage.removeItem(key);
+    expect(storage.length).toBe(0);
   });
 });
 
@@ -251,13 +339,35 @@ describe('the current export contract in the deletion summary', () => {
     const data: ExportData = {
       attempts: [{ itemVersionId: '00000000-0000-4000-8000-000000000001', picked: ['a'], correct: false, createdAt: '2026-11-01T00:00:00Z' }],
       examPlans: [{ course: 'fundamentals', examDate: '2027-01-01', createdAt: '2026-11-01T00:00:00Z' }],
-      reviewRows: [{ itemId: '00000000-0000-4000-8000-000000000002', level: 0, lastReviewed: '2026-11-01', nextReview: '2026-11-02' }],
+      reviewRows: [{ itemId: '00000000-0000-4000-8000-000000000002', level: 0, lastReviewed: '2026-11-01', nextReview: '2026-11-02', updatedAt: '2026-11-01T12:00:00Z' }],
     };
     expect(deletionSummary(data)).toEqual(['1 question attempt', '1 exam date', '1 account review schedule']);
     expect(deletionSummary({ attempts: [...data.attempts!, ...data.attempts!], examPlans: [...data.examPlans!, ...data.examPlans!], reviewRows: [...data.reviewRows!, ...data.reviewRows!] }))
       .toEqual(['2 question attempts', '2 exam dates', '2 account review schedules']);
     expect(deletionSummary({ attempts: [], examPlans: [], reviewRows: [] })).toEqual([]);
   });
+});
+
+describe('the sign-in record in the deletion summary (Task 309)', () => {
+  const session = { createdAt: '2026-11-01T08:00:00Z', updatedAt: null, notAfter: null, userAgent: 'sample browser', ip: '203.0.113.5' };
+
+  it('names the sign-in details and counts sessions without echoing them', () => {
+    const data: ExportData = {
+      account: { providers: ['google'], userMetadata: { name: 'Sample Student' }, identities: [] },
+      sessions: [session, session],
+    };
+    const lines = deletionSummary(data);
+    expect(lines).toEqual(['your sign-in details', '2 sign-in sessions']);
+    expect(lines.join(' ')).not.toContain('Sample Student');
+    expect(lines.join(' ')).not.toContain('203.0.113.5');
+    expect(deletionSummary({ sessions: [session] })).toEqual(['1 sign-in session']);
+  });
+
+  it.each([{}, { account: {}, sessions: [] }, { account: { providers: [], userMetadata: {}, identities: [] } }] satisfies ExportData[])(
+    'omits an empty sign-in record: %j', data => {
+      expect(deletionSummary(data)).toEqual([]);
+    },
+  );
 });
 
 describe('reports in the deletion summary', () => {
@@ -293,7 +403,9 @@ describe('legacy browser data in the cleanup plan', () => {
     storage.setItem(legacyStarsKey('sample-retired'), JSON.stringify(['sample-retired-card']));
     storage.setItem(legacyStarsKey('retired.deck'), 'sample: unreadable legacy value');
     saveProgress(storage, withPile(emptyProgress(), 'sample-live', 'sample-card', 'know'));
-    for (const key of [PROMO_STORAGE_KEY, THEME_STORAGE_KEY, STATS_STORAGE_KEY]) storage.setItem(key, 'sample');
+    for (const key of [PROMO_STORAGE_KEY, THEME_STORAGE_KEY, STATS_STORAGE_KEY, LAST_WELCOME_STORAGE_KEY, NOTE_SOUND_STORAGE_KEY]) {
+      storage.setItem(key, 'sample');
+    }
     storage.setItem('sample-other-app', 'sample: keep');
     const before = [...storage.values];
 
@@ -305,6 +417,26 @@ describe('legacy browser data in the cleanup plan', () => {
     expect([...loadDeckStars(storage, 'sample-live', ['sample-card'])]).toEqual([]);
     expect([...loadDeckStars(storage, 'sample-retired', ['sample-retired-card'])]).toEqual([]);
     expect(migrateLegacyStars(storage)).toEqual(emptyProgress());
+  });
+
+  it('can clear both storage areas only after deletion succeeds, leaving unrelated keys alone', () => {
+    const local = new MemoryStorage();
+    const session = new MemoryStorage();
+    local.setItem(NOTE_SOUND_STORAGE_KEY, 'off');
+    local.setItem('unrelated-local', 'keep');
+    session.setItem(VISIT_STORAGE_KEY, 'sample');
+    session.setItem(BREAK_STORAGE_KEY, 'sample');
+    session.setItem('unrelated-session', 'keep');
+    const plan = afterDeletion(local);
+    expect(local.getItem(NOTE_SOUND_STORAGE_KEY)).toBe('off');
+    expect(session.getItem(VISIT_STORAGE_KEY)).toBe('sample');
+    for (const key of plan) local.removeItem(key);
+    for (const key of plan.sessionKeys) session.removeItem(key);
+    expect(local.getItem(NOTE_SOUND_STORAGE_KEY)).toBeNull();
+    expect(session.getItem(VISIT_STORAGE_KEY)).toBeNull();
+    expect(session.getItem(BREAK_STORAGE_KEY)).toBeNull();
+    expect(local.getItem('unrelated-local')).toBe('keep');
+    expect(session.getItem('unrelated-session')).toBe('keep');
   });
 
   it('discovers the same legacy namespace as forgetProgress without deleting unrelated names', () => {
@@ -332,3 +464,142 @@ describe('legacy browser data in the cleanup plan', () => {
     expect(blocked.getItem(legacyStarsKey('sample-retired'))).toBe('[]');
   });
 });
+
+describe('study history in the deletion summary (Task 140)', () => {
+  const event: StudyEventRow = Object.freeze({
+    itemId: '00000000-0000-4000-8000-000000000001', itemVersionId: '00000000-0000-4000-8000-000000000002',
+    kind: 'marked', msOnItem: 4200, mark: 'know', at: '2026-11-01T00:00:00Z', createdAt: '2026-11-01T00:00:01Z',
+  });
+
+  it('counts one entry and many entries in plain words, after reports', () => {
+    expect(deletionSummary({ studyEvents: [event] })).toEqual(['1 study history entry']);
+    expect(deletionSummary({ reports: [], studyEvents: [event, { ...event, kind: 'skipped', mark: null }] }))
+      .toEqual(['2 study history entries']);
+  });
+
+  it.each([{}, { studyEvents: [] }] satisfies ExportData[])('omits study history when absent or empty: %j', data => {
+    expect(deletionSummary(data)).toEqual([]);
+  });
+
+  it('counts a history read page by page, as loadExport supplies it', () => {
+    const pages = new StudyEventPages();
+    pages.add([event, event]);
+    pages.add([{ ...event, kind: 'skipped', mark: null }]);
+    expect(deletionSummary({ studyEvents: pages })).toEqual(['3 study history entries']);
+    expect(deletionSummary({ studyEvents: new StudyEventPages() })).toEqual([]);
+  });
+});
+
+// ── A recent sign-in before deleting (Task 302) ──────────────────────────────
+
+/** A token shaped like Supabase's: base64url header.payload.signature. The signature is never checked here. */
+function token(payload: Record<string, unknown>): string {
+  const part = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  return `${part({ alg: 'ES256', typ: 'JWT' })}.${part(payload)}.signature`;
+}
+const NOW_MS = Date.UTC(2026, 10, 2, 20, 0, 0);
+const nowSeconds = NOW_MS / 1000;
+
+describe('tokenIssuedAt', () => {
+  it('reads iat from the payload', () => {
+    expect(tokenIssuedAt(token({ sub: 'x', iat: 1_790_000_000 }))).toBe(1_790_000_000);
+  });
+
+  it('reads a payload whose base64url needs padding and uses - and _', () => {
+    const payload = { iat: 1_790_000_123, name: '>>>???' };
+    expect(tokenIssuedAt(token(payload))).toBe(1_790_000_123);
+  });
+
+  it.each([
+    ['no token', undefined],
+    ['not a string', 42],
+    ['two parts', 'a.b'],
+    ['a bad payload', 'a.!!!.c'],
+    ['a payload that is not JSON', `a.${Buffer.from('nope').toString('base64url')}.c`],
+    ['no iat', token({ sub: 'x' })],
+    ['an iat that is a string', token({ iat: '1790000000' })],
+    ['a zero iat', token({ iat: 0 })],
+  ])('gives undefined for %s', (_name, value) => {
+    expect(tokenIssuedAt(value)).toBeUndefined();
+  });
+});
+
+describe('tokenRecentAuthAt and freshForDeletion', () => {
+  const signed = (method: string, timestamp: unknown, extras: Record<string, unknown> = {}) =>
+    token({ iat: nowSeconds, amr: [{ method, timestamp }], ...extras });
+
+  it('uses the same ten-minute limit as the database', () => {
+    expect(DELETE_MAX_SIGN_IN_AGE_SECONDS).toBe(600);
+  });
+
+  it('reads an actual password, OAuth, OTP or magic-link event, not a refreshed iat', () => {
+    expect(tokenRecentAuthAt(signed('password', nowSeconds - 40))).toBe(nowSeconds - 40);
+    expect(tokenRecentAuthAt(signed('oauth', nowSeconds - 20))).toBe(nowSeconds - 20);
+    expect(tokenRecentAuthAt(signed('otp', nowSeconds - 20))).toBe(nowSeconds - 20);
+    expect(tokenRecentAuthAt(signed('magiclink', nowSeconds - 20))).toBe(nowSeconds - 20);
+    expect(freshForDeletion(signed('password', nowSeconds), NOW_MS)).toBe(true);
+    expect(freshForDeletion(signed('password', nowSeconds - 540), NOW_MS)).toBe(true);
+    expect(freshForDeletion(signed('password', nowSeconds - 541), NOW_MS)).toBe(false);
+    expect(freshForDeletion(signed('password', nowSeconds - 3600), NOW_MS)).toBe(false);
+    expect(freshForDeletion(token({ iat: nowSeconds }), NOW_MS)).toBe(false);
+  });
+
+  it('allows a recent TOTP verification only at aal2', () => {
+    expect(freshForDeletion(signed('totp', nowSeconds, { aal: 'aal2' }), NOW_MS)).toBe(true);
+    expect(freshForDeletion(signed('totp', nowSeconds, { aal: 'aal1' }), NOW_MS)).toBe(false);
+  });
+
+  it('rejects a token refresh, a malformed AMR claim, and a future credential event', () => {
+    expect(freshForDeletion(signed('token_refresh', nowSeconds), NOW_MS)).toBe(false);
+    expect(freshForDeletion(signed('password', 'fresh'), NOW_MS)).toBe(false);
+    expect(freshForDeletion(token({ iat: nowSeconds, amr: 'password' }), NOW_MS)).toBe(false);
+    expect(freshForDeletion(signed('password', nowSeconds + 40), NOW_MS)).toBe(false);
+    expect(freshForDeletion(undefined, NOW_MS)).toBe(false);
+  });
+
+  it('uses the newest valid credential event, ignoring a newer token refresh', () => {
+    expect(freshForDeletion(token({ iat: nowSeconds, amr: [
+      { method: 'password', timestamp: nowSeconds - 2000 },
+      { method: 'token_refresh', timestamp: nowSeconds },
+      { method: 'oauth', timestamp: nowSeconds - 10 },
+    ] }), NOW_MS)).toBe(true);
+  });
+});
+
+describe('reauthHref', () => {
+  it('sends the student to sign-in and back to the delete step', () => {
+    expect(DELETE_RETURN_PATH).toBe('/account#delete');
+    expect(reauthHref()).toBe('/signin?next=%2Faccount%23delete');
+  });
+
+  it('survives the sign-in page\'s own next check', () => {
+    const next = new URLSearchParams(reauthHref().split('?')[1]).get('next');
+    expect(safeNext(next, 'https://cueory.app')).toBe(DELETE_RETURN_PATH);
+  });
+});
+
+describe('deleteOutcome', () => {
+  it('is deleted when there is no error', () => {
+    expect(deleteOutcome(null)).toEqual({ kind: 'deleted' });
+    expect(deleteOutcome(undefined)).toEqual({ kind: 'deleted' });
+  });
+
+  it('sends a stale sign-in through sign-in again', () => {
+    expect(deleteOutcome({ code: '28R01', message: 'please sign in again to delete your account' })).toEqual({
+      kind: 'sign-in', href: '/signin?next=%2Faccount%23delete',
+      message: 'for your safety, please sign in again to delete your account.',
+    });
+  });
+
+  it('sends a signed-out student to sign in too', () => {
+    expect(deleteOutcome({ code: '28000', message: 'sign in to delete your account' })).toEqual({
+      kind: 'sign-in', href: '/signin?next=%2Faccount%23delete', message: 'please sign in again to delete your account.',
+    });
+  });
+
+  it('reports anything else in one plain sentence, deleting nothing on the page', () => {
+    expect(deleteOutcome({ code: '500', message: 'internal' })).toEqual({ kind: 'failed', message: 'something went wrong — please try again.' });
+    expect(deleteOutcome('weird')).toEqual({ kind: 'failed', message: 'something went wrong — please try again.' });
+  });
+});
+

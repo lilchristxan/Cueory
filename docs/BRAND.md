@@ -25,14 +25,20 @@ Colors are applied in `src/styles/tokens.css`. The logo is shown by `src/compone
 - **Web copies:** `public/brand/v1/` holds copies built from them by `node scripts/build-brand-v1.mjs`:
   - the full logo and the emblem, in Espresso and in Ivory, on transparent backgrounds, cropped to the artwork, at a
     few widths;
+  - the cruet alone (`cruet-light-*` and `cruet-dark-*`, 32, 64 and 128px wide), the same way (Task 138);
   - browser and home-screen icons (the emblem on Ivory).
 
   The script never redraws anything. It reads how much ink covers each pixel and writes that ink in one exact brand
   color, so the logo sits on silk without a box, and the cruet's empty top half stays empty.
 - **Same drawing in both palettes (guide §4.5).** The full logo and the emblem use the light file's drawing in both
   palettes. The dark files are the same drawings (the script checks the overlap), but the full logo's dark file has
-  stair-stepped edges and the emblem's dark file is only 348px wide. The cruet alone is not on the site yet; its files
-  draw it only about 135px wide.
+  stair-stepped edges and the emblem's dark file is only 348px wide.
+- **The cruet alone (Task 138).** Its files draw it only about 135px wide, so no copy is wider than 128px and nothing is
+  scaled up. Its dark file is a coarser drawing (one thick handle, a striped neck), so both palettes use the light
+  file's drawing, which the script checks against the cruet in the approved emblem. It is used in one place: pillo's
+  game mark on /play (`src/components/PilloTitle.astro`), at the top right of the name "pillo" set in Bodoni Moda, as
+  in Christian's approved mockup. It is a supporting mark next to the name, never the only identifier: the name is
+  the text and the cruet is decorative (empty alt text).
 - **Tests:** `tests/unit/brand.test.ts` fails if a source or web copy changes without rebuilding, or if any pixel
   drifts from the exact colors.
 - **Sizes (guide §3.5):**
@@ -45,8 +51,12 @@ Colors are applied in `src/styles/tokens.css`. The logo is shown by `src/compone
 
 ## Typography
 - **Logo:** the artwork above. Bodoni Moda Medium is only a reference for its letter style (guide §5.1).
-- **Body text, UI, buttons, and headings on study screens:** Inter (guide §5.2). Live-text motto: Inter Medium.
-- **Marketing headings and their italic accent line:** Bodoni Moda Medium (D-41). The fonts are self-hosted Latin
+- **Body text, UI, buttons, and headings on study screens:** Lato, regular and bold (Christian, 2026-11-01; replaces
+  Inter from guide §5.2). Self-hosted Latin files in `public/fonts/`, SIL Open Font License. Live-text motto: Lato Bold.
+- **Line spacing:** at least 1.5 for every text style set in Lato (Christian, 2026-11-01).
+- **Marketing headings:** Bodoni Moda Medium (D-41). **Accent lines** under them (for example "cueory makes studying
+  simpler.") are plain upright Lato in Bronze, never italic or script (Christian, 2026-11-01: the italic serif was hard to
+  read). The fonts are self-hosted Latin
   files in `public/fonts/`, under the SIL Open Font License. Serif is for the logo and selected editorial emphasis
   only (guide §5.3).
 
@@ -69,6 +79,38 @@ Colors are applied in `src/styles/tokens.css`. The logo is shown by `src/compone
 | Secondary text / UI | Sand | `#CBB8A4` |
 | Primary text / logo | Ivory | `#F9F5EF` |
 
+## Copper accent (both themes)
+Added 18 Nov 2026 by Christian's decision, to match the redesign renderings. Use only for copper buttons, pills and
+accents; never for body text or backgrounds of reading areas. Not part of brand guide v1.0, which is unchanged.
+
+| Role | Name | HEX |
+| --- | --- | --- |
+| Gradient edges | Copper Deep | `#B87348` |
+| Gradient body | Copper | `#D9976A` |
+| Soft highlight | Copper Glow | `#F6D3AE` |
+| Light sweep | Copper Shine | `#FFF0DE` |
+
+Text on copper is Charcoal `#1C1917`: 4.65:1 on Copper Deep, 7.15:1 on Copper, 12.36:1 on Copper Glow, 15.63:1 on Copper
+Shine. Ivory and Espresso fail 4.5:1 on the deeper stops, so they are not used on copper.
+
+## Game accents
+Added 20 Nov 2026 by Christian's decision for the daily games rebrand. Teal is for piccline only. Dim is for the unlit board cells on the old vialo dark icon (the game is now called wordpill; its ids and CSS keep the name vialo).
+
+| Role | Name | Daytime HEX | Evening HEX | Notes |
+| --- | --- | --- | --- | --- |
+| Piccline accent | Teal / Teal Light | `#2F7A78` | `#4FB3AE` | piccline only; cursive wordmark and board loop |
+| Vialo unlit cell | Dim | `#5A463A` | `#5A463A` | unlit cells on vialo dark icon tile |
+| Letter in place | Dark Green | `#0E5A3D` | `#3F8A68` | game marks only; light step `#3F8A68` / `#52A781`, deep step `#053321` / `#0E5A3D` |
+| Letter elsewhere | Oxblood | `#6E2019` | `#A0413A` | game marks only; light step `#A0413A` / `#C25951`, deep step `#4A100D` / `#6E2019` |
+
+Dark Green and Oxblood (D-184) mark a letter on a game board and on that game's letter keys, and nothing else: never
+text, buttons or backgrounds on marketing or study screens. Christian chose them on the canvas on 20 Nov 2026 and
+picked the vialo board and its raised keys that use them on 23 Nov 2026. A marked key keeps the Daytime values in
+Evening and carries a white letter, so the letter stays at least 5:1 in both palettes. Colour is never the only mark:
+each state also has its own finish and its own name for screen readers.
+
+Fonts: Sacramento (SIL Open Font License) is used for the piccline wordmark outlines only (notice in `public/fonts/sacramento-OFL.txt`).
+
 **Retired (guide §4.3):** Espresso `#3F2E24`, Charcoal `#1B1715` and Evening Ivory `#EFE6DA` from the earlier board. A
 test fails if they come back.
 
@@ -79,9 +121,8 @@ This covers the marketing pages only: home, support, the legal pages and 404. St
 - **Home hero (D-46, D-55):** full first screen, centered, top to bottom:
   1. the logo;
   2. the Bodoni headline "nursing school is hard enough." on one line at every width;
-  3. the italic accent line "cueory makes studying simpler.";
-  4. one glassy pill button, "create your free account";
-  5. one small line under it.
+  3. the accent line "cueory makes studying simpler." (plain Lato);
+  4. one glassy pill button, "create your free account".
 
   The embossed logo is gone (forbidden by guide §3.6). The motto is in the footer.
 - **Glassy button:** translucent brand glass (Espresso by day, Sand in the evening, about 80% opaque), a blur behind
@@ -109,6 +150,7 @@ Christian's decision (2026-10-31), to match how younger students write.
   - acronyms and proper nouns anywhere (NCLEX, Open RN, YouTube, Ko-fi, Google);
   - legal body text: privacy, terms and disclaimer (their headings can be lowercase);
   - error messages and form instructions that must be read carefully.
+- No description that only restates its label (Christian, 2026-11-02).
 - **How:** write the copy in lowercase in the source. Never use CSS `text-transform`, which would change acronyms and
   names too. Screen-reader labels stay natural; lowercase reads the same aloud.
 
@@ -122,3 +164,23 @@ Christian's decision (2026-10-31), to match how younger students write.
   motion removes everything nonessential.
 - **Light / Dark / Follow device:** a switch in every page footer. Follow device is the default; a Light or Dark pick
   overrides the device and is remembered in the browser. Colors change; layout never does.
+
+## piccline's page sky, 27 Nov 2026
+
+Christian sent a picture of a soft sky and asked for its palette as the background of piccline's game page. These colors
+are for that page only (`/play/piccline`, and `/play/word-path`, the same game): never on other pages, never for text.
+Evening is the same sky at dusk. Text that sits straight on the sky is the main ink (Espresso in Daytime, Ivory in
+Evening), which measures at least 4.5:1 on every color below; the teal cue line is ink on this page for that reason.
+
+| Role | Daytime HEX | Evening HEX |
+| --- | --- | --- |
+| Sky blue | `#9FC3DF` | `#2F4F6B` |
+| Mist | `#CFE0EC` | `#263A4C` |
+| Cream | `#FDF3D6` | `#2E2F33` |
+| Sun | `#FBE6A8` | `#5A4D2E` |
+| Blush | `#F8D9C2` | `#4A3028` |
+| Peach | `#F5B98F` | `#6B4638` |
+
+## wordpill (formerly vialo), 26 Nov 2026
+
+Christian renamed vialo to wordpill and approved its artwork: wordmark B (a horizontal capsule, "word" in white on game green, "pill" in bold oxblood on ivory), icon L1 (the capsule shortened to "w | p" on an ivory tile) and, in Evening, the same art with a thin ivory rim (E1). The letters are outlines taken from Liberation Serif (SIL OFL), drawn by `scripts/generate-wordpill-art.py` into `public/design/games-v2/assets/`.

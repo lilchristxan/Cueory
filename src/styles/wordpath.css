@@ -1,0 +1,349 @@
+/*
+  word path (Task 97) on /play: its print button and its printed copy (Task 641).
+
+  The round print button matches the game's other round corner buttons: 44 × 44 px, a ring in the form-border color,
+  the page color inside and the icon in ink. It sits at the top right of the game, left of the game's "?" (how to play)
+  button when the game has one, the same place as the print buttons on the other daily games.
+
+  Printing: the button marks the page (data-print-game="suture", src/islands/gameprint.ts), and then only the word path's
+  letter grid, its theme, the list of words to find and a small "cueory.app" line are printed, black on white with no
+  texture. Found words and picked letters are not shown on paper. A plain Ctrl+P without the button prints the whole
+  page, and the word path part of it still prints clean (print.css hides [data-print-hidden], shows [data-print-only]).
+*/
+@layer components {
+  /* The quiet solve timer above the board; its line stays even when hidden so the board never moves. */
+  .wordpath-time {
+    block-size: var(--vialo-timer-height);
+    margin: var(--vialo-timer-gap) 0 var(--vialo-timer-gap-below);
+    font-size: var(--text-sm);
+    line-height: var(--vialo-timer-line);
+    text-align: center;
+    color: var(--color-ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The frosted panel around the board (WordPath.png): the shared glass tokens, rounded like the other panels. */
+  .wordpath-panel {
+    padding-block: var(--spacing-stack);
+    background-color: var(--cueory-result-card-bg);
+    border: var(--border-wordpath-panel) solid var(--cueory-result-card-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--cueory-glass-shadow);
+    -webkit-backdrop-filter: blur(var(--blur-veil));
+    backdrop-filter: blur(var(--blur-veil));
+  }
+
+  /* "cue of the day" and "letter path game": the caps label from the renderings (12 px, .22em tracking). */
+  .wordpath-label {
+    font-size: var(--cueory-label-size);
+    letter-spacing: var(--cueory-label-tracking);
+    font-weight: var(--cueory-label-weight);
+    text-transform: uppercase;
+  }
+
+  .wordpath-cue {
+    font-size: var(--wordpath-cue-size);
+    letter-spacing: var(--wordpath-cue-tracking);
+    line-height: 1.5;
+    margin-block-end: calc(var(--spacing) * 3);
+    color: var(--color-game-teal);
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  .wordpath[data-format="path"] .wordpath-panel {
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* The two-endpoint search keeps its anchor and hover treatment. */
+  .wordpath-pick {
+    background-color: var(--color-copper-glow);
+    box-shadow: inset 0 0 0 var(--wordpath-ring) var(--color-copper-deep);
+    color: var(--cueory-copper-ink);
+  }
+  .wordpath-dot.wordpath-pick {
+    background-color: var(--color-game-teal);
+    box-shadow: none;
+  }
+  .wordpath-found { background-color: var(--color-panel-ink-soft); }
+  /* The found thread is the game's teal, with the page colour on it (the same pairing as a letter being traced). */
+  .wordpath-thread { background-color: var(--color-game-teal); }
+  .wordpath-found-ink { color: var(--color-on-panel-button); }
+  /* An unpicked letter: a page-colour circle with a hairline rim so it reads against the frosted panel in both palettes. */
+  .wordpath-plain {
+    background-color: var(--color-page);
+    box-shadow: inset 0 0 0 var(--border-wordpath-panel) var(--color-line);
+  }
+  /* The cue meter: three round pips beside the cue button. Filled is a solid disc, empty is an outline only. */
+  .wordpath-meter {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--spacing) * 1.5);
+    min-block-size: calc(var(--spacing) * 11);
+    padding-inline: calc(var(--spacing) * 1);
+  }
+  .wordpath-pip {
+    inline-size: var(--wordpath-pip);
+    block-size: var(--wordpath-pip);
+    border-radius: var(--radius-pill);
+    border: var(--wordpath-pip-ring) solid var(--color-ink);
+    background-color: transparent;
+    box-sizing: border-box;
+  }
+  .wordpath-pip-filled { background-color: var(--color-ink); }
+  .wordpath-pick-text { color: var(--color-page); }
+
+  .wordpath-corner {
+    display: flex;
+    justify-content: flex-end;
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .wordpath-round {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: calc(var(--spacing) * 11);
+    block-size: calc(var(--spacing) * 11);
+    border: var(--border-share-icon) solid var(--color-control);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-page);
+    color: var(--color-ink);
+    cursor: pointer;
+  }
+
+  .wordpath-round:hover {
+    background-color: var(--color-surface);
+  }
+
+  .wordpath-round svg {
+    inline-size: calc(var(--spacing) * 5);
+    block-size: calc(var(--spacing) * 5);
+  }
+
+  .wordpath-answer-pills ul:empty { display: none; }
+  .wordpath-found-pill,
+  .wordpath-active-pill,
+  .wordpath-missing-pill {
+    border-radius: var(--radius-pill);
+    padding: var(--wordpath-pill-pad-y) var(--wordpath-pill-pad-x);
+    overflow-wrap: anywhere;
+    max-inline-size: 100%;
+    font-size: var(--wordpath-pill-size);
+    font-weight: 700;
+  }
+  .wordpath-found-pill {
+    color: var(--color-on-panel-button);
+    background: var(--color-panel-ink-soft);
+  }
+  .wordpath-thread-pill {
+    color: var(--color-page);
+    background: var(--color-game-teal);
+  }
+  .wordpath-active-pill {
+    color: var(--color-ink);
+    background: var(--color-surface);
+  }
+  .wordpath-missing-pill {
+    border: var(--border-wordpath-panel) dashed var(--color-control);
+    color: var(--color-ink-soft);
+  }
+
+  /* Keep large-text letter grids inside a named scroll region. The grid's
+     squares stay large enough to tap and to show their enlarged letters. */
+  .wordpath-board-scroll { overflow-x: auto; }
+  /* The board fills its box; it grows past it (and scrolls) only when its squares would drop below the floor. */
+  .wordpath-board { min-inline-size: max-content; }
+  .wordpath-cols-3 { --wordpath-columns: 3; }
+  .wordpath-cols-4 { --wordpath-columns: 4; }
+  .wordpath-cols-5 { --wordpath-columns: 5; }
+  .wordpath-cols-6 { --wordpath-columns: 6; }
+  .wordpath-cols-7 { --wordpath-columns: 7; }
+  .wordpath-cols-8 { --wordpath-columns: 8; }
+  .wordpath-cols-9 { --wordpath-columns: 9; }
+  .wordpath-cols-10 { --wordpath-columns: 10; }
+  .wordpath-cols-11 { --wordpath-columns: 11; }
+  /*
+    The 6 × 8 letter board (SuturePathBoard) is as wide as the column, so on a short screen (a phone turned sideways,
+    844 × 390) it grew far taller than the screen and a path could not be dragged from top to bottom without scrolling.
+    Its width is capped so all 8 rows fit the screen's height (squares: width = height × 6 / 8), never below 44px
+    squares. The reference spaces the desktop centres 62px apart with 52px dots. The board edge includes padding and border.
+  */
+  .wordpath[data-format="path"] .wordpath-board {
+    --wordpath-cell-max: calc(var(--spacing) * 15.5);
+    --wordpath-letter-inset: calc(var(--spacing) * 1.25);
+    --wordpath-board-edge: calc(var(--spacing) * 6 + var(--border-board) * 2);
+    max-inline-size: min(
+      calc(var(--wordpath-cell-max) * 6 + var(--wordpath-board-edge)),
+      max(
+        calc(var(--tap-min) * 6 + var(--wordpath-board-edge)),
+        calc((100svh - var(--spacing) * 8 - var(--wordpath-board-edge)) * 6 / 8 + var(--wordpath-board-edge))
+      )
+    );
+  }
+  /* The board's panel carries no padding of its own (the circles' rim is the edge). */
+  .wordpath[data-format="path"] .wordpath-panel { padding-block: 0; }
+  .wordpath-status { font-size: var(--wordpath-status-size); line-height: 1.5; }
+  .wordpath-row { display: grid; grid-template-columns: repeat(var(--wordpath-columns), minmax(var(--wordpath-cell-min), 1fr)); }
+}
+
+@media print {
+  /* The panel is only for the screen: on paper the board sits on plain white with no bleed or frame. */
+  .wordpath-panel {
+    margin-inline: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* The game's own part, in any print. */
+  .wordpath {
+    color: var(--print-ink) !important;
+    background: var(--print-paper) !important;
+  }
+
+  .wordpath * {
+    color: var(--print-ink) !important;
+  }
+
+  /* The screen-only offsets that centre a bleeding board on narrow phones are dropped, so the printed board is centred
+     on the page with all four borders inside it, whatever width the browser lays the page out at. */
+  .wordpath-board {
+    position: static !important;
+    inset: auto !important;
+    translate: none !important;
+    inline-size: min(100%, var(--print-board)) !important;
+    max-inline-size: 100% !important;
+    min-inline-size: 0 !important;
+    margin: var(--print-gap) auto 0 !important;
+    padding: 0 !important;
+    border-color: var(--print-ink) !important;
+    background: var(--print-paper) !important;
+    break-inside: avoid;
+  }
+
+  .wordpath-board-scroll { overflow: visible; margin-inline: 0 !important; }
+
+  /* Paper must fit the whole board even when the browser's root text is enlarged. */
+  .wordpath-row { grid-template-columns: repeat(var(--wordpath-columns), minmax(0, 1fr)); }
+
+  /* Every letter looks the same on paper: no found, picked or highlighted letters, no focus ring. */
+  .wordpath-board button {
+    background: none !important;
+    color: var(--print-ink) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    opacity: 1 !important;
+    font-size: var(--print-letter) !important;
+  }
+
+  .wordpath-print-words {
+    inline-size: min(100%, var(--print-board));
+    margin: var(--print-gap) auto 0;
+    break-inside: avoid;
+  }
+
+  .wordpath-print-foot {
+    margin-block-start: var(--print-gap);
+    text-align: center;
+  }
+
+  /* After the print button: only the word path is printed, on plain white paper. */
+  :root[data-print-game="suture"],
+  :root[data-print-game="suture"] body {
+    background: var(--print-paper) !important;
+    color: var(--print-ink) !important;
+  }
+
+  :root[data-print-game="suture"] body > :not(:has([data-print-area="suture"])),
+  :root[data-print-game="suture"] main :not([data-print-area="suture"], [data-print-area="suture"] *, :has([data-print-area="suture"])) {
+    display: none !important;
+  }
+
+  :root[data-print-game="suture"] body :has([data-print-area="suture"]) {
+    max-inline-size: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/*
+  The board format (#722): found answers carry a symbol as well as their brand state (a dot for a theme word, a
+  diamond for the thread), and a picked or hinted-in-order letter shows its place as a small number. Dragging across
+  the letters must not scroll the page, so the board's letters take every touch themselves.
+*/
+@layer components {
+  .wordpath-board button[data-path] {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* The whole board takes every touch, gaps and edges included, so a drag never scrolls the page mid-word. */
+  .wordpath[data-format="path"] .wordpath-board {
+    touch-action: none;
+  }
+
+  /* Each letter's circle sits inside its square, so a straight line can join it to the next letter of a word. */
+  .wordpath-dot {
+    position: absolute;
+    inset: var(--wordpath-letter-inset);
+  }
+
+  /* The joining lines sit under the letters and never take a touch. */
+  .wordpath-lines {
+    position: absolute;
+    inset: 0;
+    /* Always the board's size, even in the moment after a resize before the lines are measured again: the svg's own
+       width attribute would otherwise keep the old size and push the page sideways on a narrower screen. */
+    inline-size: 100%;
+    block-size: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .wordpath-line {
+    stroke: var(--color-game-teal);
+    stroke-width: calc(var(--spacing) * 3.5);
+    stroke-linecap: round;
+  }
+
+  .wordpath-line-theme,
+  .wordpath-line-special {
+    stroke: var(--color-panel-ink-soft);
+    stroke-width: calc(var(--spacing) * 4.5);
+  }
+  .wordpath-line-special { stroke: var(--color-game-teal); }
+
+  .wordpath-step {
+    position: absolute;
+    inset-block-end: 8%;
+    inset-inline-end: 18%;
+    line-height: 1;
+  }
+}
+
+@media print {
+  .wordpath-step,
+  .wordpath-lines,
+  .wordpath-dot {
+    display: none !important;
+  }
+
+  .wordpath-board button[data-path] {
+    border: 0 !important;
+  }
+}

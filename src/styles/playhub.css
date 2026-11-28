@@ -1,0 +1,111 @@
+/*
+  Room for the /play hub's browser-only islands until they render (src/pages/play.astro; performance, 2026-11-19).
+  The stats panel (GameStatsPanel) is client:only, so until its script runs the footer would sit right under the game
+  rows and then jump down (layout shift 0.29 on a throttled phone). The game rows are rendered on the server, so only
+  the stats panel needs room. While it has drawn nothing yet, and only when scripts can run, its holder keeps the room
+  it will take (flow-root keeps its top margin inside the holder). The rule stops matching as soon as it renders. The same approach as the game pages
+  (gamepage.css, #921), which keep their own rule.
+*/
+@layer components {
+  .play-hub-island {
+    display: flow-root;
+  }
+
+  @media (scripting: enabled) {
+    .play-hub-stats:not(:has(> astro-island > *)) {
+      min-block-size: var(--play-hub-stats-reserve);
+    }
+  }
+
+  /* A hub row's icon tile: the home page card's pip (src/components/DailyGamesSection.astro), same radius and shadow,
+     the artwork's own rounded tile at the hub's tile size. Games with no icon file draw their glyph on the pip colour. */
+  .play-hub-pip {
+    display: block;
+    flex: none;
+    inline-size: var(--play-hub-tile);
+    block-size: var(--play-hub-tile);
+    border-radius: var(--play-hub-pip-radius);
+    box-shadow: var(--play-hub-pip-shadow);
+  }
+
+  .play-hub-pip-glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--play-hub-pip-bg);
+    color: var(--play-hub-pip-ink);
+    font-family: var(--font-display);
+    line-height: 1;
+  }
+
+  /* Evening: the card's own alias (tokens.css, #daily-games), by the same two rules as the palettes. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .play-hub-pip-glyph {
+      --play-hub-pip-bg: var(--color-surface);
+      --play-hub-pip-ink: var(--color-ink);
+    }
+  }
+
+  :root[data-theme="dark"] .play-hub-pip-glyph {
+    --play-hub-pip-bg: var(--color-surface);
+    --play-hub-pip-ink: var(--color-ink);
+  }
+
+  .play-hub-pip-sudoku {
+    font-size: var(--play-hub-pip-sudoku-size);
+  }
+
+  .play-hub-pip-hello {
+    font-style: italic;
+    font-size: var(--play-hub-pip-hello-size);
+  }
+
+  .play-hub-pip-grid {
+    display: grid;
+    grid-template-columns: repeat(3, var(--play-hub-pip-xgrid-size));
+    gap: var(--play-hub-pip-xgrid-gap);
+  }
+
+  .play-hub-pip-cell-dark,
+  .play-hub-pip-cell-light {
+    block-size: var(--play-hub-pip-xgrid-size);
+    box-sizing: border-box;
+  }
+
+  .play-hub-pip-cell-dark {
+    background: var(--play-hub-pip-ink);
+  }
+
+  .play-hub-pip-cell-light {
+    border: var(--border-hairline) solid var(--play-hub-pip-line);
+  }
+
+  /* The left panel's foot: the totals or the account bar, in a holder that keeps the room either takes (and the room
+     they take before the session check resolves), so the rows below never move. */
+  .play-hub-account-slot {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--spacing) * 2);
+    align-items: center;
+    min-block-size: var(--play-hub-account-reserve);
+  }
+
+  .play-hub-account-slot > dl {
+    align-self: stretch;
+  }
+
+  .play-hub-account-note {
+    margin: 0;
+    color: var(--color-ink-soft);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  /* Piccline's wordmark, drawn larger than its box (global.css), grows to the right from the row's left edge, not both
+     ways, so it never reaches back toward the icon. Only piccline's: vialo's Evening wordmark scales about its centre. */
+  .play-hub-wordmark img[src$="piccline-wordmark-light.svg"],
+  .play-hub-wordmark img[src$="piccline-wordmark-dark.svg"] {
+    transform-origin: left center;
+  }
+}

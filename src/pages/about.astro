@@ -1,0 +1,97 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { site } from '../config/site';
+import { draftsAllowed } from '../islands/anatomylab';
+import { visibleFooterLinks } from '../config/legalfooter';
+import { aboutPageLinks } from '../config/sitenav';
+
+// The side bar no longer lists these pages, so they live here. A draft page is linked only where this build may show
+// drafts (never on the live site); a legal page only once approved (the footer's rule, #747).
+const drafts = draftsAllowed({
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+});
+const pageLinks = visibleFooterLinks(aboutPageLinks).filter((link) => link.draft !== true || drafts);
+---
+
+<Layout
+  title="about us"
+  description="about cueory: founder information and page sections are being prepared."
+  noindex
+>
+  <div class="mx-auto flex w-full max-w-page flex-col gap-8 py-section">
+    <p class="mx-auto w-full max-w-page text-sm font-medium tracking-label text-ink-soft">/ about us</p>
+    <!-- A size container: on phones the headline's size follows this column's width, so it draws two or three lines. -->
+    <header class="@container mx-auto w-full max-w-page space-y-5">
+      <p class="text-sm font-bold tracking-label text-ink-soft">by nursing students, for nursing students</p>
+      <h1 class="display max-w-4xl wrap-anywhere text-display-about-phone text-ink sm:text-display-lg">we know nursing school is<br class="hidden sm:inline" /> hard.</h1>
+      <p class="text-lg text-ink" data-placeholder="CHRISTIAN-TEXT">
+        [Christian's story: why Cueory exists, in his own words.]
+      </p>
+    </header>
+
+    <section class="veil min-w-0 p-6 sm:p-10" aria-labelledby="mission-heading">
+      <h2 id="mission-heading" class="display text-2xl text-ink">our mission</h2>
+      <p class="mt-4 text-ink">To make studying for nursing school simpler, and to give nursing students the materials they need to succeed and become great nurses at an affordable price.</p>
+    </section>
+
+    <section class="veil min-w-0 p-6 sm:p-10" aria-labelledby="lessons-heading">
+      <h2 id="lessons-heading" class="display text-2xl text-ink">
+        how we make our lessons
+      </h2>
+      <ul class="mt-4 list-disc space-y-3 pl-6 text-ink">
+        <li>Spot a mistake? The flag button is on every page, and we fix it.</li>
+      </ul>
+    </section>
+
+    <section class="veil flex min-w-0 flex-col gap-6 p-6 sm:flex-row sm:items-center sm:p-10" aria-labelledby="coming-heading">
+      <div class="min-w-0 flex-1">
+        <h2 id="coming-heading" class="display text-xl text-ink sm:text-2xl">what's coming</h2>
+        <p class="mt-3 text-ink">Mental Health I and Med Math are next, then Med-Surg II.</p>
+      </div>
+      <a href="/#signup" class="inline-flex min-h-11 self-start sm:self-center shrink-0 items-center justify-center rounded-pill border border-control bg-transparent px-5 py-2.5 text-center text-ink hover:bg-surface">
+        join the mailing list
+      </a>
+    </section>
+
+    <section class="veil min-w-0 p-6 sm:p-10" aria-labelledby="support-heading">
+      <div class="flex flex-col gap-6 sm:flex-row sm:items-center">
+        <svg
+          class="size-16 shrink-0 text-copper-deep"
+          viewBox="0 0 48 48"
+          fill="none"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <path fill="currentColor" d="M5 13h29v19a8 8 0 0 1-8 8H13a8 8 0 0 1-8-8V13Zm29 5h4a7 7 0 0 1 0 14h-4v-4h4a3 3 0 0 0 0-6h-4v-4Z" />
+          <path fill="var(--color-page)" d="M19.5 31.5c-5.1-3.1-8.1-6.2-8.1-9.3 0-3.2 4.3-4.4 8.1-.9 3.8-3.5 8.1-2.3 8.1.9 0 3.1-3 6.2-8.1 9.3Z" />
+        </svg>
+        <div class="min-w-0 flex-1">
+          <h2 id="support-heading" class="display text-2xl text-ink">
+            help keep cueory free.
+          </h2>
+          <p class="mt-3 text-ink">Support our mission to expand our resources, help nursing students struggling in class, and keep building ways we can help students and nurses.</p>
+        </div>
+        <a href={site.tipPageUrl} target="_blank" rel="noopener noreferrer" class="copper-button inline-flex min-h-11 self-start sm:self-center shrink-0 items-center justify-center text-center">
+          support on Ko-fi<span class="sr-only"> (opens in a new tab)</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="veil min-w-0 p-6 sm:p-10" aria-labelledby="pages-heading" data-testid="about-links">
+      <h2 id="pages-heading" class="display text-xl text-ink sm:text-2xl">more pages</h2>
+      <ul class="mt-4 flex flex-col">
+        {
+          pageLinks.map((link) => (
+            <li>
+              <a href={link.href} class="inline-flex min-h-11 items-center text-ink underline underline-offset-4 hover:text-ink-soft">
+                {link.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </section>
+  </div>
+</Layout>

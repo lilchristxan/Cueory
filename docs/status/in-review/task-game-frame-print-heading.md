@@ -1,0 +1,1 @@
+status: in review. The game frame's print heading keeps its text available to screen readers. Its decorative pictures render in print only. On the previous WebKit phone build, the hidden Vialo heading still gave its unloaded decoration a 1 × 40 rectangle inside the viewport.

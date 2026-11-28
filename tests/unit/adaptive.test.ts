@@ -156,6 +156,18 @@ describe('adaptive question selection', () => {
     expect(questions).toEqual(inputQuestions);
     expect(attempts).toEqual(inputAttempts);
   });
+
+  it('keeps the first duplicate question id so malformed data cannot create a second concept', () => {
+    const duplicateId: AdaptiveQuestion[] = [
+      { id: 'shared', concept: 'colors', level: 1 },
+      { id: 'shared', concept: 'shapes', level: 3 },
+      { id: 'color-1b', concept: 'colors', level: 1 },
+    ];
+    expect(nextQuestion(duplicateId, [], 0)).toEqual({ id: 'shared', why: "'colors' is new to you." });
+    expect(conceptStatus(duplicateId, [])).toEqual([
+      { concept: 'colors', status: 'not started', description: "'colors' has not been started." },
+    ]);
+  });
 });
 
 describe('concept status', () => {
@@ -168,6 +180,7 @@ describe('concept status', () => {
       { id: 'size-1b', concept: 'sizes', level: 1 },
       { id: 'size-2a', concept: 'sizes', level: 2 },
       { id: 'size-2b', concept: 'sizes', level: 2 },
+      { id: 'size-3a', concept: 'sizes', level: 3 },
       { id: 'pattern-1a', concept: 'patterns', level: 1 },
     ];
     const attempts: AdaptiveAttempt[] = [
@@ -176,6 +189,7 @@ describe('concept status', () => {
       { questionId: 'size-1b', right: true },
       { questionId: 'size-2a', right: true },
       { questionId: 'size-2b', right: true },
+      { questionId: 'size-3a', right: true },
       { questionId: 'pattern-1a', right: false },
     ];
 
@@ -204,6 +218,30 @@ describe('concept status', () => {
       { questionId: 'size-2a', right: false },
     ]);
     expect(afterMiss.find((entry) => entry.concept === 'sizes')?.status).toBe('getting there');
+
+    // Level 3 is reached after right answers at levels 1,1,2,2, but "got it" needs a right level-3 answer.
+    const reachedLevelThree = [
+      { questionId: 'size-1a', right: true },
+      { questionId: 'size-1b', right: true },
+      { questionId: 'size-2a', right: true },
+      { questionId: 'size-2b', right: true },
+    ];
+    expect(conceptStatus(statusQuestions, reachedLevelThree).find((entry) => entry.concept === 'sizes')).toEqual({
+      concept: 'sizes',
+      status: 'getting there',
+      description: "'sizes' is getting there.",
+    });
+    expect(
+      conceptStatus(statusQuestions, [...reachedLevelThree, { questionId: 'size-3a', right: true }]).find(
+        (entry) => entry.concept === 'sizes',
+      )?.status,
+    ).toBe('got it');
+    // A wrong level-3 answer alone does not count as a right one.
+    expect(
+      conceptStatus(statusQuestions, [...reachedLevelThree, { questionId: 'size-3a', right: false }]).find(
+        (entry) => entry.concept === 'sizes',
+      )?.status,
+    ).toBe('getting there');
   });
 
   it('never makes an exam prediction in any output', () => {

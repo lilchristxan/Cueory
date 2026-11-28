@@ -5,9 +5,10 @@
  * dimmed page; focus then returns to ☰. With reduced motion it simply appears. Without JavaScript the button stays
  * hidden (its space is kept, so nothing moves) and the footer links still work.
  */
-import { menuLinks, menuSmallLinks } from '../config/site';
+import { drawerPrimaryLinks } from '../config/sitenav';
 import SocialLinks from './SocialLinks.astro';
 import { currentHref } from '../scripts/menu';
+import { draftsAllowed } from '../islands/anatomylab';
 
 interface Props {
   /** Study screens: the same button, without the frosted circle. */
@@ -15,16 +16,23 @@ interface Props {
 }
 
 const { quiet = false } = Astro.props;
+// Drafts (the anatomy lab, the resources page) show only where this build may show drafts (staging, previews, local).
+const drafts = draftsAllowed({
+  WORKERS_CI: process.env.WORKERS_CI,
+  WORKERS_CI_BRANCH: process.env.WORKERS_CI_BRANCH,
+  CUEORY_ANATOMY_DRAFTS: process.env.CUEORY_ANATOMY_DRAFTS,
+});
+const primary = drawerPrimaryLinks.filter((link) => link.draft !== true || drafts);
 const current = currentHref(
   Astro.url.pathname,
-  menuLinks.map((link) => link.href),
+  primary.map((link) => link.href),
 );
 ---
 
 <button
   type="button"
   class:list={['corner-button invisible', quiet && 'corner-button-quiet']}
-  aria-label="menu"
+  aria-label="open site menu"
   aria-expanded="false"
   aria-controls="site-menu"
   data-menu-open
@@ -34,18 +42,29 @@ const current = currentHref(
   </svg>
 </button>
 
-<dialog id="site-menu" class="menu-panel" aria-label="menu" data-testid="site-menu">
+<dialog id="site-menu" class="menu-panel" aria-label="site menu" data-testid="site-menu">
   <div class="menu-panel-inner">
-    <div class="flex justify-end">
-      <button type="button" class="corner-button corner-button-panel" aria-label="close menu" data-menu-close>
+   <div class="menu-panel-scroll">
+    <div class="mb-2.5 flex justify-start">
+      <button type="button" class="corner-button corner-button-panel" aria-label="close site menu" data-menu-close>
         <svg viewBox="0 0 24 24" class="size-6" aria-hidden="true" focusable="false">
           <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path>
         </svg>
       </button>
     </div>
 
+    <nav aria-label="site" class="flex flex-col gap-0.5">
+      {
+        primary.map((link) => (
+          <a href={link.href} class="drawer-row" aria-current={link.href === current ? 'page' : undefined}>
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+
     <!-- Site search (D-49): results appear as you type; the index loads only once the field is used. -->
-    <div role="search" class="mt-4" data-site-search>
+    <div role="search" class="mt-6" data-site-search>
       <div class="menu-search">
         <label for="site-search" class="sr-only">search the site</label>
         <input
@@ -70,46 +89,42 @@ const current = currentHref(
       </ul>
     </div>
 
-    <nav aria-label="site" class="my-auto py-section">
-      <ul class="flex flex-col gap-7">
-        {
-          menuLinks.map((link) => (
-            <li>
-              <a
-                href={link.href}
-                class="menu-link"
-                aria-current={link.href === current ? 'page' : undefined}
-              >
-                {link.label}
-                {'note' in link && <span class="menu-note">{link.note}</span>}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </nav>
+   </div>
 
-    <div class="mb-4">
+    <!-- The social icons stay fixed at the bottom edge of the bar; only the rows above them scroll (on a short, wide screen
+         the whole bar scrolls instead, so the icons never cover a row). -->
+    <div class="menu-panel-socials">
       <SocialLinks panel />
     </div>
-
-    <ul class="flex gap-6 text-sm">
-      {
-        menuSmallLinks.map((link) => (
-          <li>
-            <a href={link.href} class="menu-small-link">
-              {link.label}
-            </a>
-          </li>
-        ))
-      }
-    </ul>
   </div>
 </dialog>
 
+<style>
+  .menu-section-heading {
+    color: var(--color-panel-ink-soft);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    letter-spacing: var(--tracking-menu);
+    font-weight: 700;
+  }
+
+  /* A reduced-motion menu opens at its final position, without a slide. */
+  @media (prefers-reduced-motion: reduce) {
+    dialog:global(.menu-panel) {
+      transition: none;
+    }
+
+    @starting-style {
+      dialog:global(.menu-panel[open]) {
+        transform: none;
+      }
+    }
+  }
+</style>
+
 <script>
   import { isCloseKey, wrapFocus } from '../scripts/menu';
-  import { cleanUrl, excerptParts, keepFocus, MAX_RESULTS, moveFocus, PAGEFIND_URL, statusText } from '../scripts/search';
+  import { cleanUrl, createSearchLoader, excerptParts, keepFocus, MAX_RESULTS, moveFocus, searchModuleUrl, statusText } from '../scripts/search';
 
   /** The parts of Pagefind's browser API the panel uses (https://pagefind.app/docs/api/). */
   interface PagefindResult {
@@ -130,19 +145,15 @@ const current = currentHref(
     const list = root.querySelector<HTMLUListElement>('[data-search-results]');
     if (!input || !status || !list) return;
 
-    let pagefind: Promise<Pagefind> | undefined;
-    const load = () => {
-      pagefind ??= (async () => {
-        // A plain URL, so the bundler leaves it alone: the index is built after the site, by `pagefind --site dist`.
-        const url: string = PAGEFIND_URL;
-        const module = (await import(/* @vite-ignore */ url)) as Pagefind;
-        // Search on the page itself rather than in a worker, so the content security policy needs no `blob:`.
-        await module.options({ noWorker: true });
-        await module.init();
-        return module;
-      })();
-      return pagefind;
-    };
+    const load = createSearchLoader(async (attempt) => {
+      // A plain URL, so the bundler leaves it alone: the index is built after the site, by `pagefind --site dist`.
+      const url: string = searchModuleUrl(attempt);
+      const module = (await import(/* @vite-ignore */ url)) as Pagefind;
+      // Search on the page itself rather than in a worker, so the content security policy needs no `blob:`.
+      await module.options({ noWorker: true });
+      await module.init();
+      return module;
+    });
 
     const links = () => [...list.querySelectorAll<HTMLAnchorElement>('a')];
     let latest = 0;
@@ -222,21 +233,34 @@ const current = currentHref(
   }
 
   const dialog = document.querySelector<HTMLDialogElement>('#site-menu');
-  const openButton = document.querySelector<HTMLButtonElement>('[data-menu-open]');
+  // ☰ and, on wide screens, the round search button in the top bar: both open this panel.
+  const openButtons = [...document.querySelectorAll<HTMLButtonElement>('[data-menu-open]')];
+  const openButton = openButtons[0];
+  const closeButton = dialog?.querySelector<HTMLButtonElement>('[data-menu-close]');
 
-  if (dialog && openButton && typeof dialog.showModal === 'function') {
+  if (dialog && openButton && closeButton && typeof dialog.showModal === 'function') {
     let returnFocus = true;
+    let opener: HTMLButtonElement = openButton;
 
-    openButton.addEventListener('click', () => {
-      returnFocus = true;
-      dialog.showModal();
-      openButton.setAttribute('aria-expanded', 'true');
-    });
+    for (const button of openButtons) {
+      button.addEventListener('click', () => {
+        returnFocus = true;
+        opener = button;
+        dialog.showModal();
+        // Focus starts on the close button. Left to itself, the browser focuses the first focusable thing in the panel,
+        // and once the links are taller than the window the panel's own scrolling box counts as one: Chromium would
+        // focus that box, which comes before the close button, instead of a control.
+        // The top bar's search button goes straight to the search field instead.
+        if (button.hasAttribute('data-menu-search')) dialog.querySelector<HTMLInputElement>('[data-search-input]')?.focus();
+        else closeButton.focus();
+        button.setAttribute('aria-expanded', 'true');
+      });
+    }
 
     dialog.addEventListener('close', () => {
-      openButton.setAttribute('aria-expanded', 'false');
+      for (const button of openButtons) button.setAttribute('aria-expanded', 'false');
       // After a link to a spot on this page, focus follows the link instead of jumping back to the top.
-      if (returnFocus) openButton.focus({ preventScroll: true });
+      if (returnFocus) opener.focus({ preventScroll: true });
     });
 
     dialog.addEventListener('keydown', (event) => {
@@ -267,7 +291,7 @@ const current = currentHref(
       if (event.target === dialog) dialog.close();
     });
 
-    dialog.querySelector('[data-menu-close]')?.addEventListener('click', () => dialog.close());
+    closeButton.addEventListener('click', () => dialog.close());
 
     for (const link of dialog.querySelectorAll('a')) {
       link.addEventListener('click', () => {
@@ -279,6 +303,6 @@ const current = currentHref(
     const search = dialog.querySelector<HTMLElement>('[data-site-search]');
     if (search) setUpSearch(search);
 
-    openButton.classList.remove('invisible');
+    for (const button of openButtons) button.classList.remove('invisible');
   }
 </script>

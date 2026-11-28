@@ -5,7 +5,10 @@
 #   and the Release pull request runs everything again before main;
 # - a pull request that only changes Markdown files (outside content/ and src/) skips the build and tests;
 # - pull requests into staging run the browser tests at phone and desktop size, and Release pull requests into main
-#   run every device.
+#   run every device;
+# - the browser tests run in parts side by side, so each job stays well inside its time limit (Task 308): four parts
+#   for a pull request into staging, eight when every Chromium project runs, and four per engine for Safari's engine
+#   and Firefox on Release pull requests.
 name: CI
 
 on:
@@ -22,12 +25,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Type check, build and test
+  # The work is split so no job comes near its time limit as browser tests grow (Task 308): `checks` type-checks,
+  # builds and runs the unit tests; `browser` runs the Chromium browser tests in four parts side by side, each on its
+  # own runner; `verify` passes only when all of them passed. `verify` keeps the check name "Type check, build and
+  # test" that the staging auto-merge requires (scripts/automerge/decide.ts), so that name still means everything.
+  checks:
+    name: Type check, build and unit tests
     # Drafts wait until they are marked ready for review.
     if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    outputs:
+      docs_only: ${{ steps.scope.outputs.docs_only }}
+      browser_parts: ${{ steps.scope.outputs.browser_parts }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,12 +54,22 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && git rev-parse -q --verify HEAD^2 >/dev/null; then
             files=$(git diff --name-only HEAD^1 HEAD)
           fi
-          if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE '\.md$' && ! printf '%s\n' "$files" | grep -qE '^(content|src)/'; then
+          # Main release PRs must run the build and legal-readiness tests, even for Markdown-only edits.
+          if [ "$GITHUB_BASE_REF" != "main" ] && [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE '\.md$' && ! printf '%s\n' "$files" | grep -qE '^(content|src)/'; then
             echo "docs_only=true" >> "$GITHUB_OUTPUT"
             echo "Only Markdown files changed, so the build and tests are skipped:"
             printf '%s\n' "$files"
           else
             echo "docs_only=false" >> "$GITHUB_OUTPUT"
+          fi
+          # How many parts the Chromium browser tests run in. A pull request into staging runs two projects (phone and
+          # desktop) in four parts. Everything else (a Release pull request into main, a push to main) runs all four
+          # projects, twice the tests, so it gets twice the parts and each part stays about the same size. This is
+          # the same condition the `browser` job uses to choose its projects.
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "$GITHUB_BASE_REF" = "staging" ]; then
+            echo "browser_parts=[1, 2, 3, 4]" >> "$GITHUB_OUTPUT"
+          else
+            echo "browser_parts=[1, 2, 3, 4, 5, 6, 7, 8]" >> "$GITHUB_OUTPUT"
           fi
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -66,22 +86,157 @@ jobs:
         run: npm run build
       - if: steps.scope.outputs.docs_only != 'true'
         run: npm test
-      - if: steps.scope.outputs.docs_only != 'true'
-        run: npx playwright install --with-deps chromium
+
+  browser:
+    # Playwright's --shard splits the test list into equal parts by test count; every part builds the same commit,
+    # so all parts see the same list and together run every test exactly once. The `checks` job decides how many
+    # parts a run needs (`browser_parts`); the total always comes from the number of jobs, so no test is left out.
+    name: Browser tests, part ${{ matrix.shard }}
+    needs: checks
+    if: needs.checks.outputs.docs_only != 'true'
+    runs-on: ubuntu-latest
+    # Release pull requests (into main) run every project, about twice the tests of a staging pull request, in twice
+    # the parts, so one part is about the same work either way.
+    timeout-minutes: 30
+    strategy:
+      # Every part finishes, so one run shows all failing tests at once.
+      fail-fast: false
+      matrix:
+        # The fallback only keeps the workflow valid if the output were ever missing; four parts still run every test.
+        shard: ${{ fromJSON(needs.checks.outputs.browser_parts || '[1, 2, 3, 4]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
       - name: Browser tests
-        if: steps.scope.outputs.docs_only != 'true'
+        env:
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
         run: |
           if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ "$GITHUB_BASE_REF" = "staging" ]; then
-            npm run test:e2e -- --project=phone --project=desktop
+            npm run test:e2e -- --project=phone --project=desktop --shard="$SHARD/$SHARDS"
           else
-            npm run test:e2e
+            npm run test:e2e -- --shard="$SHARD/$SHARDS"
           fi
 
       - name: Keep the test report if browser tests fail
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report
+          name: playwright-report-part-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
+
+  verify:
+    name: Type check, build and test
+    needs: [checks, browser, engines]
+    # Runs even when a part failed (so this check fails too), but not for drafts or a cancelled run.
+    if: >-
+      !cancelled() &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every part passed
+        env:
+          CHECKS: ${{ needs.checks.result }}
+          BROWSER: ${{ needs.browser.result }}
+          ENGINES: ${{ needs.engines.result }}
+          MAIN_RELEASE_PR: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' }}
+          DOCS_ONLY: ${{ needs.checks.outputs.docs_only }}
+        run: |
+          echo "Type check, build and unit tests: $CHECKS. Browser tests (all parts): $BROWSER."
+          if [ "$CHECKS" != "success" ]; then
+            echo "::error::Type check, build or unit tests did not pass."
+            exit 1
+          fi
+          # Main release PRs require all WebKit/Firefox jobs, even when the Chromium matrix has passed.
+          if [ "$MAIN_RELEASE_PR" = "true" ] && [ "$DOCS_ONLY" = "true" ]; then
+            echo "::error::Main release PR must run the build and tests."
+            exit 1
+          fi
+          if [ "$MAIN_RELEASE_PR" = "true" ] && [ "$ENGINES" != "success" ]; then
+            echo "::error::Safari and Firefox release browser tests did not all pass."
+            exit 1
+          fi
+          # Browser tests are skipped only when the pull request changes nothing but Markdown files.
+          if [ "$DOCS_ONLY" = "true" ] && [ "$BROWSER" = "skipped" ]; then exit 0; fi
+          if [ "$BROWSER" != "success" ]; then
+            echo "::error::At least one part of the browser tests did not pass."
+            exit 1
+          fi
+
+  engines:
+    # Release pull requests (into main) also run the browser tests in Safari's engine and Firefox (D-48). Each project
+    # runs in four parts side by side, so each job stays well inside its time limit: a whole project in one job no
+    # longer fits in an hour. The parts of one project together run every test exactly once (ENGINE_PARTS below must
+    # equal the number of entries in `shard`; tests/unit/ci-workflow.test.ts checks it). Every other pull request
+    # skips these jobs, which keeps everyday pull requests fast; drafts wait until they are marked ready for review.
+    name: Browser tests in ${{ matrix.project }}, part ${{ matrix.shard }}
+    if: github.event_name == 'pull_request' && github.base_ref == 'main' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    # A full suite in one engine is about 2,000 tests on two workers, so one part is about 500.
+    timeout-minutes: 60
+    env:
+      ENGINE_PARTS: 4
+    strategy:
+      # Every part finishes, so one run shows all failing tests at once.
+      fail-fast: false
+      matrix:
+        project: [webkit-phone, webkit-desktop, firefox-desktop]
+        shard: [1, 2, 3, 4]
+        # Adds the engine to install to every part of its project (it creates no extra jobs).
+        include:
+          - project: webkit-phone
+            browser: webkit
+          - project: webkit-desktop
+            browser: webkit
+          - project: firefox-desktop
+            browser: firefox
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx playwright install --with-deps "$BROWSER"
+        env:
+          BROWSER: ${{ matrix.browser }}
+      # Headless Firefox cannot create a WebGL context (Mozilla bug 1375585), so the 3D anatomy viewer cannot start.
+      # Firefox therefore runs headed under a virtual display (Xvfb); WebKit stays headless.
+      - run: |
+          if [ "$BROWSER" = "firefox" ]; then
+            xvfb-run -a npm run test:e2e -- --project="$PROJECT" --shard="$SHARD/$ENGINE_PARTS"
+          else
+            npm run test:e2e -- --project="$PROJECT" --shard="$SHARD/$ENGINE_PARTS"
+          fi
+        env:
+          ALL_ENGINES: '1'
+          BROWSER: ${{ matrix.browser }}
+          HEADED_FIREFOX: ${{ matrix.browser == 'firefox' && '1' || '' }}
+          PROJECT: ${{ matrix.project }}
+          SHARD: ${{ matrix.shard }}
+
+      - name: Keep the test report if browser tests fail
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-${{ matrix.project }}-part-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
 

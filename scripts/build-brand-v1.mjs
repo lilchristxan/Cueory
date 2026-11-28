@@ -9,8 +9,8 @@
  *   3. writes the ink in exactly one brand color with that coverage as its transparency, so the logo sits on the silk
  *      or any background without a box around it, and the cruet's empty top half stays empty (guide §4.1);
  *   4. crops to the visible artwork (guide §3.5: scale from the visible bounding box) and saves a few widths.
- * It also writes browser and app icons (the emblem on Ivory) and brand-source/v1.0/manifest.json, which records
- * where every file came from with checksums (guide §2.3). tests/unit/brand.test.ts checks all of it.
+ * It also writes browser and app icons (the emblem on Ivory), public/favicon.ico (the 32px icon inside an ICO file) and
+ * brand-source/v1.0/manifest.json, which records where every file came from with checksums (guide §2.3). tests/unit/brand.test.ts checks all of it.
  *
  * Run from the repository root (sharp comes with Astro):
  *   node scripts/build-brand-v1.mjs           writes public/brand/v1/ and the manifest
@@ -22,6 +22,8 @@ import sharp from 'sharp';
 
 const SOURCE_DIR = 'brand-source/v1.0';
 const OUT_DIR = 'public/brand/v1';
+/** /favicon.ico, for browsers and tools that ask for it directly instead of reading the page's icon links. */
+const FAVICON = 'public/favicon.ico';
 const EXPORTED = '2026-11-01';
 
 /** The three logo colors (guide §4.1). Partly blended edge pixels are normal anti-aliasing, not new colors. */
@@ -39,8 +41,7 @@ const PAIRINGS = {
 
 /**
  * The approved families the site uses (guide §3.4) and the widths we serve: they cover the sizes on the site at 1x to
- * 3x, and none is wider than the artwork in its source. The cruet alone is not exported yet: its files draw it only
- * about 135 px wide, too small to compare or to scale up, and the site has no use for it yet (guide §8.2 ideas).
+ * 3x, and none is wider than the artwork in its source (the script stops if one would be: nothing is scaled up).
  */
 const FAMILIES = [
   {
@@ -60,6 +61,19 @@ const FAMILIES = [
     // The dark file draws the emblem only 348 px wide; the light file draws the same emblem 1,824 px wide. Both
     // palettes use the light file's drawing (only the color changes, guide §4.5), so the icons stay sharp.
     drawing: 'light',
+  },
+  {
+    name: 'cruet',
+    role: 'The cruet alone: a small supporting mark, never the only identifier (pillo game mark, Task 138)',
+    sources: { light: 'cueory_cruet_light_logo.png', dark: 'cueory_cruet_dark_logo.png' },
+    // Its files draw it only about 135 px wide, so the widest copy stays under that. pillo shows it about 10 to 13 px
+    // wide, so these cover 1x to 3x and more.
+    widths: [32, 64, 128],
+    // The two files are not the same drawing: the dark file draws the handle as one thick loop and stripes the neck
+    // (about 74% overlap), while the light file matches the cruet in the approved emblem. Both palettes use the light
+    // file's drawing (only the color changes, guide §4.5), and the script checks it against the emblem's cruet instead.
+    drawing: 'light',
+    sameAs: { file: 'cueory_letter_Light_logo.png', part: 'the cruet in the approved emblem (all but the c)' },
   },
 ];
 
@@ -132,6 +146,42 @@ function boundingBox({ amount, width, height }) {
   }
   if (right < 0) throw new Error('no artwork found');
   return { left, top, width: right - left + 1, height: bottom - top + 1 };
+}
+
+/** The emblem's cruet: its ink without the largest connected shape, which is the c. */
+function withoutLargestShape(cover) {
+  const { width, height, amount } = cover;
+  const label = new Int32Array(width * height).fill(-1);
+  const sizes = [];
+  const stack = [];
+  for (let start = 0; start < amount.length; start += 1) {
+    if (amount[start] <= 0 || label[start] >= 0) continue;
+    const id = sizes.length;
+    let size = 0;
+    label[start] = id;
+    stack.push(start);
+    while (stack.length > 0) {
+      const p = stack.pop();
+      size += 1;
+      const x = p % width;
+      const y = (p - x) / width;
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= width || yy >= height) continue;
+          const q = yy * width + xx;
+          if (amount[q] > 0 && label[q] < 0) {
+            label[q] = id;
+            stack.push(q);
+          }
+        }
+      }
+    }
+    sizes.push(size);
+  }
+  const largest = sizes.indexOf(Math.max(...sizes));
+  return { ...cover, amount: amount.map((v, p) => (label[p] === largest ? 0 : v)) };
 }
 
 /** The ink as one brand color with coverage as transparency, cropped to the artwork, as a sharp image. */
@@ -224,6 +274,29 @@ async function overlap(a, b) {
   return best;
 }
 
+/** The coverage map a family's drawing comes from (both palettes use it when the family names one). */
+/**
+ * An ICO file holding one PNG image unchanged (the ICO format allows a PNG as the image data): a 6-byte header, one
+ * 16-byte directory entry, then the PNG bytes as they are. Nothing is redrawn, resized or recolored.
+ */
+function icoFromPng(png, size) {
+  const header = Buffer.alloc(22);
+  header.writeUInt16LE(0, 0); // reserved
+  header.writeUInt16LE(1, 2); // type 1: icon
+  header.writeUInt16LE(1, 4); // one image
+  header.writeUInt8(size, 6); // width
+  header.writeUInt8(size, 7); // height
+  header.writeUInt8(0, 8); // no palette
+  header.writeUInt8(0, 9); // reserved
+  header.writeUInt16LE(1, 10); // color planes
+  header.writeUInt16LE(32, 12); // bits per pixel
+  header.writeUInt32LE(png.length, 14); // image size
+  header.writeUInt32LE(22, 18); // image offset
+  return Buffer.concat([header, png]);
+}
+
+const drawnFrom = (family, light, dark) => ((family.drawing ?? 'light') === 'light' ? light : dark);
+
 const checkOnly = process.argv.includes('--check');
 const manifest = {
   brand: 'cueory',
@@ -255,14 +328,20 @@ for (const family of FAMILIES) {
   const dark = await coverage(family.sources.dark, PAIRINGS.dark);
   const lightBox = boundingBox(light);
   const darkBox = boundingBox(dark);
-  const same = await overlap(light, dark);
+  const darkFile = await overlap(light, dark);
+  // Usually the other palette's file is the check. A family with sameAs is checked against approved artwork instead.
+  const reference = family.sameAs
+    ? withoutLargestShape(await coverage(family.sameAs.file, PAIRINGS.light))
+    : undefined;
+  const same = reference ? await overlap(drawnFrom(family, light, dark), reference) : darkFile;
   const aspect = (box) => (box.width / box.height).toFixed(3);
   const touches = (box, cover) =>
     box.left === 0 || box.top === 0 || box.left + box.width === cover.width || box.top + box.height === cover.height;
   console.log(
     `${family.name}: light ${lightBox.width}x${lightBox.height} (aspect ${aspect(lightBox)}${touches(lightBox, light) ? ', TOUCHES EDGE' : ''}), ` +
       `dark ${darkBox.width}x${darkBox.height} (aspect ${aspect(darkBox)}${touches(darkBox, dark) ? ', TOUCHES EDGE' : ''}), ` +
-      `same geometry ${(same * 100).toFixed(1)}%`,
+      `same geometry ${(darkFile * 100).toFixed(1)}%` +
+      (reference ? `; ${family.drawing} drawing vs ${family.sameAs.part}: ${(same * 100).toFixed(1)}%` : ''),
   );
   if (same < SAME_DRAWING) {
     throw new Error(`${family.name}: the Daytime and Evening files are different drawings; ask Christian (guide §2.1)`);
@@ -280,6 +359,10 @@ for (const family of FAMILIES) {
     sources: family.sources,
     drawing: family.drawing ? `both palettes from ${family.sources[family.drawing]}` : 'each palette from its own file',
     overlap: Number(same.toFixed(3)),
+    ...(family.sameAs && {
+      overlapWith: `${family.sameAs.part}, ${family.sameAs.file}`,
+      darkFileOverlap: Number(darkFile.toFixed(3)),
+    }),
     files: {},
   };
   for (const mode of ['light', 'dark']) {
@@ -309,6 +392,10 @@ if (!checkOnly) {
     writeFileSync(`${OUT_DIR}/${name}`, png);
     manifest.icons[name] = { from: 'emblem (Daytime)', background: COLORS.ivory.hex, width: size, height: size, sha256: sha256(png) };
   }
+  // The 32px icon above, byte for byte, inside an ICO file at the site root.
+  const favicon = icoFromPng(readFileSync(`${OUT_DIR}/icon-32.png`), 32);
+  writeFileSync(FAVICON, favicon);
+  manifest.favicon = { file: FAVICON, from: 'icon-32.png (unchanged PNG inside an ICO file)', width: 32, height: 32, sha256: sha256(favicon) };
   writeFileSync(`${SOURCE_DIR}/manifest.json`, `${JSON.stringify(manifest, null, 2)}\n`);
   console.log(`wrote ${OUT_DIR}/ and ${SOURCE_DIR}/manifest.json`);
 }

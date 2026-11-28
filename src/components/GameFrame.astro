@@ -1,0 +1,343 @@
+---
+import '../styles/gameframe.css';
+import GameFrameControls from '../islands/GameFrameControls';
+import GameFrameStats from '../islands/GameFrameStats';
+import { statsCta } from '../config/statscta';
+import GameDeck from './GameDeck.astro';
+import { formatGameDateLine } from '../scripts/gamedateline';
+
+interface Props {
+  game: string;
+  tagline?: string;
+  dateLine?: string;
+  howSteps?: readonly string[];
+  puzzleNumber?: number | string;
+  wide?: boolean;
+  showcase?: boolean;
+  /** Opted-in game pages move visible page controls and stats to this Frame. */
+  framed?: boolean;
+  /** True only where a framed island receives the Frame's named control events. */
+  bridge?: boolean;
+  /** Shows the four stats in the panel even where the page keeps its own controls (framed off). Default: with framed. */
+  stats?: boolean;
+}
+
+const {
+  game,
+  tagline: propTagline,
+  dateLine: propDateLine,
+  howSteps: propHowSteps,
+  wide = false,
+  showcase = false,
+  framed = true,
+  bridge = false,
+  stats: showStats,
+} = Astro.props;
+
+type GameConfig = {
+  id: string;
+  name: string;
+  brandName: string;
+  defaultTagline: string;
+  iconType: 'img' | 'tachyyy' | 'grid' | '9' | 'hi';
+  iconSrc?: string;
+  wordmarkType: 'img' | 'serif';
+  wordmarkSrc?: string;
+  /** The Evening art for the wordmark, when the Daytime art would not read on the dark panel. */
+  wordmarkEveningSrc?: string;
+  wordmarkText?: string;
+  defaultSteps: readonly string[];
+  hasPillLegend: boolean;
+};
+
+const configs: Record<string, GameConfig> = {
+  pulse: {
+    id: 'pulse',
+    name: 'pillo',
+    brandName: 'wordpill',
+    defaultTagline: "find today's word",
+    iconType: 'img',
+    iconSrc: '/design/games-v2/assets/wordpill-icon-l1.svg',
+    wordmarkType: 'img',
+    wordmarkSrc: '/design/games-v2/assets/wordpill-wordmark-light.svg',
+    wordmarkEveningSrc: '/design/games-v2/assets/wordpill-wordmark-dark.svg',
+    defaultSteps: [
+      'Type a five-letter word.',
+      'Each pill shows if a letter is in place, elsewhere or not in the word.',
+      'Solve it in six tries.',
+    ],
+    hasPillLegend: true,
+  },
+  stat: {
+    id: 'stat',
+    name: 'tachyyy',
+    brandName: 'tachyyy',
+    defaultTagline: 'beat the clock',
+    iconType: 'tachyyy',
+    wordmarkType: 'img',
+    wordmarkSrc: '/brand/games/tachyyy-wordmark-light.svg',
+    wordmarkEveningSrc: '/brand/games/tachyyy-wordmark-dark.svg',
+    defaultSteps: [
+      'Read the question.',
+      'Pick one answer before the timer runs out.',
+      'See the rationale after each one.',
+    ],
+    hasPillLegend: false,
+  },
+  suture: {
+    id: 'suture',
+    name: 'word path',
+    brandName: 'piccline',
+    defaultTagline: "picc today's words",
+    iconType: 'img',
+    iconSrc: '/brand/games/piccline-dark.svg',
+    wordmarkType: 'img',
+    wordmarkSrc: '/brand/games/piccline-wordmark-light.svg',
+    wordmarkEveningSrc: '/brand/games/piccline-wordmark-dark.svg',
+    defaultSteps: [
+      'Drag, tap or use the arrow keys to link touching letters.',
+      'Every letter belongs to one word.',
+      'Find the theme word to finish.',
+    ],
+    hasPillLegend: false,
+  },
+  cueword: {
+    id: 'cueword',
+    name: 'crossword',
+    brandName: 'crossword',
+    defaultTagline: "solve today's mini",
+    iconType: 'grid',
+    wordmarkType: 'serif',
+    wordmarkText: 'crossword',
+    defaultSteps: [
+      'Pick a square or a clue.',
+      'Type your answer.',
+      'Check a square, a word or the whole grid.',
+    ],
+    hasPillLegend: false,
+  },
+  triage: {
+    id: 'triage',
+    name: 'sudoku',
+    brandName: 'sudoku',
+    defaultTagline: "fill today's grid",
+    iconType: '9',
+    wordmarkType: 'serif',
+    wordmarkText: 'sudoku',
+    defaultSteps: [
+      'Pick a square.',
+      'Type or tap a number. Pencil marks are on the P key.',
+      'Each number appears once per row, column and box.',
+    ],
+    hasPillLegend: false,
+  },
+  'hello-cards': {
+    id: 'hello-cards',
+    name: 'hello cards',
+    brandName: 'hello cards',
+    defaultTagline: 'start a convo',
+    iconType: 'hi',
+    wordmarkType: 'serif',
+    wordmarkText: 'hello cards',
+    defaultSteps: [
+      'Flip the top card.',
+      'Ask the person next to you.',
+      'Save the ones you like.',
+    ],
+    hasPillLegend: false,
+  },
+};
+
+// Aliases
+const key =
+  game === 'pillo' || game === 'vialo'
+    ? 'pulse'
+    : game === 'tachyyy'
+      ? 'stat'
+      : game === 'word-path' || game === 'piccline'
+        ? 'suture'
+        : game === 'crossword'
+          ? 'cueword'
+          : game === 'sudoku'
+            ? 'triage'
+            : game === 'hello cards'
+              ? 'hello-cards'
+              : game;
+
+const currentConfig: GameConfig = configs[key] ?? configs.pulse!;
+// The corner buttons are named for the page's own game, the name the game island uses for its dialogs: vialo's page is
+// "vialo" although it shares pillo's art, and word path's page is "piccline".
+const controlName = game === 'vialo' ? currentConfig.brandName : key === 'suture' ? 'piccline' : currentConfig.name;
+
+// The games that can print from their own page get the Frame's printer button (it announces cueory:print with this id).
+// Vialo and piccline print their own two-page sheets (their print islands answer); sudoku and crossword print what they printed before,
+// and so does the older word path route.
+const printId = game === 'vialo' ? 'vialo' : key === 'triage' ? 'sudoku' : key === 'cueword' ? 'crossword' : key === 'suture' ? 'suture' : undefined;
+
+const activeTagline = propTagline ?? currentConfig.defaultTagline;
+const activeSteps = propHowSteps ?? currentConfig.defaultSteps;
+// The static fallback makes the page useful before hydration. The browser replaces it with the visitor's own day
+// below; a build date must never identify a later visitor's daily puzzle.
+const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
+---
+
+<div class="game-frame" data-game-look={game === 'vialo' ? 'wordpill' : key === 'suture' ? 'piccline' : undefined}>
+  <div class="game-frame-layout">
+    <!-- Left panel (full height above footer) -->
+    <aside class="game-frame-sidebar" aria-label="Game details and stats">
+      <div class="game-frame-sidebar-top">
+        <a href="/play" class="game-frame-back" aria-label="all games" data-testid="all-games-link">
+          <span aria-hidden="true">‹</span>&nbsp;games
+        </a>
+        <div class="game-frame-flag-slot"><slot name="flag" /></div>
+        <a href="/" class="game-frame-logo-wrap" aria-label="cueory home">
+          <img
+            src="/brand/v1/logo-full-light-480.png"
+            alt="cueory"
+            class="game-frame-logo game-frame-day-art"
+            width="80"
+            height="20"
+            loading="lazy"
+            data-image-priority="header"
+            decoding="async"
+          />
+          <img
+            src="/brand/v1/logo-full-dark-480.png"
+            alt="cueory"
+            class="game-frame-logo game-frame-evening-art"
+            width="80"
+            height="20"
+            loading="lazy"
+            data-image-priority="header"
+            decoding="async"
+          />
+        </a>
+      </div>
+
+      <div class="game-frame-game-badge">
+        <div class="game-frame-icon-wrap" aria-hidden="true">
+          {currentConfig.iconType === 'img' && currentConfig.iconSrc && (
+            <img src={currentConfig.iconSrc} alt="" aria-hidden="true" class="game-frame-icon-img" width="72" height="72" loading="lazy" decoding="async" />
+          )}
+          {currentConfig.iconType === 'tachyyy' && (
+            <span class="logo game-frame-icon-img">
+              <img class="logo-day" src="/brand/games/tachyyy-light.svg" alt="" aria-hidden="true" width="72" height="72" loading="lazy" decoding="async" />
+              <img class="logo-evening" src="/brand/games/tachyyy-light.svg" alt="" aria-hidden="true" width="72" height="72" loading="lazy" decoding="async" />
+            </span>
+          )}
+          {currentConfig.iconType === 'grid' && (
+            <span class="game-frame-emblem">
+              <span class="game-frame-emblem-grid">
+                <span class="game-frame-emblem-cell is-filled"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell is-filled"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell"></span>
+                <span class="game-frame-emblem-cell is-filled"></span>
+              </span>
+            </span>
+          )}
+          {currentConfig.iconType === '9' && (
+            <span class="game-frame-emblem">
+              <span class="game-frame-emblem-9">9</span>
+            </span>
+          )}
+          {currentConfig.iconType === 'hi' && (
+            <span class="game-frame-emblem">
+              <span class="game-frame-emblem-hi">hi</span>
+            </span>
+          )}
+        </div>
+
+        <div class="game-frame-wordmark-wrap">
+          {currentConfig.wordmarkType === 'img' && currentConfig.wordmarkSrc && (
+            <img
+              src={currentConfig.wordmarkSrc}
+              alt=""
+              aria-hidden="true"
+              class:list={['game-frame-wordmark-img', currentConfig.wordmarkEveningSrc && 'game-frame-day-art']}
+              width="180"
+              height="60"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          {currentConfig.wordmarkType === 'img' && currentConfig.wordmarkEveningSrc && (
+            <img
+              src={currentConfig.wordmarkEveningSrc}
+              alt=""
+              aria-hidden="true"
+              class="game-frame-wordmark-img game-frame-evening-art"
+              width="180"
+              height="60"
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          {currentConfig.wordmarkType === 'serif' && (
+            <span class="game-frame-serif-title">{currentConfig.wordmarkText}</span>
+          )}
+        </div>
+
+        <p class="game-frame-tagline">{activeTagline}</p>
+      </div>
+
+      <!-- The four stats are drawn by the island itself, and only for a signed-in visitor (nothing is rendered, and no gap
+           kept, for anyone else). They are still recorded in this browser either way. -->
+      {(showStats ?? framed) && <GameFrameStats client:load game={currentConfig.id} cta={statsCta} />}
+    </aside>
+
+    <!-- Center area -->
+    <div class="game-frame-main">
+    <div class="game-frame-head">
+      <!-- Date line centered above the board -->
+      <p class="game-frame-dateline" data-game-frame-dateline={propDateLine === undefined ? '' : undefined}>{activeDateLine}</p>
+
+      <!-- Slot for piccline cue line ("TODAY'S CUE · ...") -->
+      <div class="game-frame-cue-slot">
+        <slot name="cue" />
+      </div>
+
+      <!-- Row above the board: Settings gear (top-left), middle slot for game-specific controls, ? popover (top-right) -->
+      {framed && (
+        <GameFrameControls client:load gameName={controlName} printId={printId} steps={activeSteps} hasPillLegend={currentConfig.hasPillLegend} bridge={bridge} wide={wide}>
+          <slot name="controls" />
+        </GameFrameControls>
+      )}
+
+      <!-- Slot for page title -->
+      <div class="not-print:sr-only game-frame-title"><slot name="title" /></div>
+    </div>
+
+      <!-- The board slot -->
+      <div class:list={['game-frame-board', wide && 'is-wide', showcase && 'is-showcase']}>
+        <slot />
+      </div>
+
+    </div>
+
+    <!-- The other open games as a fanned deck (desktop) or a row of cards under the stats (compact) -->
+    <div class="game-frame-deck-slot">
+      <GameDeck current={currentConfig.id} />
+      <slot name="deck" />
+    </div>
+  </div>
+
+  <!-- Footer slot (placeholder for Item 3) -->
+  <div class="game-frame-footer-slot">
+    <slot name="footer" />
+  </div>
+</div>
+
+{propDateLine === undefined && (
+  <script>
+    import { formatGameDateLine } from '../scripts/gamedateline';
+
+    for (const line of document.querySelectorAll<HTMLElement>('[data-game-frame-dateline]')) {
+      line.textContent = formatGameDateLine(new Date());
+    }
+  </script>
+)}

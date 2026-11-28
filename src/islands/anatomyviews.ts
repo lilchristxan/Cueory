@@ -1,0 +1,209 @@
+/**
+ * Camera presets, the 3D view's keyboard map, model download sizes and lesson links for the anatomy lab. Pure logic, no
+ * three.js and no DOM, so it is unit tested (tests/unit/anatomyviews.test.ts).
+ */
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Preset views
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type ViewPreset = 'front' | 'back' | 'left' | 'right' | 'top';
+
+/**
+ * The words for each view. Christian's three: anterior (the model's front), posterior (its back) and lateral (a side).
+ * Nothing else about the body is named here. "lateral, opposite" is the other side from "lateral". "top" and
+ * "bottom" were already in the lab.
+ */
+export const VIEW_WORDS: Readonly<Record<ViewPreset | 'bottom', string>> = {
+  front: 'anterior',
+  back: 'posterior',
+  left: 'lateral',
+  right: 'lateral, opposite',
+  top: 'top',
+  bottom: 'bottom',
+};
+
+/**
+ * The preset views, in button order. The ids follow the model's own frame, set once for every system by
+ * scripts/build-anatomy.mjs: glTF +y up, the model facing +z, and +x the body's left (BodyParts3D's coordinate system).
+ * So "lateral" looks at the body's left side, whichever way the student has turned it, and "lateral, opposite" at the
+ * right side.
+ */
+export const VIEW_PRESETS: ReadonlyArray<{ id: ViewPreset; label: string; key: string }> = [
+  { id: 'front', label: VIEW_WORDS.front, key: '1' },
+  { id: 'back', label: VIEW_WORDS.back, key: '2' },
+  { id: 'left', label: VIEW_WORDS.left, key: '3' },
+  { id: 'right', label: VIEW_WORDS.right, key: '4' },
+  { id: 'top', label: VIEW_WORDS.top, key: '5' },
+];
+
+/** The three views in the orientation panel, in order. Pressing "lateral" again turns to the opposite side. */
+export const ORIENTATIONS: ReadonlyArray<{ id: 'front' | 'back' | 'left'; label: string }> = [
+  { id: 'front', label: VIEW_WORDS.front },
+  { id: 'back', label: VIEW_WORDS.back },
+  { id: 'left', label: VIEW_WORDS.left },
+];
+
+/**
+ * The unit direction from the model's center to the camera for a preset. "top" leans a hair towards the front so the
+ * camera never sits exactly on the up axis (where "which way is up on screen" is undefined) and the front of the model
+ * is at the bottom of the screen.
+ */
+export function presetDirection(id: ViewPreset): [number, number, number] {
+  switch (id) {
+    case 'front': return [0, 0, 1];
+    case 'back': return [0, 0, -1];
+    case 'left': return [1, 0, 0];
+    case 'right': return [-1, 0, 0];
+    case 'top': {
+      const lean = 1e-3;
+      const length = Math.hypot(1, lean);
+      return [0, 1 / length, lean / length];
+    }
+  }
+}
+
+export function isViewPreset(value: unknown): value is ViewPreset {
+  return VIEW_PRESETS.some((preset) => preset.id === value);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Keyboard map for the 3D view
+// ---------------------------------------------------------------------------------------------------------------------
+
+export type CanvasAction =
+  | { kind: 'orbit'; yaw: number; pitch: number }
+  | { kind: 'zoom'; factor: number }
+  | { kind: 'reset' }
+  | { kind: 'view'; preset: ViewPreset };
+
+/** What a key pressed on the focused 3D view does, or null when the lab leaves it to the browser. */
+export function canvasKeyAction(key: string, step: number, zoomIn: number): CanvasAction | null {
+  switch (key) {
+    case 'ArrowLeft': return { kind: 'orbit', yaw: -step, pitch: 0 };
+    case 'ArrowRight': return { kind: 'orbit', yaw: step, pitch: 0 };
+    case 'ArrowUp': return { kind: 'orbit', yaw: 0, pitch: -step };
+    case 'ArrowDown': return { kind: 'orbit', yaw: 0, pitch: step };
+    case '+': case '=': return { kind: 'zoom', factor: zoomIn };
+    case '-': case '_': return { kind: 'zoom', factor: 1 / zoomIn };
+    case '0': case 'Home': return { kind: 'reset' };
+    default: {
+      const preset = VIEW_PRESETS.find((p) => p.key === key);
+      return preset ? { kind: 'view', preset: preset.id } : null;
+    }
+  }
+}
+
+/** The keys listed in the lab's "keys" panel, in the words a student reads. Kept in step with canvasKeyAction. */
+export const KEY_MAP: ReadonlyArray<{ keys: string; does: string }> = [
+  { keys: '← →', does: 'turn the model left or right' },
+  { keys: '↑ ↓', does: 'tilt the model up or down' },
+  { keys: '+ −', does: 'zoom in or out' },
+  ...VIEW_PRESETS.map((preset) => ({ keys: preset.key, does: `${preset.label} view` })),
+  { keys: '0 or Home', does: 'reset the view' },
+  { keys: 'Tab', does: 'move to the buttons and the structure list, which do everything the 3D view does' },
+];
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Download sizes
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** "45 KB", "0.6 MB", "2.4 MB": rounded up, so a note never promises less than the download. */
+export function formatDownloadSize(bytes: number): string | null {
+  if (!Number.isFinite(bytes) || bytes <= 0) return null;
+  if (bytes < 1_000_000) return `${Math.max(1, Math.ceil(bytes / 1_000))} KB`;
+  return `${(Math.ceil(bytes / 100_000) / 10).toFixed(1)} MB`;
+}
+
+/** The note under the cover's button: what the first tap downloads besides the 3D viewer itself. */
+export function coverDownloadNote(firstTitle: string | null, bytes: number | undefined): string {
+  const size = bytes === undefined ? null : formatDownloadSize(bytes);
+  if (!firstTitle || !size) return 'loads the 3D viewer, then one body system at a time.';
+  return `loads the 3D viewer, then one body system at a time. the first, ${firstTitle}, is a ${size} download.`;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Lesson links: /preview/anatomy-lab?system=heart&structure=FMA7204
+// ---------------------------------------------------------------------------------------------------------------------
+
+export interface LabFocus {
+  system: string | null;
+  structure: string | null;
+}
+
+const SYSTEM_KEY = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const STRUCTURE_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+
+/**
+ * Which system and structure a link asks the lab to open on. Anything that isn't a well-formed key or id is ignored
+ * (never shown, never looked up), so a hand-edited address can only fall back to the normal first view.
+ */
+export function focusFromSearch(search: string): LabFocus {
+  const params = new URLSearchParams(search);
+  const system = params.get('system');
+  const structure = params.get('structure');
+  const validSystem = system && system.length <= 64 && SYSTEM_KEY.test(system) ? system : null;
+  // An explicitly invalid system cannot turn into a structure-only link to the fallback system.
+  const invalidSystem = params.has('system') && validSystem === null;
+  return {
+    system: validSystem,
+    structure: !invalidSystem && structure && STRUCTURE_ID.test(structure) ? structure : null,
+  };
+}
+
+/** The system the lab starts on: the linked one when this build has it, else the first. */
+export function initialSystemKey(keys: readonly string[], focus: LabFocus): string {
+  return focus.system && keys.includes(focus.system) ? focus.system : (keys[0] ?? '');
+}
+
+/**
+ * The lab opens on the skeleton (Christian, 2026-11-27): the system whose key ends in this, when the build has it.
+ * The test shapes (?fixture) still come first when they are asked for, and a lesson's own link still wins.
+ */
+const OPENING_SYSTEM_KEY = 'skeleton-axial';
+
+/** The same systems with the opening system moved to the front; unchanged when it is missing or the fixture leads. */
+export function openingSystemFirst<T extends { key: string; fixture?: boolean }>(systems: readonly T[]): T[] {
+  if (systems[0]?.fixture) return [...systems];
+  const opening = systems.find((system) => system.key.endsWith(OPENING_SYSTEM_KEY));
+  return opening ? [opening, ...systems.filter((system) => system !== opening)] : [...systems];
+}
+
+/** A lesson's structure belongs to its requested system and that system's completed model load. */
+export function linkedStructureId(
+  focus: LabFocus,
+  systemKey: string,
+  loadedSystemKey: string,
+  found: readonly string[],
+): string | null {
+  if (loadedSystemKey !== systemKey || (focus.system && focus.system !== systemKey)) return null;
+  return focus.structure && found.includes(focus.structure) ? focus.structure : null;
+}
+
+/**
+ * The structures a "find it" round can ask for by tapping the model. The skin is drawn as an outline that a tap
+ * passes through whenever anything else is showing (src/islands/anatomyscene.ts), so it cannot be answered then and is
+ * left out of the round. Alone, the skin is solid and stays in.
+ */
+export function tappableIds(visible: readonly string[], outlined: ReadonlySet<string>): string[] {
+  return tappableRound(visible, visible, outlined);
+}
+
+/**
+ * The same rule for a round that asks about `pool` while `shown` is what will be on screen (a review round shows its
+ * whole queue first): an outlined structure is left out whenever anything not outlined is shown.
+ */
+export function tappableRound(pool: readonly string[], shown: readonly string[], outlined: ReadonlySet<string>): string[] {
+  const innerShown = shown.some((id) => !outlined.has(id));
+  return innerShown ? pool.filter((id) => !outlined.has(id)) : [...pool];
+}
+
+/**
+ * A saved view stores the camera, visibility and selection, not how far the structures are spread apart, so it can
+ * only be saved while they are together; opening a saved view always brings them back together first.
+ */
+export function spreadBlocksSaving(spread: number): boolean {
+  return spread > 0;
+}
+
+export const SPREAD_SAVE_NOTE = 'bring the structures back together to save a view.';

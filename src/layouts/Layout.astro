@@ -1,10 +1,16 @@
 ---
 import '../styles/global.css';
+import '../styles/print.css';
+import '../styles/reduced-motion.css';
 import BuildingNotice from '../components/BuildingNotice.astro';
 import PromoPanel from '../components/PromoPanel.astro';
+import SignupPopup from '../components/SignupPopup.astro';
+import GloveNote from '../components/GloveNote.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import { offline, promo as promoSettings, site } from '../config/site';
+import { socialImageMeta } from '../config/socialimages';
+import { popupAllowedOn } from '../scripts/signuppopup';
 import { themeHeadScript } from '../scripts/theme';
 
 interface Props {
@@ -18,23 +24,54 @@ interface Props {
   variant?: 'default' | 'study' | 'home';
   /** Keep this page out of search engines. */
   noindex?: boolean;
+  /** Site path of the page this one duplicates (a retained legacy route); the canonical link points there. Default: this page. */
+  canonicalTo?: string;
   /**
    * The once-only promo panel (D-59). Marketing pages show it unless they turn it off (the signup thank-you page does,
    * because its visitor has just joined); study screens never do.
    */
   promo?: boolean;
+  /**
+   * The real item a question page shows, for its flag reports: the database item id and item version id (uuids).
+   * Sample pages pass none (Task 171). A slug or half a pair fails the build.
+   */
+  flagItem?: { itemId: string; itemVersionId: string };
+  /** Hide the flag-or-comment button (D-pending, Task 64): set true during sharpening rounds and timed reviews. */
+  hideFlag?: boolean;
+  /** Absolute or site-relative Open Graph image for this page. */
+  socialImage?: string;
+  /**
+   * The page's accounts gate is closed (/signin and /signup, src/config/accountsgate.ts): the account corner and the
+   * flag button stay signed out and never load the Supabase client.
+   */
+  accountsOff?: boolean;
+  /**
+   * Leaves out the "still building" strip and the site menu bar, so a full-page game board (the Games v2 frame) owns
+   * the top of the screen. One switch for every game page: src/components/GamePage.astro passes it. Off by default.
+   */
+  bareHeader?: boolean;
+  /** The page lays out its own full width (the /play hub, option B): no page-width cap or side padding on <main>. */
+  wide?: boolean;
 }
 
-const { title, description = site.description, variant = 'default', noindex = false, promo = true } = Astro.props;
+const { title, description = site.description, variant = 'default', noindex = false, canonicalTo, promo = true, flagItem, hideFlag = false, socialImage: socialImagePath = '/share/study-ivory.png', accountsOff = false, bareHeader = false, wide = false } = Astro.props;
 // Browser-tab titles use the lowercase brand voice: "privacy · cueory" (D-47).
 const fullTitle = title === site.name || title === site.wordmarkName ? site.wordmarkName : `${title} · ${site.wordmarkName}`;
-// Static Astro builds can expose /index.html or /privacy.html as the URL path.
-// Canonicals must use the actual extensionless public routes served by Cloudflare.
+// Astro's static file build may expose /index.html or /privacy.html as the pathname.
+// Canonical URLs must match the public extensionless routes served by Workers.
 const canonicalPath = (Astro.url.pathname.replace(/\/index\.html$/, '') || '/').replace(/\.html$/, '');
-const canonical = new URL(canonicalPath, site.url).href;
+const canonical = new URL(canonicalTo ?? canonicalPath, site.url).href;
+const socialImage = new URL(socialImagePath, site.url).href;
+// The share card's size, type and words for link previews. Only our own cards in public/share/ are allowed, so an
+// unknown image fails the build instead of shipping a preview without a size or a text alternative.
+const socialImageUrl = new URL(socialImagePath, site.url);
+const socialImageInfo = socialImageUrl.origin === new URL(site.url).origin ? socialImageMeta(socialImageUrl.pathname) : undefined;
+if (!socialImageInfo) throw new Error(`Layout: ${socialImagePath} is not a share card listed in src/config/socialimages.ts`);
 const isStudy = variant === 'study';
 const isHome = variant === 'home';
 const showPromo = promoSettings.show && promo && !isStudy;
+// The launch-updates pop-up (lane 14): the same pages as the promo panel, never on lesson, study or game screens.
+const showSignupPopup = promo && !isStudy && popupAllowedOn(Astro.url.pathname);
 // The title a page has in site search results (D-49): its own title, and "home" for the home page.
 const searchTitle = isHome ? 'home' : title;
 ---
@@ -47,38 +84,59 @@ const searchTitle = isHome ? 'home' : title;
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={site.wordmarkName} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:type" content={socialImageInfo.type} />
+    <meta property="og:image:width" content={String(socialImageInfo.width)} />
+    <meta property="og:image:height" content={String(socialImageInfo.height)} />
+    <meta property="og:image:alt" content={socialImageInfo.alt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content={socialImageInfo.alt} />
     <!-- Brand v1.0 icons (D-55): the emblem on Ivory, built by scripts/build-brand-v1.mjs. -->
     <link rel="icon" type="image/png" sizes="32x32" href="/brand/v1/icon-32.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/brand/v1/icon-192.png" />
     <link rel="apple-touch-icon" href="/brand/v1/icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#f9f5ef" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#1c1917" media="(prefers-color-scheme: dark)" />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <!-- Applies a saved Light or Dark pick before the page paints (ThemePicker.astro, src/scripts/theme.ts). -->
     <script is:inline set:html={themeHeadScript} />
+    <slot name="head" />
+    <!-- Every page sets its text in these two Lato files (the only weights in use), so fetch them alongside the
+         stylesheet instead of after it. They stay font-display: swap (global.css). -->
+    <link rel="preload" href="/fonts/lato-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/lato-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
     {
       /* Marketing pages fetch their serif early so it is ready before the page is drawn (font-display: optional). */
       !isStudy && (
         <link rel="preload" href="/fonts/bodoni-moda-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin />
       )
     }
-    {isHome && <link rel="preload" href="/fonts/bodoni-moda-latin-opsz-italic.woff2" as="font" type="font/woff2" crossorigin />}
   </head>
-  <body class:list={['flex flex-col', isStudy ? 'bg-page' : 'silk-quiet']}>
+  <body class:list={['flex flex-col', isStudy ? 'bg-(--study-page)' : 'silk-quiet']}>
     <a
       href="#main"
       class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-10 focus:bg-surface focus:px-4 focus:py-2"
     >
       skip to content
     </a>
-    <BuildingNotice />
+    {!bareHeader && <BuildingNotice />}
     {
-      isHome ? (
-        <div class="relative z-20 h-0">
-          <SiteHeader overlay />
+      bareHeader ? null : isHome ? (
+        <div class="home-header-wrap relative z-20 h-0">
+          <SiteHeader overlay accountsOff={accountsOff} />
         </div>
       ) : (
-        <SiteHeader quiet={isStudy} />
+        <SiteHeader quiet={isStudy} accountsOff={accountsOff} />
       )
     }
     <!--
@@ -87,14 +145,16 @@ const searchTitle = isHome ? 'home' : title;
     -->
     <main
       id="main"
-      class:list={['w-full flex-1', !isHome && 'mx-auto max-w-page px-gutter']}
+      class:list={['w-full flex-1', !isHome && !bareHeader && !wide && 'mx-auto max-w-page px-gutter']}
       data-pagefind-body={noindex ? undefined : ''}
       data-pagefind-meta={noindex ? undefined : `title:${searchTitle}`}
     >
       <slot />
     </main>
-    <SiteFooter />
+    <SiteFooter hideFlag={hideFlag} flagItem={flagItem} accountsOff={accountsOff} />
     {showPromo && <PromoPanel />}
+    {showSignupPopup && <SignupPopup />}
+    <GloveNote />
     <!--
       Offline copies of pages (ROADMAP Task 5): an external file (built from src/scripts/offline.ts) that registers
       /sw.js after the page has loaded, in a built site only and while `offline.enabled` (src/config/site.ts) is true.

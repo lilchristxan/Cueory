@@ -14,8 +14,12 @@ export interface ReviewStateRow {
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function isValidDay(day: unknown): day is string {
-  if (typeof day !== 'string' || !DAY_RE.test(day)) return false;
+  // The shared review scheduler also rejects unsupported year zero.
+  if (typeof day !== 'string' || !DAY_RE.test(day) || day.startsWith('0000-')) return false;
   const d = new Date(`${day}T00:00:00.000Z`);
+  // An invalid month can match DAY_RE but produces Invalid Date. Let callers
+  // report the field-specific validation error instead of a RangeError.
+  if (!Number.isFinite(d.getTime())) return false;
   return d.toISOString().slice(0, 10) === day;
 }
 
@@ -59,12 +63,22 @@ export function dueItems(rows: readonly ReviewStateRow[], today: string): string
 /**
  * Builds a minimal Review history from a row so reviewsession.ts can use it.
  * Produces a history of `level` consecutive 'knew' results (or one 'missed' for level 0),
- * all on last_reviewed. Note: if the stored next_review was shortened by an exam plan,
+ * ending on last_reviewed, one per day on consecutive days because only one 'knew' a day
+ * counts toward the streak (review.ts). Note: if the stored next_review was shortened by an exam plan,
  * nextReview(syntheticHistory(row)) will return the unshortened interval — use the stored
  * next_review from the row when you need the exact scheduled date.
  */
 export function syntheticHistory(row: ReviewStateRow): Review[] {
   validateRow(row, 0);
   if (row.level === 0) return [{ day: row.last_reviewed, result: 'missed' }];
-  return Array.from({ length: row.level }, () => ({ day: row.last_reviewed, result: 'knew' as const }));
+  return Array.from({ length: row.level }, (_, i) => ({
+    day: daysBefore(row.last_reviewed, row.level - 1 - i),
+    result: 'knew' as const,
+  }));
+}
+
+function daysBefore(day: string, count: number): string {
+  if (count === 0) return day;
+  const text = new Date(Date.parse(`${day}T00:00:00.000Z`) - count * 86_400_000).toISOString().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : day;
 }

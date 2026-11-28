@@ -1,0 +1,4 @@
+status: in review (needs-christian, protected site header) · task-home-v3/header-layout · Home v3 header: on desktop and phone landscape the logo is centred on its own row with the menu bar under it, search and a copper "sign in" pill (person icon plus the words) on the right, as on the approved board; on phone portrait a menu button on the left, the logo exactly centred on the screen, search and sign in as round icons on the right.
+decision: D-pending — keep the official full wordmark and existing themed tokens instead of tracing or recolouring board artwork.
+decision: D-pending — retain the existing account and search controls so normal sign-in, closed-account and signed-in states keep their established behavior.
+decision: D-pending — below 21 rem of header width (336 px, or enlarged text) the logo drops to its own row so the logo keeps its 96 px minimum and nothing overlaps.

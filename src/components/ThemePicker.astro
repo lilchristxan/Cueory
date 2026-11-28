@@ -1,21 +1,24 @@
 ---
-// Light / Dark / Follow device switch (brand spec section 9). Hidden until its script runs, so visitors without
-// JavaScript simply follow their device setting.
-const options = [
-  { value: 'light', label: 'light' },
-  { value: 'dark', label: 'dark' },
-  { value: 'device', label: 'follow device' },
-];
+// Light / Dark / Follow device switch (brand spec section 9), in the footer's links panel. Hidden until its script
+// runs, so visitors without JavaScript simply follow their device setting.
+//
+// The same three-position slider as the game settings panel (.theme-slider, global.css; Christian, 2026-11-24): a pill
+// track with the words light, dark and device and a thumb under the chosen one. It is made of three real
+// <input type="radio"> elements, each covering its whole segment, invisible, so arrow keys move and pick, Tab stops once,
+// Space and Enter pick, and a tap anywhere on a segment picks it. The accessible names stay Light, Dark and Follow device
+// (aria-label). The labels come from src/islands/sitetheme.ts, which the game panel uses too.
+import { THEME_ROWS } from '../islands/sitetheme';
+const names: Record<string, string> = { light: 'light', dark: 'dark', device: 'follow device' };
 ---
 
 <fieldset data-theme-picker hidden>
-  <legend class="mb-1">theme</legend>
-  <div class="flex flex-wrap gap-x-5">
+  <legend class="mb-2 h-6">theme</legend>
+  <div class="theme-slider mx-auto max-w-xs">
     {
-      options.map((option) => (
-        <label class="inline-flex min-h-11 cursor-pointer items-center gap-2">
-          <input type="radio" name="theme" value={option.value} class="size-5 cursor-pointer accent-ink" />
-          {option.label}
+      THEME_ROWS.map((row) => (
+        <label class="theme-slider-option" data-text={row.short}>
+          <input type="radio" name="theme" value={row.value} aria-label={names[row.value]} />
+          <span aria-hidden="true">{row.short}</span>
         </label>
       ))
     }
@@ -48,12 +51,20 @@ const options = [
     const selected = picker.querySelector<HTMLInputElement>(`input[value="${current}"]`);
     if (selected) selected.checked = true;
 
+    // One Tab stop for the three segments: only the chosen radio is tabbable. Firefox did not skip the other two on
+    // its own here, so the order is set explicitly (arrow keys still move between all three).
+    const syncTabStops = () => {
+      for (const input of picker.querySelectorAll<HTMLInputElement>('input[type="radio"]')) input.tabIndex = input.checked ? 0 : -1;
+    };
+    syncTabStops();
+
     picker.addEventListener('change', (event) => {
       const value = (event.target as HTMLInputElement).value;
       if (!isThemeChoice(value)) return;
       applyChoice(root, value);
       saveChoice(storage, value);
       syncThemeColor(value);
+      syncTabStops();
     });
 
     picker.hidden = false;

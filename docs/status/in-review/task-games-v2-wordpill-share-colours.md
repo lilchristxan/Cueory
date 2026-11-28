@@ -1,0 +1,1 @@
+status: wordpill share card, dialog preview and exported sticker now draw pills in the board's current colours (light green in place, pink elsewhere, white not in the word); layout, logo and oxblood dialog accents unchanged.

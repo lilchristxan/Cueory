@@ -1,0 +1,159 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { describe, expect, it } from 'vitest';
+import { heroStartHref, lessonEntryHref } from '../../src/lessons/draftgate';
+import { accountLaunch, accountsOpen, showsHeroJoin } from '../../src/config/site';
+
+// Verify the built visitor-facing HTML after npm run build, not only Astro source text.
+const built = readFileSync(new URL('../../dist/index.html', import.meta.url), 'utf8');
+const main = built.match(/<main\b[^>]*>[\s\S]*?<\/main>/)?.[0];
+if (!main) throw new Error('missing main landmark on the built home page');
+
+function section(id: 'ways-to-study' | 'daily-games' | 'signup'): string {
+  const expression = new RegExp('<section\\b(?=[^>]*\\bid="' + id + '")[^>]*>[\\s\\S]*?<\\/section>');
+  const found = main!.match(expression)?.[0];
+  if (!found) throw new Error('missing home section: ' + id);
+  return found;
+}
+function plain(markup: string): string {
+  return markup.replace(/<[^>]*>/g, ' ').replace(/&#(?:39|x27);|&apos;/gi, "'").replace(/\s+/g, ' ').trim();
+}
+function titles(markup: string, level: 2 | 3): string[] {
+  const expression = new RegExp('<h' + level + '\\b[^>]*>([\\s\\S]*?)<\\/h' + level + '>', 'g');
+  return [...markup.matchAll(expression)].map((match) => plain(match[1]!));
+}
+function links(markup: string): string[] {
+  return [...markup.matchAll(/<a\b[^>]*\bhref="([^"]+)"[^>]*>/g)].map((match) => match[1]!);
+}
+
+describe('home lower sections', () => {
+  it('has one h1 and the approved lower-section order', () => {
+    expect([...main!.matchAll(/<h1\b[^>]*>/g)]).toHaveLength(1);
+    const ids = [...main!.matchAll(/<section\b[^>]*\bid="([^"]+)"/g)].map((match) => match[1]);
+    // Christian's final home board (20 Nov): the games come before the vials (the order was ways-to-study, daily-games).
+    expect(ids.filter((id) => ['ways-to-study', 'daily-games', 'signup'].includes(id))).toEqual(['daily-games', 'ways-to-study', 'signup']);
+    expect(titles(section('ways-to-study'), 2).filter(Boolean)).toEqual(['one lesson, multiple ways to study']);
+    expect(titles(section('daily-games'), 2)).toEqual(["nurse's station games"]);
+    expect(titles(section('signup'), 2)).toEqual(['coming soon']);
+    expect(main).not.toContain('id="how-it-works"');
+  });
+
+  it('keeps the games cards and Kit signup contract', () => {
+    const games = section('daily-games');
+    const signup = section('signup');
+    expect(links(games)).toEqual([
+      '/play/wordpill',
+      '/play/tachyyy',
+      '/play/piccline',
+      '/play/crossword',
+      '/play/sudoku',
+      '/play/hello-cards',
+      '/play',
+    ]);
+    expect(plain(games)).toContain("crossword a mini crossword from this week's lessons.");
+    expect(plain(games)).toMatch(/hello cards flip a card,\s*start a conversation\./);
+    expect(plain(games)).toContain('sudoku a calm numbers break.');
+    expect(signup).toContain('id="signup"');
+    // Home v3: the coming-soon panel (keeps the #signup anchor) is named by its heading.
+    expect(signup).toMatch(/<section\b[^>]*\baria-labelledby="soon-heading"/);
+    expect(plain(signup)).toContain('Mental Health I and Med Math are next. Get one email when they open.');
+  });
+
+  it('keeps surviving lower-section style values in tokens, not inline styles or raw colors', () => {
+    for (const file of ['DailyGamesSection.astro', 'home-v3/ComingSoon.astro']) {
+      const source = readFileSync(new URL('../../src/components/' + file, import.meta.url), 'utf8');
+      expect(source).not.toMatch(/\bstyle\s*=/i);
+      expect(source).not.toMatch(/#[\da-f]{3,8}\b/i);
+    }
+  });
+  it('builds the redesigned hero: a closed call to action, no quiet join link, and true explore links (P5)', () => {
+    const hero = built.match(/<section\b[^>]*\bscene-hero\b[^>]*>[\s\S]*?<\/section>/)?.[0];
+    if (!hero) throw new Error('missing home hero');
+    const heading = hero.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/)?.[1] ?? '';
+    expect(plain(heading)).toBe('nursing school made simpler.');
+    expect(plain(hero)).toContain('by nursing students, for nursing students');
+    // The one "start studying" call to action is always a copper link (heroStartHref): the open lesson where drafts may
+    // show, the lesson library on the live build. No "coming soon" pill and no second link beside it.
+    const startTag = hero.match(/<a\b(?=[^>]*data-testid="hero-start")[^>]*>([\s\S]*?)<\/a>/);
+    expect(plain(startTag?.[1] ?? '')).toBe('start studying for free →');
+    expect(startTag?.[0]).toContain('href="' + lessonEntryHref(process.env) + '"');
+    expect(startTag?.[0]).toContain('copper-button');
+    expect(hero).not.toContain('coming soon');
+    expect(hero).not.toContain('data-testid="hero-play-games"');
+    // The old quiet launch-list link went away with the old hero (copy deck, "hero quiet link"); the form is lower down.
+    expect(hero).not.toContain('data-testid="hero-join"');
+    expect(accountLaunch(true)).toMatchObject({ accountHref: '/signup', promoJoinLabel: 'create your free account' });
+    // The third value point shipped (Christian approved it, 23 Nov, D-190).
+    expect(plain(hero)).toContain('adhd friendly');
+    expect((hero.match(/<ul\b[^>]*aria-label="what you get"[\s\S]*?<\/ul>/)?.[0].match(/<li\b/g) ?? []).length).toBe(3);
+    expect(plain(hero)).toContain('structured learning');
+    expect(plain(hero)).toContain('multiple ways to study');
+    // Explore dock tiles (Home v3): five places that exist today, resources included.
+    const explore = hero.match(/<nav\b[^>]*aria-labelledby="explore-heading"[\s\S]*?<\/nav>/)?.[0] ?? '';
+    expect(links(explore)).toEqual(['/learn', '#ways-to-study', '/play', '/resources', '/message']);
+    expect(plain(explore)).toMatch(/resources/i);
+    for (const href of ['/learn', '/play', '/message']) expect(existsSync(new URL('../../dist' + href + '.html', import.meta.url)) || existsSync(new URL('../../dist' + href + '/index.html', import.meta.url))).toBe(true);
+    // Ko-fi card: the supporting-our-mission page, opened in a new tab and said so to screen readers.
+    const support = hero.match(/<a\b(?=[^>]*data-testid="hero-support")[^>]*>[\s\S]*?<\/a>/)?.[0] ?? '';
+    expect(support).toContain('target="_blank"');
+    expect(support).toContain('rel="noopener noreferrer"');
+    expect(support).toContain('opens in a new tab');
+    expect(hero).toMatch(/<div[^>]*class="stage-photo"[^>]*aria-hidden="true"/);
+  });
+
+  it('uses the approved day and evening photos and places the value points above the stage', () => {
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
+    for (const mode of ['light', 'evening']) {
+      const filename = '/design/home-v3/stage-' + mode + '.webp';
+      expect(source).toContain(filename);
+      expect(existsSync(new URL('../../public' + filename, import.meta.url))).toBe(true);
+    }
+    const positions = ['class="stage-copy"', 'id="hero-heading"', 'class="stage-actions"', 'class="stage-points"', 'class="stage-scene"', 'class="stage-halo"', 'data-testid="hero-support"'].map(selector => source.indexOf(selector));
+    expect(positions.every(index => index >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    expect(source).toContain('prefers-reduced-motion: no-preference');
+    expect(source).toContain('stage-orbit 7s linear infinite');
+    expect(source).not.toContain('hero-play-games');
+  });
+
+  it('the hero start button always links: the open lesson where drafts show, the lesson library on the live build', () => {
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'main' })).toBe('/learn');
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'refs/heads/main' })).toBe('/learn');
+    expect(heroStartHref({ WORKERS_CI: '1' })).toBe('/learn');
+    expect(heroStartHref({})).toBe('/learn');
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'staging' })).toBe('/learn/study-skills');
+    expect(heroStartHref({ WORKERS_CI: '1', WORKERS_CI_BRANCH: 'task-p5/home-hero' })).toBe('/learn/study-skills');
+    expect(heroStartHref({ CUEORY_ANATOMY_DRAFTS: '1' })).toBe('/learn/study-skills');
+    const source = readFileSync(new URL('../../src/components/HomeHero.astro', import.meta.url), 'utf8');
+    expect(source).toContain('heroStartHref()');
+    expect(source).not.toContain('hero-soon');
+  });
+
+  it('shows the hero join link only when it leads to a real next step', () => {
+    // Made-up sample addresses.
+    const form = 'https://app.kit.com/forms/0000000/subscriptions';
+    const landing = 'https://sample.kit.com/0000000000';
+    // Accounts closed, no form and no landing page: the box only says "sign ups open soon.", so no link.
+    expect(showsHeroJoin(false, '', '')).toBe(false);
+    expect(showsHeroJoin(false, 'http://example.com/form', '')).toBe(false);
+    expect(showsHeroJoin(false, '', 'https://example.com/not-kit')).toBe(false);
+    // Accounts closed, Kit form or landing page set: the link joins the launch list.
+    expect(showsHeroJoin(false, form, '')).toBe(true);
+    expect(showsHeroJoin(false, '', landing)).toBe(true);
+    expect(showsHeroJoin(false, form, landing)).toBe(true);
+    // Accounts open: the link creates the free account either way.
+    expect(showsHeroJoin(true, '', '')).toBe(true);
+    expect(showsHeroJoin(true, form, landing)).toBe(true);
+  });
+
+  it('lays the explore dock out as five tiles: a row from the tablet width, 3 + 2 with the bottom two centred on phones', () => {
+    const source = readFileSync(new URL('../../src/components/ExploreDock.astro', import.meta.url), 'utf8');
+    expect((source.match(/testid: 'explore-/g) ?? []).length).toBe(5);
+    expect(source).toContain('justify-content: center');
+    expect(source).toContain('--explore-tile-basis-min');
+    expect(source).toContain('--explore-landscape-width');
+    expect(source).toContain('EXPLORE');
+    expect(source).toContain('grid-template-columns: repeat(5, minmax(0, 1fr))');
+    expect(source).toContain('/design/home-v3/icon-games.webp');
+    expect(existsSync(new URL('../../public/design/home-v3/icon-games.webp', import.meta.url))).toBe(true);
+  });
+});

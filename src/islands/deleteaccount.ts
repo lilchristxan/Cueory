@@ -3,12 +3,13 @@
  * The actual deletion is handled by the server; this module describes what will go and validates the
  * typed confirmation before the caller fires the request.
  */
-import { legacyStarsKey, PROGRESS_STORAGE_KEY, type Progress } from '../scripts/progress';
-import { PROMO_STORAGE_KEY } from '../scripts/promo';
-import { THEME_STORAGE_KEY } from '../scripts/theme';
+import { fixedLocalKeysToClear, localPrefixesToClear, sessionKeysToClear } from '../config/storage-keys';
+import type { Progress } from '../scripts/progress';
 import type { KeyValueStorage } from '../scripts/storage';
-import { STATS_STORAGE_KEY } from './gameresults';
 import type { ExportData } from './exportdata';
+import { isPkceVerifierKey } from './supabaseclient';
+import { DELETE_RETURN_PATH, reauthHref } from './deletereauth';
+import { DELETE_REAUTH, DELETE_REAUTH_CODE, DELETE_SIGNED_OUT, studentMessage } from './rpcerrors';
 
 // Keep the download and confirmation contracts together, including the actual saved Progress record.
 export type { ExportData } from './exportdata';
@@ -36,6 +37,12 @@ export function deletionSummary(data: ExportData): string[] {
   else if (profile?.displayName) lines.push('your display name');
   else if (profile?.createdAt) lines.push('your account details');
 
+  // The sign-in record Supabase keeps with the account (Task 309): Google's details, sign-in methods and dates.
+  const account = data.account;
+  if (account?.identities?.length || account?.providers?.length || Object.keys(account?.userMetadata ?? {}).length) {
+    lines.push('your sign-in details');
+  }
+
   const guest = isGuestProgress(data.progress) ? data.progress : undefined;
   if (hasSetup(data.onboarding) || hasSetup(guest?.onboarding)) lines.push('your study setup');
 
@@ -58,10 +65,20 @@ export function deletionSummary(data: ExportData): string[] {
     lines.push(`${n} game result${n === 1 ? '' : 's'}`);
   }
 
+  if (Array.isArray(data.sudokuStats) && data.sudokuStats.length > 0) {
+    const n = data.sudokuStats.length;
+    lines.push(`${n} sudoku solve${n === 1 ? '' : 's'}`);
+  }
+
   if (data.attempts?.length) lines.push(`${data.attempts.length} question attempt${data.attempts.length === 1 ? '' : 's'}`);
   if (data.examPlans?.length) lines.push(`${data.examPlans.length} exam date${data.examPlans.length === 1 ? '' : 's'}`);
   if (data.reviewRows?.length) lines.push(`${data.reviewRows.length} account review schedule${data.reviewRows.length === 1 ? '' : 's'}`);
   if (data.reports?.length) lines.push(`${data.reports.length} report${data.reports.length === 1 ? '' : 's'}`);
+  if (data.sessions?.length) lines.push(`${data.sessions.length} sign-in session${data.sessions.length === 1 ? '' : 's'}`);
+  // loadExport supplies the history as pages, which know their count; a short list can also be passed as rows.
+  const events = data.studyEvents;
+  const eventCount = events === undefined ? 0 : 'count' in events ? events.count : events.length;
+  if (eventCount) lines.push(`${eventCount} study history entr${eventCount === 1 ? 'y' : 'ies'}`);
 
   return lines;
 }
@@ -81,26 +98,101 @@ export function confirmState(typed: string): string | null {
 
 // ── Browser-storage keys to clear ────────────────────────────────────────────
 
+/** This tab's sessionStorage keys that deletion clears. Fixed names, so they can be cleared even when localStorage can't be listed. */
+export const SESSION_KEYS_AFTER_DELETION: readonly string[] = Object.freeze(sessionKeysToClear());
+
+/** Iterable localStorage key names with separate keys for this tab's sessionStorage. */
+export type DeletionStorageKeys = string[] & { readonly sessionKeys: readonly string[] };
+
 /**
- * Snapshot the keys to clear, including every legacy stars key, even for retired decks.
- * The caller supplies browser storage and removes these keys after the server confirms deletion.
- * This function reads key names only; it never changes storage. Unlistable storage is an error, not a complete list.
+ * Plan cleanup only after the server confirms account deletion. This reads key names, never removes data.
+ * Include every legacy stars key, even for retired decks, all account-specific guest-import markers, and every PKCE
+ * sign-in verifier key (sign-out removes those too, but one left by an abandoned sign-in should not outlive the account).
+ * The caller signs out and removes the auth key separately. Unlistable localStorage is an error.
+ * The offline copies (Cache Storage, `cueory-offline-*`) stay: they hold only public pages and site files.
  */
-export function afterDeletion(storage: KeyValueStorage | undefined): string[] {
+export function afterDeletion(storage: KeyValueStorage | undefined): DeletionStorageKeys {
   if (!storage || typeof storage.length !== 'number' || !Number.isSafeInteger(storage.length) || storage.length < 0 || typeof storage.key !== 'function') {
     throw new Error('browser storage must support listing its keys before cleanup.');
   }
-  const keys = new Set([
-    PROGRESS_STORAGE_KEY,
-    PROMO_STORAGE_KEY,
-    THEME_STORAGE_KEY,
-    STATS_STORAGE_KEY,
-  ]);
-  const prefix = legacyStarsKey('');
+  // Every key comes from the one list in src/config/storage-keys.ts.
+  const keys = new Set(fixedLocalKeysToClear());
+  const prefixes = localPrefixesToClear();
   const length = storage.length;
   for (let index = 0; index < length; index++) {
     const key = storage.key(index);
-    if (key?.startsWith(prefix)) keys.add(key);
+    if (key && (prefixes.some((prefix) => key.startsWith(prefix)) || isPkceVerifierKey(key))) {
+      keys.add(key);
+    }
   }
-  return [...keys];
+  return Object.assign([...keys], { sessionKeys: [...SESSION_KEYS_AFTER_DELETION] });
+}
+
+// ── A recent reauthentication before deleting (Task 725) ─────────────────────
+
+/** The server enforces ten minutes since a genuine authentication event in the signed AMR claim, not JWT iat. */
+export const DELETE_MAX_SIGN_IN_AGE_SECONDS = 600;
+export { DELETE_RETURN_PATH, reauthHref };
+
+/** Client-side display hint only. The database verifies the Supabase-signed claims independently. */
+function tokenPayload(accessToken: unknown): Record<string, unknown> | undefined {
+  if (typeof accessToken !== 'string' || accessToken.length > 16_384) return undefined;
+  const parts = accessToken.split('.');
+  if (parts.length !== 3 || !/^[A-Za-z0-9_-]+$/.test(parts[1]!)) return undefined;
+  try {
+    const base64 = parts[1]!.replace(/-/g, '+').replace(/_/g, '/');
+    const payload: unknown = JSON.parse(atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')));
+    return typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+      ? payload as Record<string, unknown> : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Diagnostic only. The renewable JWT iat must never authorize account deletion. */
+export function tokenIssuedAt(accessToken: unknown): number | undefined {
+  const iat = tokenPayload(accessToken)?.iat;
+  return typeof iat === 'number' && Number.isFinite(iat) && iat > 0 ? iat : undefined;
+}
+
+/** Timestamp of the newest genuine credential or aal2 second-factor event recorded by Supabase Auth. */
+export function tokenRecentAuthAt(accessToken: unknown): number | undefined {
+  const payload = tokenPayload(accessToken);
+  const amr = payload?.amr;
+  if (!Array.isArray(amr)) return undefined;
+  let recent: number | undefined;
+  for (const item of amr) {
+    if (typeof item !== 'object' || item === null) continue;
+    const { method, timestamp } = item as { method?: unknown; timestamp?: unknown };
+    const credential = method === 'password' || method === 'oauth' || method === 'otp' || method === 'magiclink';
+    const secondFactor = method === 'totp' && payload?.aal === 'aal2';
+    if (!credential && !secondFactor) continue;
+    if (typeof timestamp !== 'number' || !Number.isFinite(timestamp) || timestamp <= 0) continue;
+    recent = recent === undefined ? timestamp : Math.max(recent, timestamp);
+  }
+  return recent;
+}
+
+/** Non-authoritative UI check, with a one-minute buffer before the server's ten-minute expiry. */
+export function freshForDeletion(accessToken: unknown, nowMs: number, marginSeconds = 60): boolean {
+  const at = tokenRecentAuthAt(accessToken);
+  if (at === undefined || !Number.isFinite(nowMs)) return false;
+  const age = nowMs / 1000 - at;
+  return age >= -30 && age <= DELETE_MAX_SIGN_IN_AGE_SECONDS - marginSeconds;
+}
+
+export type DeleteOutcome =
+  | { kind: 'deleted' }
+  /** Signed in too long ago, or signed out: send the student to `href` (sign-in, then back to the delete step). */
+  | { kind: 'sign-in'; href: string; message: string }
+  | { kind: 'failed'; message: string };
+
+/** What the page does after calling delete_my_account, from the call's error (null or undefined: it worked). */
+export function deleteOutcome(error: unknown): DeleteOutcome {
+  if (error === null || error === undefined) return { kind: 'deleted' };
+  const { code, message } = typeof error === 'object' ? error as { code?: unknown; message?: unknown } : {};
+  if (message === DELETE_REAUTH || code === DELETE_REAUTH_CODE || message === DELETE_SIGNED_OUT) {
+    return { kind: 'sign-in', href: reauthHref(), message: studentMessage('delete_my_account', error) };
+  }
+  return { kind: 'failed', message: studentMessage('delete_my_account', error) };
 }

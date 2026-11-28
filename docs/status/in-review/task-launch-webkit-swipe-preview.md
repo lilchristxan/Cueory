@@ -1,0 +1,1 @@
+status: in review · task-launch/webkit-swipe-preview · Pause the homepage slideshow before the swipe-down preview test taps Video, so the six-second autoplay cannot move it aside on a slow WebKit runner. Test-only; verified in Chromium and CI only.

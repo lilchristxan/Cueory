@@ -37,7 +37,23 @@ describe('review intervals', () => {
 
   it('allows same-day reviews and does not mutate inputs', () => {
     const history = Object.freeze([Object.freeze(knew('2026-11-01')), Object.freeze(knew('2026-11-01'))]);
-    expect(nextReview(history)).toBe('2026-11-08');
+    expect(nextReview(history)).toBe('2026-11-04');
+  });
+
+  it('counts at most one knew per calendar day toward the streak', () => {
+    const once = nextReview([knew('2026-11-01')]);
+    expect(nextReview([knew('2026-11-01'), knew('2026-11-01'), knew('2026-11-01')])).toBe(once);
+    expect(once).toBe('2026-11-04');
+  });
+
+  it('still climbs to the 7-day step when knew happens on three different days', () => {
+    expect(nextReview([knew('2026-10-29'), knew('2026-10-30'), knew('2026-11-01')])).toBe('2026-11-15');
+    expect(nextReview([knew('2026-10-30'), knew('2026-10-30'), knew('2026-11-01'), knew('2026-11-01')])).toBe('2026-11-08');
+  });
+
+  it('lets a same-day missed reset the streak after a knew', () => {
+    expect(nextReview([knew('2026-10-30'), knew('2026-11-01'), missed('2026-11-01')])).toBe('2026-11-02');
+    expect(nextReview([knew('2026-11-01'), knew('2026-11-01'), missed('2026-11-01')])).toBe('2026-11-02');
   });
 });
 
@@ -50,6 +66,10 @@ describe('exam limits', () => {
     expect(nextReview(history, '2026-11-30')).toBe('2026-11-15');
     expect(nextReview(history, '2026-10-31')).toBe('2026-11-15');
     expect(nextReview(history, '2026-11-03', '2026-11-04')).toBe('2026-11-15');
+  });
+  it('keeps a normal due day that already equals the day before an active exam', () => {
+    const dueToday = [knew('2026-11-01')];
+    expect(nextReview(dueToday, '2026-11-05', '2026-11-04')).toBe('2026-11-04');
   });
   it('uses tomorrow when the day before an active exam is already past or today', () => {
     expect(nextReview(history, '2026-11-01')).toBe('2026-11-02');

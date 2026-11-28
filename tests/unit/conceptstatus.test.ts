@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { statusesFrom, type ConceptAttempt, type ConceptDefinition } from '../../src/islands/conceptstatus';
 import { conceptStatus, type AdaptiveQuestion } from '../../src/islands/adaptive';
-import { parseItems } from '../../src/islands/conceptmap';
+import { parseItems } from '../../src/islands/concept-map';
 
 const concepts: ConceptDefinition[] = [
   { id: 'sample-colors', concept: 'sample: colors' },
@@ -27,21 +27,21 @@ describe('concept status adapter', () => {
   });
 
   it.each([
-    [[1], 'learning'], [[1, 1], 'getting there'], [[1, 1, 2, 2], 'got it'], [[2, 2], 'learning'], [[3, 3], 'learning'],
+    [[1], 'learning'], [[1, 1], 'getting there'], [[1, 1, 2, 2], 'getting there'], [[1, 1, 2, 2, 3], 'got it'], [[2, 2], 'learning'], [[3, 3], 'learning'],
   ] as const)('uses the existing adaptive rules for recorded levels %j', (levels, expected) => {
     expect(statusesFrom(sequence([...levels]), concepts).statuses.map(value => value.status)).toEqual([expected, 'not started']);
   });
 
   it('uses each attempt’s recorded level even when the same item id recurs', () => {
-    const history = sequence([1, 1, 2, 2]);
+    const history = sequence([1, 1, 2, 2, 3]);
     expect(new Set(history.map(value => value.item_id)).size).toBe(1);
     expect(statusesFrom(history, concepts).statuses[0].status).toBe('got it');
-    history.push(attempt({ level: 3, correct: false, created_at: '2026-11-01T10:00:04Z' }));
+    history.push(attempt({ level: 3, correct: false, created_at: '2026-11-01T10:00:05Z' }));
     expect(statusesFrom(history, concepts).statuses[0].status).toBe('getting there');
   });
 
   it('keeps mixed concepts independent while matching the map’s names to database ids', () => {
-    const colors = sequence([1, 1, 2, 2]);
+    const colors = sequence([1, 1, 2, 2, 3]);
     const shapes = sequence([1]).map(value => ({ ...value, concept_id: 'sample-shapes', correct: false }));
     expect(statusesFrom([...shapes, ...colors], concepts).statuses.map(value => [value.id, value.concept, value.status])).toEqual([
       ['sample-colors', 'sample: colors', 'got it'], ['sample-shapes', 'sample: shapes', 'learning'],
@@ -61,6 +61,7 @@ describe('concept status adapter', () => {
       attempt({ created_at: '2026-11-01T03:00:01-07:00' }),
       attempt({ level: 2, created_at: '2026-11-01T10:00:02Z' }),
       attempt({ level: 2, created_at: '2026-11-01T11:00:03+01:00' }),
+      attempt({ level: 3, created_at: '2026-11-01T10:00:04Z' }),
     ];
     expect(statusesFrom(history.toReversed(), concepts).statuses[0].status).toBe('got it');
   });

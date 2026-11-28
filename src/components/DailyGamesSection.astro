@@ -1,21 +1,1381 @@
 ---
 /**
- * Daily games on the home page (D-61, D-63): one calm silk scene after "ways to study", with the heading, one line and
- * a way into today's games. Like the other sections below the first screen, it fades in once (D-62). It has its own
- * scene, between the tint of "ways to study" and the launch-updates panel.
+ * Daily games on Home v2 (Lane 5, D-61): "nurse's station games".
+ * Six white playing-card style cards (280x392) in a carousel:
+ * vialo, tachyyy, piccline, crossword, sudoku, hello cards.
+ *
+ * Each card has:
+ * - Square game icon top-left (.gpip.tl) and upside down bottom-right (.gpip.br)
+ * - Wordmark or serif title (.gname)
+ * - One-line description (.gdesc)
+ * - Today's status (.gstatus)
+ * - Looping interactive demo on hover/focus (.gdemo), paused under reduced motion
+ *
+ * Prev/next navigation buttons (52px >= 44px tap target), arrow keys, swipe on touch, wrapping.
+ * Brand tokens only, no arbitrary tailwind classes, no inline styles or raw hex.
  */
+import { getCollection } from 'astro:content';
+import { gameName, helloCardsGame, helloCardsIndexWhenApproved } from '../config/games';
+import { gameLogos, imageLogo } from '../config/gamelogos';
+import { crosswordShown, pageBuildEnv } from '../config/crossword';
+import { draftsAllowed } from '../islands/anatomylab';
+import { helloCardsPage } from '../islands/hello-cards';
+
+const env = pageBuildEnv();
+const tachyyyAvailable = draftsAllowed(env);
+const crosswordAvailable = crosswordShown(env);
+const tachyyyGame = {
+  name: gameName('tachyyy'),
+  href: '/play/tachyyy',
+  line: 'fifteen fast clinical questions in 30 seconds. how sharp are you on shift today?',
+} as const;
+
+// One pager dot per card, in card order; the name is read out with its place in the row.
+const pagerGames = [
+  gameName('vialo'),
+  tachyyyGame.name,
+  gameName('piccline'),
+  gameName('cueword'),
+  gameName('triage'),
+  helloCardsGame.name,
+];
+
+const helloEntries = await getCollection('hello-cards');
+const helloCardsAvailable = helloCardsPage(
+  helloEntries.map(({ data }) => data),
+  env,
+  helloCardsIndexWhenApproved
+).shown;
 ---
 
-<section id="daily-games" class="scene scene-play scroll-mt-section py-section" aria-labelledby="games-heading">
-  <div class="mx-auto max-w-prose px-gutter text-center" data-reveal-section>
-    <h2 id="games-heading" class="display text-title sm:text-title-lg">daily games</h2>
-    <p class="mt-4 text-ink-soft">four short puzzles every day: a word to guess, terms to sort, a small crossword and a word path.</p>
-    <a
-      href="/play"
-      class="mt-8 inline-block rounded-pill bg-button px-6 py-3 text-on-button no-underline hover:bg-button-hover hover:text-on-button"
-      data-testid="games-link"
-    >
-      play today's games
+<section id="daily-games" class="scene scene-play games-scene scroll-mt-section" aria-labelledby="games-heading">
+  <div class="games-container games-stage" role="region" aria-roledescription="carousel" aria-label="daily games" data-games-carousel data-carousel-state="settled" data-testid="games-stage" data-reveal-section>
+    <div class="games-header">
+      <div class="games-nav-slot games-nav-prev">
+        <button type="button" class="glass gs-nav" data-games-prev aria-label="previous game" aria-controls="games-track">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M15 5l-7 7 7 7"></path>
+          </svg>
+        </button>
+      </div>
+      <h2 id="games-heading" class="serif games-heading">nurse's station games</h2>
+      <div class="games-nav-slot games-nav-next">
+        <button type="button" class="glass gs-nav" data-games-next aria-label="next game" aria-controls="games-track">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M9 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      </div>
+      <p class="games-subtitle" data-testid="daily-games-summary">inspired by your favorite daily games for you and your patients</p>
+    </div>
+
+    <div class="gcar" data-games-car>
+      <div id="games-track" class="gtrack" data-games-track>
+        <!-- Card 1: Vialo -->
+        <a href="/play/wordpill" class="gcard on" data-game-card="vialo" aria-label={`${gameName('vialo')}: guess the five-letter word in six tries`}>
+          <img class="gpip gpip-bare tl" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <span class="gface">
+            <span class="gname">
+              <img src={imageLogo('vialo').card.wordmark} alt={gameName('vialo')} width="168" height="60" loading="lazy" decoding="async" />
+            </span>
+            <span class="gdesc">guess the five-letter word in six tries.</span>
+            <span class="gstatus" data-game-status="vialo">
+              <span class="gstatus-sym" aria-hidden="true">○</span> not started
+            </span>
+            <span class="gdemo" aria-hidden="true">
+              <span class="vialo-grid">
+                <span class="vialo-row">
+                  <span class="gc gc-absent d-0">C</span>
+                  <span class="gc gc-absent d-30">A</span>
+                  <span class="gc gc-here d-60">R</span>
+                  <span class="gc gc-elsewhere d-90">E</span>
+                  <span class="gc gc-elsewhere d-120">S</span>
+                </span>
+                <span class="vialo-row">
+                  <span class="gc gc-here d-180">N</span>
+                  <span class="gc gc-here d-210">U</span>
+                  <span class="gc gc-here d-240">R</span>
+                  <span class="gc gc-here d-270">S</span>
+                  <span class="gc gc-here d-300">E</span>
+                </span>
+              </span>
+            </span>
+          </span>
+          <img class="gpip gpip-bare br" src={imageLogo('vialo').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+        </a>
+
+        <!-- Card 2: Tachyyy -->
+        <a href="/play/tachyyy" class="gcard" data-game-card="tachyyy" aria-label={`${tachyyyGame.name}: quick questions against the clock`}>
+          <img class="gpip tl" src={imageLogo('tachyyy').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <span class="gface">
+            <span class="gname">
+              <img src={imageLogo('tachyyy').card.wordmark} alt={tachyyyGame.name} width="168" height="60" loading="lazy" decoding="async" />
+            </span>
+            <span class="gdesc">quick questions against the clock.</span>
+            {tachyyyAvailable ? (
+              <span class="gstatus" data-game-status="tachyyy">
+                <span class="gstatus-sym" aria-hidden="true">○</span> not started
+              </span>
+            ) : (
+              <span class="gstatus">coming soon</span>
+            )}
+            <span class="gdemo" aria-hidden="true">
+              <span class="tq">
+                <span class="tbar"><i></i></span>
+                <span class="tq-prompt">A pt presents to ED...</span>
+                <span class="tch">answer a</span>
+                <span class="tch ok">answer b</span>
+                <span class="tch">answer c</span>
+              </span>
+            </span>
+          </span>
+          <img class="gpip br" src={imageLogo('tachyyy').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+        </a>
+
+        <!-- Card 3: Piccline -->
+        <a href="/play/piccline" class="gcard" data-game-card="piccline" aria-label={`${gameName('piccline')}: trace hidden words through the letters`}>
+          <img class="gpip tl" src={imageLogo('piccline').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+          <span class="gface">
+            <span class="gname">
+              <img src={imageLogo('piccline').card.wordmark} alt={gameName('piccline')} width="168" height="60" loading="lazy" decoding="async" />
+            </span>
+            <span class="gdesc">trace hidden words through the letters.</span>
+            <span class="gstatus" data-game-status="piccline">
+              <span class="gstatus-sym" aria-hidden="true">○</span> not started
+            </span>
+            <span class="gdemo" aria-hidden="true">
+              <span class="pgrid">
+                <svg viewBox="0 0 132 98" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline points="15,15 49,15 49,49 83,49 83,83"></polyline>
+                </svg>
+                <span>N</span><span>U</span><span>·</span><span>·</span>
+                <span>·</span><span>R</span><span>S</span><span>·</span>
+                <span>·</span><span>·</span><span>E</span><span>·</span>
+              </span>
+            </span>
+          </span>
+          <img class="gpip br" src={imageLogo('piccline').card.icon} alt="" aria-hidden="true" width="52" height="52" loading="lazy" decoding="async" />
+        </a>
+
+        <!-- Card 4: Crossword -->
+        <a href="/play/crossword" class="gcard" data-game-card="crossword" aria-label={`${gameName('cueword')}: a mini crossword from this week's lessons`}>
+          <span class="gpip tl gpip-crossword" aria-hidden="true">
+            <span class="pip-xgrid">
+              <span class="pip-xcell-dark"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-dark"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-dark"></span>
+            </span>
+          </span>
+          <span class="gface">
+            <span class="gname">
+              <span class="serif">{gameName('cueword')}</span>
+            </span>
+            <span class="gdesc">a mini crossword from this week's lessons.</span>
+            {crosswordAvailable ? (
+              <span class="gstatus" data-game-status="crossword">
+                <span class="gstatus-sym" aria-hidden="true">○</span> not started
+              </span>
+            ) : (
+              <span class="gstatus">coming soon</span>
+            )}
+            <span class="gdemo" aria-hidden="true">
+              <span class="xg">
+                <span><em class="d-0">C</em></span>
+                <span><em class="d-18">A</em></span>
+                <span><em class="d-36">R</em></span>
+                <span><em class="d-54">E</em></span>
+                <span><em class="d-72">A</em></span>
+                <span class="b"></span>
+                <span class="b"></span>
+                <span><em class="d-126">A</em></span>
+                <span><em class="d-144">R</em></span>
+                <span class="b"></span>
+                <span class="b"></span>
+                <span><em class="d-198">T</em></span>
+                <span><em class="d-216">E</em></span>
+                <span><em class="d-234">A</em></span>
+                <span><em class="d-252">T</em></span>
+                <span><em class="d-270">S</em></span>
+              </span>
+            </span>
+          </span>
+          <span class="gpip br gpip-crossword" aria-hidden="true">
+            <span class="pip-xgrid">
+              <span class="pip-xcell-dark"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-dark"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-light"></span>
+              <span class="pip-xcell-dark"></span>
+            </span>
+          </span>
+        </a>
+
+        <!-- Card 5: Sudoku -->
+        <a href="/play/sudoku" class="gcard" data-game-card="sudoku" aria-label={`${gameName('triage')}: a calm numbers break`}>
+          <span class="gpip tl gpip-sudoku" aria-hidden="true">{gameLogos.sudoku.text}</span>
+          <span class="gface">
+            <span class="gname">
+              <span class="serif">{gameName('triage')}</span>
+            </span>
+            <span class="gdesc">a calm numbers break.</span>
+            <span class="gstatus" data-game-status="sudoku">
+              <span class="gstatus-sym" aria-hidden="true">○</span> not started
+            </span>
+            <span class="gdemo" aria-hidden="true">
+              <span class="sg">
+                <span>4</span>
+                <span><em class="d-25">3</em></span>
+                <span>9</span>
+                <span><em class="d-75">8</em></span>
+                <span>7</span>
+                <span><em class="d-125">1</em></span>
+                <span>2</span>
+                <span><em class="d-175">6</em></span>
+                <span>5</span>
+              </span>
+            </span>
+          </span>
+          <span class="gpip br gpip-sudoku" aria-hidden="true">{gameLogos.sudoku.text}</span>
+        </a>
+
+        <!-- Card 6: Hello cards -->
+        <a href="/play/hello-cards" class="gcard" data-game-card="hello cards" aria-label={`${helloCardsGame.name}: flip a card, start a conversation`}>
+          <span class="gpip tl gpip-hello" aria-hidden="true">{gameLogos.helloCards.text}</span>
+          <span class="gface">
+            <span class="gname">
+              <span class="serif">{helloCardsGame.name}</span>
+            </span>
+            <span class="gdesc">flip a card,<br />start a conversation.</span>
+            {helloCardsAvailable ? (
+              <span class="gstatus" data-game-status="hello-cards">
+                <span class="gstatus-sym" aria-hidden="true">○</span> not started
+              </span>
+            ) : (
+              <span class="gstatus">coming soon</span>
+            )}
+            <span class="gdemo gdemo-perspective" aria-hidden="true">
+              <span class="hflip">
+                <span class="hface front">hello card<br />tap to flip</span>
+                <span class="hface back">[a conversation starter]</span>
+              </span>
+            </span>
+          </span>
+          <span class="gpip br gpip-hello" aria-hidden="true">{gameLogos.helloCards.text}</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="games-pager" role="group" aria-label="choose a game">
+      {pagerGames.map((game, idx) => (
+        <button type="button" class="games-dot" data-games-dot aria-label={`${game}, ${idx + 1} of ${pagerGames.length}`} aria-current={idx === 0 ? 'true' : undefined}></button>
+      ))}
+    </div>
+
+    <p class="games-date-note" data-testid="daily-games-day" data-daily-games-date aria-live="polite" aria-atomic="true">
+      the date changes at midnight on your device. some sample puzzles repeat.
+    </p>
+    <a href="/play" class="games-stage-action" data-testid="games-link">
+      play today's <span aria-hidden="true">→</span>
     </a>
   </div>
 </section>
+
+<style>
+
+  .games-section {
+    max-width: var(--game-section-max-width);
+    margin: 0 auto;
+    padding: var(--game-section-padding);
+    box-sizing: border-box;
+  }
+
+  @media (max-width: 40em) {
+    .games-section {
+      padding: var(--game-section-padding-phone);
+    }
+  }
+
+  .games-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--game-container-gap);
+    width: 100%;
+    /* The final board keeps the heading row and the cards inside one 1280 px column (arrows at its two ends); the box
+       includes the stage's side padding, so that is added to the width. */
+    max-width: calc(var(--game-section-max-width) + 2 * var(--game-stage-inline));
+    margin-inline: auto;
+  }
+
+  /* Home v3 board: almost no space above the heading (the hero's own bottom padding is the gap); below, as tall as the next scene's fade (D-53). */
+  .games-scene {
+    padding-block: var(--game-section-top) var(--game-section-bottom);
+    /* The vial platter's silk fades in over the last 72 px of this section (D-53: nothing but empty space and the dots
+       there, since the boards leave only 24 px under the dots). Standing above it keeps the dots drawn in full ink
+       instead of washed out by that fade. */
+    z-index: 1;
+  }
+
+  .games-stage {
+    position: relative;
+    padding: var(--game-stage-padding);
+    color: var(--color-ink);
+  }
+
+  .games-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "heading heading"
+      "subtitle subtitle"
+      "prev next";
+    align-items: center;
+    justify-items: center;
+    gap: var(--game-header-gap);
+  }
+
+  .games-nav-slot {
+    display: flex;
+    align-items: center;
+  }
+
+  .games-nav-prev {
+    grid-area: prev;
+    justify-self: end;
+  }
+
+  .games-nav-next {
+    grid-area: next;
+    justify-self: start;
+  }
+
+  .gs-nav {
+    width: var(--game-nav-size);
+    height: var(--game-nav-size);
+    min-width: var(--game-nav-size);
+    min-height: var(--game-nav-size);
+    border-radius: var(--radius-pill);
+    border: var(--border-hairline) solid var(--game-nav-border);
+    background: var(--game-nav-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    color: var(--color-ink);
+    transition: background 0.2s ease, transform 0.2s ease;
+  }
+
+  .gs-nav:hover {
+    background: var(--game-nav-bg-hover);
+  }
+
+  /* The final board draws these as the same copper-glow discs as the vial shelf's arrows. */
+  .gs-nav {
+    border-color: var(--cueory-copper-start);
+    background: var(--cueory-copper-glow);
+    color: var(--cueory-copper-ink);
+  }
+
+  .gs-nav:hover {
+    background: var(--cueory-copper-shine);
+  }
+
+  .gs-nav:focus-visible {
+    outline: var(--game-nav-outline-width) solid var(--color-copper-deep);
+    outline-offset: var(--game-nav-outline-offset);
+  }
+
+  .games-heading {
+    grid-area: heading;
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(var(--game-heading-size-min), 6vw, var(--game-heading-size-max));
+    line-height: 1.1;
+    text-align: center;
+    color: var(--color-ink);
+    font-weight: 700;
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
+  .games-subtitle {
+    grid-area: subtitle;
+    margin: 0 0 var(--game-subtitle-margin-bottom);
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: var(--game-subtitle-size);
+    line-height: 1.5;
+    color: var(--color-ink-soft);
+    min-width: 0;
+  }
+
+  /*
+    The boards draw nothing under the dots: no "today's set" line and no "play today's" button. Both stay in the page for
+    screen readers and the keyboard (the line is read out as the day changes; the button is the first thing the Tab key
+    reveals after the dots, drawn over the dots' row while it has focus), but take no room in the row.
+  */
+  .games-date-note {
+    position: absolute;
+    inline-size: var(--border-hairline);
+    block-size: var(--border-hairline);
+    margin: calc(-1 * var(--border-hairline));
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .games-stage-action {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline: 0;
+    inline-size: max-content;
+    max-inline-size: 100%;
+    display: inline-flex;
+    min-height: var(--tap-min);
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing);
+    margin-inline: auto;
+    padding-inline: calc(var(--spacing) * 6);
+    border: var(--border-hairline) solid var(--color-ink);
+    border-radius: var(--radius-pill);
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-weight: 700;
+    text-decoration: none;
+    z-index: 2;
+    clip-path: inset(50%);
+  }
+
+  .games-stage-action:focus-visible {
+    clip-path: none;
+  }
+
+  .games-stage-action:focus-visible {
+    outline: var(--focus-width) solid var(--color-copper-deep);
+    outline-offset: var(--focus-offset);
+  }
+
+  @media (min-width: 48em) {
+    .games-header {
+      grid-template-columns: minmax(auto, var(--game-nav-size)) minmax(0, 1fr) minmax(auto, var(--game-nav-size));
+      grid-template-areas:
+        "prev heading next"
+        "subtitle subtitle subtitle";
+    }
+
+    .games-nav-prev {
+      justify-self: start;
+    }
+
+    .games-nav-next {
+      justify-self: end;
+    }
+  }
+
+  /* Dot pager (Christian, 23 Nov): one dot per position, 8 px dots, the current one a 26 x 8 px pill. Each dot is a real
+     button whose whole 44 x 44 box takes the tap; the dot itself is drawn inside it by ::after. The boxes sit side by
+     side with a hair of space (never overlapping, never clipped), and the row wraps instead of scrolling sideways at large text. */
+  .games-pager {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    column-gap: var(--game-pager-gap);
+    /* The board puts the dots 18 px under the cards' shadow room, with the 8 px dot (not its 44 px box) at that spot. */
+    margin-block: var(--game-pager-pull) var(--game-pager-pull-end);
+  }
+
+  @media (orientation: landscape) and (max-height: 32em) {
+    .games-pager {
+      margin-block-start: var(--game-pager-pull-landscape);
+    }
+  }
+
+  .games-dot {
+    position: relative;
+    flex: none;
+    inline-size: var(--tap-min);
+    block-size: var(--tap-min);
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+  }
+
+  .games-dot::after {
+    content: '';
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-start: 50%;
+    inline-size: var(--game-pager-dot);
+    block-size: var(--game-pager-dot);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-line);
+    transform: translate(-50%, -50%);
+  }
+
+  .games-dot[aria-current='true']::after {
+    inline-size: var(--game-pager-pill);
+    background-color: var(--color-ink);
+  }
+
+  /* Keyboard focus: a round ring just inside the whole 44 px box, so nothing clips it. */
+  .games-dot:focus-visible {
+    border-radius: var(--radius-pill);
+    outline: var(--focus-width) solid var(--color-copper-deep);
+    outline-offset: calc(-1 * var(--focus-width));
+  }
+
+  .games-date-note {
+    margin: 0;
+    text-align: center;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    color: var(--color-ink-soft);
+  }
+
+  /* Carousel structure */
+  .gcar {
+    overflow: hidden;
+    padding: var(--game-car-padding);
+    margin-block-end: var(--game-car-shadow-pull);
+    touch-action: pan-y;
+    max-width: 100%;
+  }
+
+  .gtrack {
+    display: flex;
+    gap: var(--game-track-gap);
+    transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+    will-change: transform;
+  }
+
+  /* Playing Card Style (280x392) */
+  .gcard {
+    flex: 0 0 auto;
+    position: relative;
+    width: var(--game-card-width);
+    height: var(--game-card-height);
+    box-sizing: border-box;
+    border-radius: var(--game-card-radius);
+    padding: var(--game-card-padding);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: var(--game-card-ink);
+    background: var(--game-card-bg);
+    border: var(--game-card-border);
+    box-shadow: var(--game-card-shadow);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  .gcard:hover,
+  .gcard:focus-visible {
+    transform: translateY(var(--game-card-lift));
+    border-color: var(--color-copper-glow);
+    box-shadow: var(--game-card-shadow-hover);
+  }
+
+  .gcard:focus-visible {
+    outline: var(--game-card-outline-width) solid var(--color-copper-deep);
+    outline-offset: var(--game-card-outline-offset);
+  }
+
+  .gcard.on {
+    border-color: var(--color-copper-glow);
+    box-shadow: var(--game-card-shadow-on);
+  }
+
+  /* Pips */
+  .gpip {
+    position: absolute;
+    width: var(--game-pip-size);
+    height: var(--game-pip-size);
+    border-radius: var(--game-pip-radius);
+    box-shadow: var(--game-pip-shadow);
+  }
+
+  /* wordpill's logo is a capsule with its own outline, so it has no tile behind it (Christian, 2026-11-27). */
+  .gpip.gpip-bare {
+    box-shadow: none;
+    background: none;
+  }
+
+  .gpip.tl {
+    top: var(--game-pip-inset);
+    left: var(--game-pip-inset);
+  }
+
+  .gpip.br {
+    bottom: var(--game-pip-inset);
+    right: var(--game-pip-inset);
+    transform: rotate(180deg);
+  }
+
+  .gpip-crossword {
+    background: var(--game-pip-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pip-xgrid {
+    display: grid;
+    grid-template-columns: repeat(3, var(--game-pip-xgrid-size));
+    gap: var(--game-pip-xgrid-gap);
+  }
+
+  .pip-xcell-dark {
+    height: var(--game-pip-xgrid-size);
+    background: var(--game-pip-ink);
+  }
+
+  .pip-xcell-light {
+    height: var(--game-pip-xgrid-size);
+    border: var(--border-hairline) solid var(--game-pip-line);
+    box-sizing: border-box;
+  }
+
+  .gpip-sudoku {
+    background: var(--game-pip-bg);
+    color: var(--game-pip-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: var(--game-pip-sudoku-size);
+    line-height: 1;
+  }
+
+  .gpip-hello {
+    background: var(--game-pip-bg);
+    color: var(--game-pip-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: var(--game-pip-hello-size);
+    line-height: 1;
+  }
+
+  /* Card Face */
+  .gface {
+    position: relative;
+    width: var(--game-face-width);
+    height: var(--game-face-height);
+    box-sizing: border-box;
+    background: none;
+    border: 0;
+    display: grid;
+    grid-template-rows: var(--game-face-header-height) auto 1fr;
+    justify-items: center;
+    padding: var(--game-face-padding);
+    text-align: center;
+  }
+
+  .gname {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: var(--game-face-header-height);
+  }
+
+  .gname img {
+    display: block;
+    max-width: var(--game-wordmark-max-width);
+    max-height: var(--game-wordmark-max-height);
+    width: auto;
+    height: auto;
+  }
+
+  .gname span {
+    font-family: var(--font-display);
+    font-weight: 500;
+    font-size: var(--game-serif-name-size);
+    line-height: 1;
+    color: var(--game-card-name-ink);
+  }
+
+  .gdesc {
+    margin: var(--game-desc-margin-top) 0 0;
+    font-family: var(--font-body);
+    font-size: var(--game-desc-size);
+    line-height: 1.5;
+    color: var(--game-card-ink-soft);
+    transition: opacity 0.25s ease;
+  }
+
+  .gstatus {
+    align-self: end;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--game-status-gap);
+    font-family: var(--font-body);
+    font-size: var(--game-status-size);
+    line-height: var(--game-status-line-height);
+    padding: var(--game-status-padding);
+    border-radius: var(--radius-pill);
+    border: var(--border-hairline) solid var(--game-status-border);
+    color: var(--game-status-ink);
+    background: var(--game-status-bg);
+    transition: opacity 0.25s ease;
+  }
+
+  /* :global because the status script rewrites this span at run time (it carries no scope attribute then). */
+  .gstatus :global(.gstatus-sym) {
+    font-family: var(--font-body);
+    margin-inline-end: var(--game-status-sym-gap);
+  }
+
+  /*
+    Phones (Home v3 board, 390): the arrows flank the heading as on desktop (44 px discs at the two edges), the line sits
+    under the heading in the middle column, and the cards run edge to edge so the next card peeks in at the right.
+  */
+  @media (max-width: 47.99em) {
+    /* The section rises 10 px. Keep its track on whole pixels during the reveal so a
+       card retains both of its edges while scrolling on a phone. */
+    .games-stage[data-reveal="shown"] {
+      transition-timing-function: ease-out, steps(10, end);
+    }
+
+    .games-scene {
+      padding-block-end: var(--game-section-bottom-phone);
+    }
+
+    .games-stage {
+      padding: var(--game-stage-padding-phone);
+    }
+
+    .games-header {
+      grid-template-columns: var(--game-nav-size-phone) minmax(0, 1fr) var(--game-nav-size-phone);
+      grid-template-areas:
+        "prev heading next"
+        ". subtitle .";
+      gap: var(--game-header-gap-phone);
+    }
+
+    .games-heading {
+      font-size: var(--game-heading-size-phone);
+    }
+
+    .games-subtitle {
+      margin: var(--game-subtitle-margin-top-phone) 0 0;
+      font-size: var(--game-subtitle-size-phone);
+    }
+
+    .gcar {
+      padding: var(--game-car-padding-phone);
+      margin-inline: calc(-1 * var(--game-stage-inline-phone));
+      margin-block-end: var(--game-car-shadow-pull-phone);
+      max-width: none;
+    }
+
+    .games-nav-prev {
+      justify-self: start;
+    }
+
+    .games-nav-next {
+      justify-self: end;
+    }
+
+    .games-nav-slot .gs-nav {
+      width: var(--game-nav-size-phone);
+      height: var(--game-nav-size-phone);
+      min-width: var(--game-nav-size-phone);
+      min-height: var(--game-nav-size-phone);
+    }
+
+    /* The "play today's" pill may wrap instead of pushing the page sideways at very large text. */
+    .games-stage-action {
+      min-width: 0;
+      padding-block: calc(var(--spacing) * 2);
+      padding-inline: calc(var(--spacing) * 3);
+      flex-wrap: wrap;
+      text-align: center;
+    }
+
+    /* Body text on a phone is at least 16 px. */
+    .games-date-note {
+      font-size: var(--text-base);
+      line-height: var(--text-base--line-height);
+    }
+  }
+
+  /* At enlarged text on a phone, the rem-sized playing card must contract to the carousel viewport. Keep the
+   * decorative offscreen track clipped, but never clip the active card's name, description or status. */
+  @media (max-width: 40em) {
+    .gtrack {
+      gap: var(--game-track-gap-phone);
+    }
+
+    .gcard {
+      /* At enlarged text the rem-sized card contracts to the row, so it never spills past the screen. */
+      width: min(var(--game-card-phone-width), 100%);
+      height: auto;
+      min-height: var(--game-card-phone-height);
+      aspect-ratio: auto;
+      scroll-snap-align: center;
+    }
+
+    .gface {
+      /* The board's 204 px face (a 172 px wordmark and line), narrower only when enlarged text shrinks the card. */
+      width: min(var(--game-face-width), calc(100% - (2 * var(--game-card-padding))));
+      height: auto;
+      /* The desktop face's height, so the name, line and status sit where they do on desktop (status at the foot). */
+      min-height: var(--game-face-height);
+      min-width: 0;
+    }
+
+    .gname {
+      height: min(var(--game-face-header-height), var(--game-face-phone-header-height));
+      min-width: 0;
+    }
+
+    .gname img {
+      max-width: 100%;
+    }
+
+    .gname span {
+      font-size: min(var(--game-serif-name-size), var(--game-name-phone-size));
+    }
+
+    .gdesc {
+      font-size: min(var(--game-desc-size), var(--game-desc-phone-size));
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .gstatus {
+      font-size: min(var(--game-status-size), var(--game-status-phone-size));
+      min-width: 0;
+      max-width: 100%;
+    }
+  }
+
+  /* Demos */
+  .gdemo {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: var(--game-demo-top);
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+
+  .gcard:hover .gdesc,
+  .gcard:hover .gstatus,
+  .gcard:focus-visible .gdesc,
+  .gcard:focus-visible .gstatus {
+    opacity: 0;
+  }
+
+  .gcard:hover .gdemo,
+  .gcard:focus-visible .gdemo {
+    opacity: 1;
+  }
+
+  .gdemo * {
+    animation-play-state: paused !important;
+  }
+
+  .gcard:hover .gdemo *,
+  .gcard:focus-visible .gdemo * {
+    animation-play-state: running !important;
+  }
+
+  /* Vialo Demo: a miniature of the live board (src/styles/vialo.css). Oblong capsule pills in a strip of the same grey
+     blister foil, drawn in CSS from the board's own tokens; the card stays light in Evening, so the foil and the pill
+     colours are the Daytime ones (--game-demo-vialo-*). The guess is CARES against NURSE: in place is light green, elsewhere in
+     the word is pink with a small dot under its letter, not in the word is white (Christian, 2026-11-27), so colour is never the only signal. The first look at rest (and under reduced motion) is the finished rows. */
+  .vialo-grid {
+    display: grid;
+    gap: var(--game-demo-vialo-grid-gap);
+    padding: var(--game-demo-vialo-strip-padding);
+    border-radius: var(--radius-md);
+    background-color: var(--game-demo-vialo-foil);
+    background-image:
+      linear-gradient(135deg, var(--game-demo-vialo-gloss), var(--game-demo-vialo-gloss-clear) 45%),
+      repeating-linear-gradient(45deg, var(--game-demo-vialo-hatch) 0 var(--pillo-hatch-width), var(--game-demo-vialo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap)),
+      repeating-linear-gradient(-45deg, var(--game-demo-vialo-hatch) 0 var(--pillo-hatch-width), var(--game-demo-vialo-hatch-clear) var(--pillo-hatch-width) var(--pillo-hatch-gap));
+    box-shadow: var(--shadow-pillo-pack);
+  }
+
+  .vialo-row {
+    display: flex;
+    gap: var(--game-demo-vialo-row-gap);
+  }
+
+  .gc {
+    --gc-face: var(--game-demo-vialo-green);
+    --gc-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-demo-vialo-green-light) 38%, var(--game-demo-vialo-green-deep)), var(--game-demo-vialo-green) 55%, var(--game-demo-vialo-green-deep));
+    --gc-ink: var(--game-demo-vialo-on-green);
+    --gc-ring: var(--game-demo-vialo-ring-color);
+    position: relative;
+    width: var(--game-demo-vialo-cell-width);
+    height: var(--game-demo-vialo-cell-height);
+    border-radius: var(--radius-pill);
+    display: grid;
+    place-items: center;
+    font-family: var(--vialo-pill-font);
+    font-size: var(--game-demo-vialo-font-size);
+    line-height: 1;
+    box-sizing: border-box;
+    color: var(--gc-ink);
+    background-color: var(--gc-face);
+    background-image: var(--gc-image);
+    box-shadow: var(--shadow-pillo-pill);
+    animation: gfill 4.8s ease-in-out infinite;
+  }
+
+  .gc.gc-elsewhere {
+    --gc-ink: var(--game-demo-vialo-on-red);
+    --gc-face: var(--game-demo-vialo-red);
+    --gc-image: radial-gradient(ellipse 120% 140% at 30% 20%, color-mix(in srgb, var(--game-demo-vialo-red-light) 80%, var(--game-demo-vialo-red)), var(--game-demo-vialo-red) 55%, var(--game-demo-vialo-red-deep));
+  }
+
+  .gc.gc-absent {
+    --gc-face: var(--game-demo-vialo-absent-face);
+    --gc-image: none;
+    --gc-ink: var(--game-demo-vialo-absent-ink);
+  }
+
+  /* Elsewhere in the word: a thin light ring inside the pill's edge (as on the live board and its key), so red differs from
+     green by more than colour. Green and white carry no mark. */
+  .gc.gc-elsewhere::before {
+    content: "";
+    position: absolute;
+    inset-block-end: var(--game-demo-vialo-ring);
+    inset-inline-start: 50%;
+    inline-size: var(--game-demo-vialo-ring-gap);
+    block-size: var(--game-demo-vialo-ring-gap);
+    translate: -50% 0;
+    box-sizing: border-box;
+    border: calc(var(--game-demo-vialo-ring-gap) / 2) solid var(--game-demo-vialo-on-red);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  /* Each pocket starts empty (the foil's well) and its pill drops in. */
+  @keyframes gfill {
+    0%, 8% { background-image: none; background-color: transparent; color: transparent; box-shadow: var(--shadow-pillo-pocket); --gc-ring: transparent; }
+    18%, 86% { background-image: var(--gc-image); background-color: var(--gc-face); color: var(--gc-ink); box-shadow: var(--shadow-pillo-pill); --gc-ring: var(--game-demo-vialo-ring-color); }
+    100% { background-image: none; background-color: transparent; color: transparent; box-shadow: var(--shadow-pillo-pocket); --gc-ring: transparent; }
+  }
+
+  /* Tachyyy Demo */
+  .tq {
+    width: var(--game-demo-tachyyy-width);
+    border-radius: var(--game-demo-tachyyy-radius);
+    border: var(--border-hairline) solid var(--game-demo-border);
+    background: var(--game-demo-tachyyy-bg);
+    padding: var(--game-demo-tachyyy-padding);
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: var(--game-demo-tachyyy-font-size);
+    line-height: 1.4;
+    color: var(--game-card-ink);
+    display: flex;
+    flex-direction: column;
+    gap: var(--game-demo-tachyyy-gap);
+  }
+
+  .tbar {
+    height: var(--game-demo-tachyyy-bar-height);
+    border-radius: var(--radius-pill);
+    background: var(--game-pip-bg);
+    overflow: hidden;
+  }
+
+  .tbar i {
+    display: block;
+    height: 100%;
+    background: var(--color-copper-deep);
+    animation: tbar 4s linear infinite;
+  }
+
+  @keyframes tbar {
+    0% { width: 100%; }
+    100% { width: 0; }
+  }
+
+  .tq-prompt {
+    font-weight: 700;
+  }
+
+  .tch {
+    border: var(--border-hairline) solid var(--game-demo-border);
+    border-radius: var(--radius-pill);
+    padding: var(--game-demo-tachyyy-choice-padding);
+    text-align: left;
+  }
+
+  .tch.ok {
+    animation: tok 4s ease-in-out infinite;
+  }
+
+  @keyframes tok {
+    0%, 45% { background: var(--game-demo-tachyyy-bg); border-color: var(--game-demo-border); color: var(--game-card-ink); }
+    55%, 90% { background: var(--game-demo-active-bg); color: var(--game-card-on-dark); border-color: var(--game-demo-active-bg); }
+    100% { background: var(--game-demo-tachyyy-bg); color: var(--game-card-ink); }
+  }
+
+  /* Piccline Demo */
+  .pgrid {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(4, var(--game-demo-piccline-cell-size));
+    gap: var(--game-demo-piccline-gap);
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: var(--game-demo-piccline-font-size);
+    color: var(--game-card-ink);
+    text-align: center;
+    line-height: var(--game-demo-piccline-line-height);
+  }
+
+  .pgrid svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .pgrid polyline {
+    fill: none;
+    stroke: var(--color-copper-deep);
+    stroke-width: var(--game-demo-piccline-stroke);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.45;
+    stroke-dasharray: 260;
+    stroke-dashoffset: 260;
+    animation: ptrace 4.4s ease-in-out infinite;
+  }
+
+  @keyframes ptrace {
+    0%, 10% { stroke-dashoffset: 260; }
+    60%, 88% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 260; }
+  }
+
+  /* Crossword Demo */
+  .xg {
+    display: grid;
+    grid-template-columns: repeat(4, var(--game-demo-crossword-cell-size));
+    gap: var(--game-demo-crossword-gap);
+  }
+
+  .xg span {
+    width: var(--game-demo-crossword-cell-size);
+    height: var(--game-demo-crossword-cell-size);
+    box-sizing: border-box;
+    border: var(--border-hairline) solid var(--game-demo-border);
+    background: var(--game-demo-crossword-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-weight: 700;
+    font-size: var(--game-demo-crossword-font-size);
+    color: var(--game-card-ink);
+  }
+
+  .xg span.b {
+    background: var(--game-demo-active-bg);
+    border-color: var(--game-demo-active-bg);
+    color: var(--game-card-on-dark);
+  }
+
+  .xg em,
+  .sg em {
+    font-style: normal;
+    opacity: 0;
+    animation: gpop 4.8s ease-in-out infinite;
+  }
+
+  @keyframes gpop {
+    0%, 10% { opacity: 0; transform: scale(0.4); }
+    22%, 86% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; }
+  }
+
+  /* Sudoku Demo */
+  .sg {
+    display: grid;
+    grid-template-columns: repeat(3, var(--game-demo-sudoku-cell-size));
+    gap: 0;
+    border: var(--game-demo-sudoku-border) solid var(--game-demo-active-bg);
+  }
+
+  .sg span {
+    width: var(--game-demo-sudoku-cell-size);
+    height: var(--game-demo-sudoku-cell-size);
+    box-sizing: border-box;
+    border: var(--border-hairline) solid var(--game-demo-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: var(--game-demo-sudoku-font-size);
+    color: var(--game-card-ink);
+    background: var(--game-demo-sudoku-bg);
+  }
+
+  .sg em {
+    color: var(--game-card-ink);
+    font-weight: 700;
+  }
+
+  /* Hello cards Demo */
+  .gdemo-perspective {
+    perspective: var(--game-demo-hello-perspective);
+  }
+
+  .hflip {
+    width: var(--game-demo-hello-width);
+    height: var(--game-demo-hello-height);
+    position: relative;
+    transform-style: preserve-3d;
+    animation: hflip 4.8s ease-in-out infinite;
+  }
+
+  @keyframes hflip {
+    0%, 25% { transform: rotateY(0deg); }
+    40%, 80% { transform: rotateY(180deg); }
+    95%, 100% { transform: rotateY(0deg); }
+  }
+
+  .hface {
+    position: absolute;
+    inset: 0;
+    border-radius: var(--game-demo-hello-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--game-demo-hello-padding);
+    box-sizing: border-box;
+    font-family: var(--font-body);
+    font-weight: 400;
+    font-size: var(--game-demo-hello-font-size);
+    line-height: 1.4;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .hface.front {
+    background: var(--game-demo-active-bg);
+    color: var(--game-card-on-dark);
+  }
+
+  .hface.back {
+    background: var(--game-pip-bg);
+    color: var(--game-pip-ink);
+    transform: rotateY(180deg);
+  }
+
+  /* Animation delay helper classes (No inline styles!) */
+  .d-0 { animation-delay: 0s; }
+  .d-18 { animation-delay: 0.18s; }
+  .d-25 { animation-delay: 0.25s; }
+  .d-30 { animation-delay: 0.3s; }
+  .d-36 { animation-delay: 0.36s; }
+  .d-54 { animation-delay: 0.54s; }
+  .d-60 { animation-delay: 0.6s; }
+  .d-72 { animation-delay: 0.72s; }
+  .d-75 { animation-delay: 0.75s; }
+  .d-90 { animation-delay: 0.9s; }
+  .d-120 { animation-delay: 1.2s; }
+  .d-125 { animation-delay: 1.25s; }
+  .d-126 { animation-delay: 1.26s; }
+  .d-144 { animation-delay: 1.44s; }
+  .d-175 { animation-delay: 1.75s; }
+  .d-180 { animation-delay: 1.8s; }
+  .d-198 { animation-delay: 1.98s; }
+  .d-210 { animation-delay: 2.1s; }
+  .d-216 { animation-delay: 2.16s; }
+  .d-234 { animation-delay: 2.34s; }
+  .d-240 { animation-delay: 2.4s; }
+  .d-252 { animation-delay: 2.52s; }
+  .d-270 { animation-delay: 2.7s; }
+  .d-300 { animation-delay: 3s; }
+
+  /*
+    Phone landscape (844 x 390, Christian's final board): four 186 x 260 cards across, and everything inside a card stays
+    inside its edges: the face is the card's inner size, wordmark images are at most 132 x 46 px, text wordmarks are 30 px,
+    pips are 30 px inset 10 px, and the status pill sits left of the bottom-right pip, never under it.
+  */
+  @media (orientation: landscape) and (max-height: 32em) {
+    .games-scene {
+      padding-block-end: var(--game-section-bottom-landscape);
+    }
+
+    .games-stage {
+      padding: var(--game-stage-padding-landscape);
+    }
+
+    .games-container {
+      gap: var(--game-container-gap-landscape);
+    }
+
+    .games-header {
+      grid-template-columns: var(--game-nav-size-landscape) minmax(0, 1fr) var(--game-nav-size-landscape);
+      grid-template-areas:
+        "prev heading next"
+        ". subtitle .";
+      gap: var(--game-header-gap);
+    }
+
+    .games-heading {
+      font-size: var(--game-heading-size-landscape);
+    }
+
+    .games-subtitle {
+      margin: var(--game-subtitle-margin-top-landscape) 0 0;
+      font-size: var(--game-subtitle-size-landscape);
+    }
+
+    .games-nav-slot .gs-nav {
+      width: var(--game-nav-size-landscape);
+      height: var(--game-nav-size-landscape);
+      min-width: var(--game-nav-size-landscape);
+      min-height: var(--game-nav-size-landscape);
+    }
+
+    /* Four cards sit centred in the row; the clip's side padding is whatever the row has left over. */
+    .gcar {
+      padding: var(--game-car-padding-landscape);
+      padding-inline: max(var(--game-car-landscape-min-inset), calc((100% - (4 * var(--game-card-landscape-width)) - (3 * var(--game-track-gap-landscape))) / 2));
+      margin-block-end: var(--game-car-shadow-pull-landscape);
+    }
+
+    .gtrack {
+      gap: var(--game-track-gap-landscape);
+    }
+
+    .gcard {
+      width: var(--game-card-landscape-width);
+      height: var(--game-card-landscape-height);
+      min-height: 0;
+      padding: var(--game-card-landscape-padding);
+    }
+
+    /* The board's landscape face: it fills the card, the wordmark row sits 46 px under the card's top and the status
+       pill stands level with the bottom-right pip (see .gstatus below). */
+    .gface {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      min-width: 0;
+      grid-template-rows: var(--game-face-landscape-header-height) auto 1fr;
+      row-gap: 0;
+      padding: var(--game-face-landscape-padding);
+    }
+
+    .gname {
+      height: var(--game-face-landscape-header-height);
+      min-width: 0;
+    }
+
+    /* A definite height, drawn with object-fit: contain, instead of height:auto under two max limits: Firefox does not apply
+       max-height through the aspect ratio to an image that is a flex item, so a wide wordmark (piccline, drawn 1.5 times
+       larger) came out 4 px past the card there. The picture is the same size and place; only its box is now fixed. */
+    .gname img {
+      max-width: var(--game-wordmark-landscape-max-width);
+      height: var(--game-wordmark-landscape-max-height);
+      max-height: var(--game-wordmark-landscape-max-height);
+      object-fit: contain;
+    }
+
+    /* Piccline's wordmark is drawn larger about its centre (global.css, --piccline-wordmark-scale). Until its SVG has
+       loaded, Firefox and Safari size the box from the 168 x 60 width and height attributes (wider than the artwork), so
+       the enlarged box came out 4 px past the card's edges. The box is capped so that, enlarged, it still fits the face. */
+    .gname img[src$="piccline-wordmark-light.svg"],
+    .gname img[src$="piccline-wordmark-dark.svg"] {
+      max-width: calc(100% / var(--piccline-wordmark-scale));
+    }
+
+    .gname span {
+      font-size: var(--game-serif-name-landscape-size);
+    }
+
+    .gdesc {
+      font-size: var(--game-desc-landscape-size);
+    }
+
+    .gstatus {
+      align-self: end;
+      justify-self: start;
+      font-size: var(--game-status-landscape-size);
+      margin-block-end: var(--game-status-landscape-drop);
+      max-width: calc(100% - var(--game-pip-landscape-size) - var(--game-pip-landscape-inset));
+    }
+
+    .gpip {
+      width: var(--game-pip-landscape-size);
+      height: var(--game-pip-landscape-size);
+      --game-pip-xgrid-size: var(--game-pip-landscape-xcell);
+      --game-pip-sudoku-size: var(--game-pip-landscape-glyph);
+      --game-pip-hello-size: var(--game-pip-landscape-glyph);
+    }
+
+    .gpip.tl {
+      top: var(--game-pip-landscape-inset);
+      left: var(--game-pip-landscape-inset);
+    }
+
+    .gpip.br {
+      bottom: var(--game-pip-landscape-inset);
+      right: var(--game-pip-landscape-inset);
+    }
+  }
+
+  /* Reduced Motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    .gcard,
+    .gtrack,
+    .gdemo,
+    .gdesc,
+    .gstatus,
+    .gc,
+    .tbar i,
+    .tch.ok,
+    .pgrid polyline,
+    .xg em,
+    .sg em,
+    .hflip {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<script src="../scripts/gamescarousel.ts"></script>
+<script src="../islands/dailyline.ts"></script>

@@ -219,6 +219,9 @@ export default function BodyViewer({ creditText }: Props) {
       // Color-scheme changes while the viewer is open.
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
       mq.addEventListener('change', applyBg);
+      // The site's own Light / Dark pick sets data-theme on <html>; follow it while the viewer is open.
+      const themeObserver = new MutationObserver(applyBg);
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
       cleanupRef.current = () => {
         cancelAnimationFrame(raf);
@@ -226,6 +229,7 @@ export default function BodyViewer({ creditText }: Props) {
         controls.removeEventListener('change', requestRender);
         canvas.removeEventListener('keydown', onKey);
         mq.removeEventListener('change', applyBg);
+        themeObserver.disconnect();
         controls.dispose();
         renderer.dispose();
         requestRenderRef.current = null;
@@ -300,8 +304,7 @@ export default function BodyViewer({ creditText }: Props) {
           aria-label="Interactive 3D body viewer (placeholder model)"
           role="img"
           aria-describedby="body-viewer-desc"
-          className="w-full rounded-lg bg-page focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-button"
-          style={{ aspectRatio: '4/3', touchAction: 'none', minHeight: '200px' }}
+          className="aspect-4/3 min-h-50 w-full touch-none rounded-lg bg-page focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-button"
         />
         {state === 'loading' && (
           <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-soft">

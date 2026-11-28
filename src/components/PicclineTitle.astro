@@ -1,0 +1,41 @@
+---
+/**
+ * piccline's game title mark: the SVG wordmark outline.
+ * Plain text "piccline" for screen readers, SVGs for Daytime and Evening palettes.
+ */
+interface Props {
+  name?: string;
+}
+
+import { imageLogo } from '../config/gamelogos';
+
+const art = imageLogo('piccline').wordmark;
+const boxWidth = Math.round((art.width / art.height) * 100);
+const { name = 'piccline' } = Astro.props;
+---
+
+<span class="inline-flex items-center gap-3" data-testid="piccline-title">
+  <span class="sr-only">{name}</span>
+  <span class="logo flex items-center" aria-hidden="true">
+    <img
+      class="logo-day h-10 sm:h-12 w-auto"
+      src={art.day}
+      alt=""
+      aria-hidden="true"
+      width={boxWidth}
+      height="100"
+      loading="lazy"
+      decoding="async"
+    />
+    <img
+      class="logo-evening h-10 sm:h-12 w-auto"
+      src={art.evening}
+      alt=""
+      aria-hidden="true"
+      width={boxWidth}
+      height="100"
+      loading="lazy"
+      decoding="async"
+    />
+  </span>
+</span>

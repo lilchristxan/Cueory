@@ -1,0 +1,172 @@
+import { expect, test, type Page } from '@playwright/test';
+import { existsSync, readdirSync } from 'node:fs';
+import { join, relative, resolve, sep } from 'node:path';
+import { indexablePages } from '../../src/config/routes';
+import { markGameRulesSeen } from './clock';
+
+test.beforeEach(async ({ page }) => { await markGameRulesSeen(page); });
+
+const dist = resolve('dist');
+
+function builtPages(folder = dist): string[] {
+  const routes: string[] = [];
+  if (!existsSync(folder)) return routes;
+  for (const entry of readdirSync(folder, { withFileTypes: true })) {
+    if (entry.name === 'pagefind' || entry.name === '_astro') continue;
+    const file = join(folder, entry.name);
+    if (entry.isDirectory()) routes.push(...builtPages(file));
+    else if (entry.isFile() && entry.name.endsWith('.html')) {
+      const name = relative(dist, file).split(sep).join('/');
+      if (name === '404.html') routes.push('/task-280-missing-page');
+      else if (name === 'index.html') routes.push('/');
+      else if (name.endsWith('/index.html')) routes.push(`/${name.slice(0, -'/index.html'.length)}`);
+      else routes.push(`/${name.slice(0, -'.html'.length)}`);
+    }
+  }
+  return routes;
+}
+
+async function settleIslands(page: Page, route: string): Promise<void> {
+  await page.waitForFunction(() => document.querySelectorAll('astro-island[ssr]').length === 0, undefined, { timeout: 10_000 });
+  await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => {
+    throw new Error(`${route}: network requests did not settle within 10 s`);
+  });
+}
+
+const routes = builtPages();
+
+// Lane 23: the same check at the narrowest supported width (320 px) in Light and Evening, for every public page the
+// sitemap lists plus /play and each game page. The legal pages are checked by their own specs.
+const LEGAL = ['/terms', '/disclaimer', '/privacy'];
+const routes320 = [...new Set([...indexablePages, '/play', '/play/pillo', '/play/sudoku', '/play/word-path', '/play/crossword'])]
+  .filter((route) => !LEGAL.includes(route))
+  .filter((route) => routes.includes(route));
+
+const sweeps = [
+  { title: 'Task 280: large-text reflow', list: routes, use: {} },
+  ...(['light', 'dark'] as const).map((colorScheme) => ({
+    title: `Lane 23: large-text reflow at 320 px (${colorScheme === 'light' ? 'Light' : 'Evening'})`,
+    list: routes320,
+    use: { viewport: { width: 320, height: 700 }, colorScheme },
+  })),
+];
+
+for (const sweep of sweeps) {
+  test.describe(sweep.title, () => {
+    test.use(sweep.use);
+    test.beforeEach(async ({}, info) => {
+      test.skip(Object.keys(sweep.use).length > 0 && info.project.name !== 'desktop', 'fixed-width sweep runs once, in the desktop project');
+    });
+  for (const route of sweep.list) {
+    test(`${route} has no sideways scroll or clipped visible controls at 32px root text`, async ({ page }) => {
+      await page.goto(route);
+      await page.evaluate(() => {
+        document.documentElement.style.setProperty('font-size', '32px', 'important');
+      });
+      await settleIslands(page, route);
+      await expect(page.locator('html')).toHaveCSS('font-size', '32px');
+
+      const findings = await page.evaluate(() => {
+        const width = document.documentElement.clientWidth;
+        // Report only the painted portion of a control. A wide crossword or data table
+        // can intentionally scroll inside its own box, and a share-style carousel keeps
+        // offscreen cards mounted. Their offscreen controls are not currently visible.
+        // Still reject any painted control outside the viewport, and independently
+        // reject document-level horizontal scrolling below.
+        const clipped = [...document.querySelectorAll<HTMLElement>('a, button, input, select, textarea, [role="button"]')]
+          .filter((element) => {
+            const style = getComputedStyle(element);
+            return element.getClientRects().length > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+          })
+          .flatMap((element) => {
+            const box = element.getBoundingClientRect();
+            if (box.width <= 0 || box.height <= 0) return [];
+            let left = box.left;
+            let right = box.right;
+            for (let ancestor = element.parentElement; ancestor; ancestor = ancestor.parentElement) {
+              const overflowX = getComputedStyle(ancestor).overflowX;
+              if (!['auto', 'scroll', 'hidden', 'clip'].includes(overflowX)) continue;
+              const clip = ancestor.getBoundingClientRect();
+              const clipLeft = clip.left + ancestor.clientLeft;
+              left = Math.max(left, clipLeft);
+              right = Math.min(right, clipLeft + ancestor.clientWidth);
+              if (right <= left) return [];
+            }
+            if (left >= -1 && right <= width + 1) return [];
+            return [{
+              name: element.getAttribute('aria-label') ?? element.textContent?.trim() ?? element.tagName.toLowerCase(),
+              left,
+              right,
+            }];
+          });
+        // Diagnostic only: surface the elements extending past the 32px-text viewport
+        // without loosening either accessibility assertion.
+        const overflowCandidates = [...document.querySelectorAll<HTMLElement>('body *')]
+          .filter((element) => {
+            const style = getComputedStyle(element);
+            if (style.display === 'none' || style.visibility === 'hidden') return false;
+            const box = element.getBoundingClientRect();
+            return box.width > 0 && box.height > 0 && (box.right > width + 1 || box.left < -1);
+          })
+          .map((element) => {
+            const box = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return {
+              tag: element.tagName.toLowerCase(),
+              id: element.id,
+              classes: typeof element.className === 'string' ? element.className.slice(0, 90) : '',
+              left: Math.round(box.left),
+              right: Math.round(box.right),
+              overflowX: style.overflowX,
+            };
+          })
+          .sort((a, b) => b.right - a.right)
+          .slice(0, 12);
+        // A document can overflow even when no descendant box crosses the viewport:
+        // intrinsic scroll boxes, pseudo-elements, or html/body widths can cause it.
+        // These are diagnostics only; the strict assertions below are unchanged.
+        const rootMetrics = [document.documentElement, document.body, document.querySelector('main'), document.querySelector('footer')]
+          .filter((element): element is HTMLElement => element instanceof HTMLElement)
+          .map((element) => {
+            const box = element.getBoundingClientRect();
+            return {
+              tag: element.tagName.toLowerCase(),
+              clientWidth: element.clientWidth,
+              scrollWidth: element.scrollWidth,
+              left: Math.round(box.left),
+              right: Math.round(box.right),
+              overflowX: getComputedStyle(element).overflowX,
+            };
+          });
+        const scrollBoxes = [...document.querySelectorAll<HTMLElement>('body, body *')]
+          .filter((element) => {
+            const style = getComputedStyle(element);
+            return style.display !== 'none' && style.visibility !== 'hidden' && element.scrollWidth > element.clientWidth + 1;
+          })
+          .map((element) => {
+            const box = element.getBoundingClientRect();
+            return {
+              tag: element.tagName.toLowerCase(),
+              classes: typeof element.className === 'string' ? element.className.slice(0, 65) : '',
+              clientWidth: element.clientWidth,
+              scrollWidth: element.scrollWidth,
+              excess: element.scrollWidth - element.clientWidth,
+              left: Math.round(box.left),
+              right: Math.round(box.right),
+              overflowX: getComputedStyle(element).overflowX,
+            };
+          })
+          .sort((a, b) => b.excess - a.excess)
+          .slice(0, 8);
+        return { scrollWidth: document.documentElement.scrollWidth, width, clipped, overflowCandidates, rootMetrics, scrollBoxes };
+      });
+
+      expect(
+        findings.scrollWidth,
+        `${route}: horizontal overflow. Out-of-bounds elements: ${JSON.stringify(findings.overflowCandidates)}. Root metrics: ${JSON.stringify(findings.rootMetrics)}. Scroll boxes: ${JSON.stringify(findings.scrollBoxes)}`,
+      ).toBeLessThanOrEqual(findings.width);
+      expect(findings.clipped, `${route}: clipped visible controls`).toEqual([]);
+    });
+  }
+  });
+}

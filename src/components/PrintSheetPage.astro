@@ -1,0 +1,36 @@
+---
+/**
+ * One page of a game's paper sheet (Christian, 2026-11-25): page 1 is the game, page 2 is how to play. Every sheet
+ * shares this frame: the game's logo artwork (plain images, never recoloured), an outlined copy label, a caption and the
+ * footer "cueory.app · page N of 2". It always has the Daytime look on white paper (src/styles/print-sheet.css).
+ */
+interface Props {
+  /** Which page of two. */
+  page: 1 | 2;
+  /** The game's name, the wordmark's text alternative. */
+  name: string;
+  /** The game's icon and wordmark artwork. */
+  /** Omitted for a game that has no icon artwork of its own: the page then carries only the wordmark. */
+  icon?: string;
+  wordmark: string;
+  wordmarkWidth: number;
+  wordmarkHeight: number;
+  /** The outlined pill under the logo, such as "guesser's copy". */
+  label: string;
+  caption: string;
+  footer: string;
+  testid: string;
+  class?: string;
+}
+const { page, name, icon, wordmark, wordmarkWidth, wordmarkHeight, label, caption, footer, testid, class: extra } = Astro.props;
+---
+<section class:list={['sheet-page', page === 1 ? 'sheet-page-one' : 'sheet-page-two', extra]} data-testid={testid}>
+  <p class="sheet-brand" data-testid={`${testid}-brand`}>
+    {icon && <img class="sheet-icon" src={icon} alt="" aria-hidden="true" width="100" height="100" loading="lazy" decoding="async" />}
+    <img class="sheet-wordmark" src={wordmark} alt={name} width={wordmarkWidth} height={wordmarkHeight} loading="lazy" decoding="async" />
+  </p>
+  <p class="sheet-label" data-testid="sheet-label">{label}</p>
+  <p class="sheet-caption">{caption}</p>
+  <slot />
+  <p class="sheet-footer">{footer}</p>
+</section>

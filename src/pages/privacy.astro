@@ -1,105 +1,160 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Prose from '../components/Prose.astro';
-import { newsletter, promo, site } from '../config/site';
+import { site } from '../config/site';
+
+// FINAL source: cueory-privacy-p4.md, adopted 2026-11-17 (full SHA-256
+// 02b71d707ee723f0a7e4f9922cb9af015a9d4f5b518c445a006f8e4353f2574f). Word for word; change it only with
+// Christian's approval.
+const email = site.contactEmail;
+const mail = `mailto:${email}`;
 ---
 
 <Layout title="privacy" description="What Cueory stores, what it doesn't, and how to delete or export your data.">
   <Prose>
     <h1>privacy, in plain language</h1>
-    <p class="text-sm text-ink-soft">Draft for review. Last updated: not yet published.</p>
-
-    <h2>The short version</h2>
-    <p>
-      We keep only what we need. We don't sell your data, we don't show ads, and we don't use trackers that follow you to
-      other websites.
-    </p>
-
-    <h2>Right now</h2>
-    <p>
-      {site.name} has no accounts yet. You can read lessons without giving us anything. Nothing you do on a lesson is
-      sent to us.
-    </p>
-    <p>If you pick Light or Dark at the bottom of a page, your browser remembers that on your device. It never reaches us.</p>
-
-    <h2>Your progress on this device</h2>
-    <p>
-      Until accounts exist, your study progress is kept by your browser, on your device only. It never reaches us. It is
-      only:
-    </p>
-    <ul>
-      <li>your answers to the two setup questions (which course, and your exam date), if you answer them;</li>
-      <li>for each card deck, which cards you sorted into "know it" or "still learning", and which you starred.</li>
-    </ul>
-    <p>
-      On <a href="/progress">your progress page</a> you can see all of it, download a copy, or forget it on this device.
-      Clearing this site's data in your browser also removes it.
-    </p>
-    <p>
-      On your first visit, a small panel about the launch list may slide down from the top of the page. Your browser
-      remembers on your device that it showed you the panel, so it stays away for {promo.rememberDays} days. That isn't a
-      cookie, and it never reaches us.
-    </p>
-    <p>
-      On <a href="/play">daily games</a> you can turn on stats. They're off unless you do. When they're on, your browser
-      keeps, for each game you finish, the day, whether you solved it and how many tries it took. Anything older than 400
-      days is deleted the next time you open daily games. It stays on your device and never reaches us, and there are no
-      streaks. "Forget", or turning stats off, deletes it.
-    </p>
+    <p class="text-sm text-ink-soft">Effective 19 November 2026</p>
 
     <p>
-      To let the lessons open without a connection, your browser may keep copies of the pages you visit (lessons
-      and the home page; daily games are never kept) and of the site's own files, on your device. That is a normal browser feature, the
-      copies never leave your device, and nothing about your answers or progress is in them. Clearing this site's data
-      in your browser removes them.
+      Cueory is a free study site for nursing students, run by an individual in Arizona, USA. Public accounts are closed.
+      You can study and play without giving us your email address. Your browser keeps your study progress and game
+      results on your device. If you join the email list, send feedback or leave a tip, the information involved is
+      described below.
     </p>
 
-    <h2>Launch-updates emails</h2>
+    <h2>Studying on this device</h2>
     <p>
-      If you sign up for launch updates, your email address is stored by {newsletter.provider}, the service that sends
-      those emails for us. You'll get a confirmation email first, and every email has an unsubscribe link. We use your
-      address only for {site.name} updates.
+      If you enter your course or exam date, star a card, or sort cards into “know it” and “still learning,” your browser
+      saves those choices on this device. You can view, download or forget them on
+      <a href="/progress">your progress page</a>. A study activity can also remember its page, question, timer and your
+      answers so far. That saved place expires after 14 days. Clearing Cueory’s site data in your browser removes these
+      records.
+    </p>
+    <p>
+      Your browser may keep copies of the homepage, lessons you visit and site files so that you can reopen them offline.
+      These copies contain the page content. Your answers and progress are stored separately. Cueory’s offline cache
+      excludes daily games.
     </p>
 
-    <h2>Lesson videos</h2>
+    <h2>Playing daily games</h2>
     <p>
-      Some lessons include a video. The video doesn't load until you tap play. When you do, it loads from
-      <code>youtube-nocookie.com</code>, YouTube's reduced-tracking domain. YouTube may still set cookies or record
-      that the video was played. Nothing plays automatically.
+      If your browser allows storage, it automatically saves finished games on this device. Playing a game does not send
+      your score to Cueory. For each result the browser can remember the puzzle date, whether you solved it, how many
+      tries it took and whether you finished on a later day. Crossword results can record whether a solve counts toward a
+      streak. Word path can also record how many cues you used and whether you found the special answer first. For
+      sudoku, the browser saves the level, date and time taken for your first solve of each level each day. The games use
+      these records to show results, times and streaks.
+    </p>
+    <p>
+      piccline also saves the board you are playing today on this device: which answers you have found, the other
+      words you found, the cues you used and how many words did not count. That lets a reload bring the board back, and a finished board
+      stays finished that day. It holds one day only and starts over the next day. It is never sent to Cueory.
+    </p>
+    <p>
+      Opening <a href="/play">Daily Games</a> or a pillo, crossword, sudoku or word path page deletes general results
+      and sudoku solve times older than 400 days. When your browser blocks storage, it cannot keep your results.
+    </p>
+    <p>
+      On Daily Games, “forget” deletes that game’s saved results; for sudoku this includes its per-level times. “Forget
+      all my stats” deletes every game’s results and sudoku’s times, and stays available while any are saved. If your
+      browser refuses a deletion, the stats panel keeps the results and “forget” buttons for anything still stored.
+      Clearing Cueory’s site data in your browser also removes these records, along with your other Cueory settings. If
+      you finish another game afterward, your browser starts saving results again.
     </p>
 
-    <h2>Visit statistics</h2>
+    <h2>Settings and reminders</h2>
     <p>
-      We count page visits with Cloudflare Web Analytics. It doesn't use cookies, and it doesn't build a profile of you.
+      Your browser can remember whether you chose the light or dark theme, your game settings such as sound, contrast,
+      timer and motion, and which games’ instructions you have seen. To decide when to suggest adding Cueory to your home
+      screen, it can remember up to three dates on which you finished a puzzle and whether you dismissed that suggestion.
+    </p>
+    <p>
+      Older versions of Cueory showed a launch-list panel that may have left a date in your browser under
+      <code>cueory-promo-seen</code>; it is no longer used, and clearing Cueory’s site data removes it. On eligible pages,
+      a signup pop-up about the email list may appear after 10 seconds of viewing. The
+      browser saves the time under <code>cueory-signup-popup-seen</code> when it shows the pop-up and updates the time
+      when you close it, follow its link or leave the page while it is open. It uses that time to keep the pop-up away for three hours.
+      Lessons and game boards do not show the pop-up. Seeing a reminder does not subscribe you. Clearing Cueory’s site
+      data removes these records.
+    </p>
+    <p>
+      Some features are still being built. Where enabled, glove notes remember which notes appeared in this tab, when the
+      visit started, when the last message glove appeared and which gloves were used, the last welcome note on this
+      device and your note-sound choice. The break timer can remember its state in this tab for up to two hours. A survey prompt can remember that you dismissed it. The dismissal record contains no survey answers.
     </p>
 
-    <h2>When accounts arrive</h2>
-    <p>Accounts are coming later. When they do, this page will be updated first. We plan to store only:</p>
-    <ul>
-      <li>Your email address, so you can sign in.</li>
-      <li>A display name, if you choose one.</li>
-      <li>Your answers to a few setup questions, such as your exam date.</li>
-      <li>Your study progress: what you've studied, your answers, and when to review next.</li>
-    </ul>
+    <h2>Joining the launch email list</h2>
     <p>
-      Your account page will have one button that deletes your account and everything linked to it, and one that
-      downloads a copy of your data.
+      The “get launch updates” email box (on the home page and in the signup pop-up) sends the email address you type
+      straight to Kit; Cueory’s own servers never receive it. Kit can also be reached through Cueory’s signup page on Kit.
+      If you subscribe, you give your email address to Kit, which manages the list and sends Cueory’s updates and study
+      tips for us. Joining the list does not create a
+      Cueory account. Use the unsubscribe link in an email to stop receiving updates, or contact us about your
+      subscription. Clearing browser data leaves your subscription in place.
+      <a href="https://cueory.kit.com/bfd9609b46" rel="noopener noreferrer">Kit signup page</a> ·
+      <a href="https://kit.com/privacy" rel="noopener noreferrer">Kit privacy policy</a>
     </p>
 
-    <h2>Who handles data for us</h2>
-    <ul>
-      <li>Cloudflare hosts the website and counts visits.</li>
-      <li>{newsletter.provider} stores newsletter signups and sends launch-update emails.</li>
-      <li>
-        YouTube plays lesson videos. Nothing loads from YouTube until you tap play, and it may set cookies once a video
-        plays.
-      </li>
-    </ul>
-
-    <h2>Questions</h2>
+    <h2>Contacting Cueory</h2>
     <p>
-      Email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>. You can ask what we hold about you or ask us
-      to delete it.
+      When you email us, we receive your email address, the name your email service shows, your message and anything you
+      attach. We use those details to respond, handle requests and correct reported errors. Please keep patient
+      information, confidential exam material and other people’s private information out of your messages. If you
+      accidentally send patient information, follow your school’s or facility’s reporting procedure and start a new
+      message telling us approximately when and where you sent it. Leave out the patient details and the original
+      message. <a href={mail}>Email Cueory</a>
+    </p>
+
+    <h2>Tips, videos and social links</h2>
+    <p>
+      Tips are optional. Ko-fi requires users to be at least 18. The payment is handled through Ko-fi by PayPal or
+      Stripe. As the recipient, Cueory may see your supporter name, email address, payment amount and any message you
+      choose to send. Depending on the settings you choose, a Ko-fi message may be public. We use payment details to
+      manage tips, answer refund questions and keep records where required. A tip does not change your access to the
+      site. For a mistaken payment, email us and leave out card or bank details.
+      <a href="https://more.ko-fi.com/privacy" rel="noopener noreferrer">Ko-fi privacy policy</a>
+    </p>
+    <p>
+      If a lesson offers a video, its YouTube player loads only when you choose to play it. YouTube may then receive your
+      connection details, record the play or set cookies. If you follow a social link, the destination receives your
+      visit under its own privacy policy.
+      <a href="https://policies.google.com/privacy" rel="noopener noreferrer">Google privacy policy</a>
+    </p>
+
+    <h2>Hosting and visit statistics</h2>
+    <p>
+      Cloudflare delivers Cueory’s pages. It processes connection details such as your IP address and browser
+      information to deliver and protect the site. Cueory uses Cloudflare Web Analytics to see page-visit and performance
+      statistics. That analytics service does not use cookies or build a profile to follow you across sites. Cueory does
+      not sell personal information or show ads on its own pages. Cueory does not track you across other websites, so it
+      does not respond differently to Do Not Track or Global Privacy Control signals. Other services you choose to use
+      from Cueory, such as YouTube, Kit or Ko-fi, may collect information about your activity over time and across sites
+      under their own policies.
+      <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener noreferrer">Cloudflare privacy policy</a>
+    </p>
+
+    <h2>Children’s information</h2>
+    <p>
+      Cueory and its launch email list are for people aged 16 and over. We do not knowingly collect personal information
+      from children under 13. If you believe a child under 13 gave us personal information, a parent or guardian can
+      email <a href={mail}>{email}</a>. Please leave sensitive information out of the first message. If we learn we
+      collected a child’s personal information, we will promptly delete it from our records and ask any provider holding
+      it for us to do the same, except where the law requires us to keep it.
+    </p>
+
+    <h2>Your information and questions</h2>
+    <p>
+      Email <a href={mail}>{email}</a> to ask what personal information we hold about you or to request a copy,
+      correction or deletion. We may need to confirm that the information is yours. We can handle records we control and
+      ask a provider to help where it acts for us. Your browser’s local study and game records can be cleared on the
+      device where you used Cueory. For records held independently by a payment provider or social platform, use that
+      service’s privacy controls.
+    </p>
+    <p>
+      If we change how Cueory handles personal information, we’ll update this notice and its date.
+    </p>
+    <p>
+      <a href="/terms">Terms of Use</a> · <a href="/disclaimer">Disclaimer</a>
     </p>
   </Prose>
 </Layout>

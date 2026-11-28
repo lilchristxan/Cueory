@@ -1,100 +1,31 @@
 {
   "status": "sample",
+  "format": "path",
+  "clue": "when it pours outside",
   "grid": [
-    "SPOON",
-    "FATEB",
-    "ORKIO",
-    "CHDGW",
-    "UPYML"
+    "BORLBT",
+    "OATANE",
+    "ILSDKR",
+    "NZERAE",
+    "YZITOD",
+    "DNDCUN",
+    "IANOAH",
+    "WYWIRT"
   ],
   "words": [
-    {
-      "cue": "you eat soup with it",
-      "answer": "SPOON",
-      "path": [
-        [
-          0,
-          0
-        ],
-        [
-          0,
-          1
-        ],
-        [
-          0,
-          2
-        ],
-        [
-          0,
-          3
-        ],
-        [
-          0,
-          4
-        ]
-      ]
-    },
-    {
-      "cue": "it has prongs for picking up food",
-      "answer": "FORK",
-      "path": [
-        [
-          1,
-          0
-        ],
-        [
-          2,
-          0
-        ],
-        [
-          2,
-          1
-        ],
-        [
-          2,
-          2
-        ]
-      ]
-    },
-    {
-      "cue": "a round dish for cereal",
-      "answer": "BOWL",
-      "path": [
-        [
-          1,
-          4
-        ],
-        [
-          2,
-          4
-        ],
-        [
-          3,
-          4
-        ],
-        [
-          4,
-          4
-        ]
-      ]
-    },
-    {
-      "cue": "you drink tea from it",
-      "answer": "CUP",
-      "path": [
-        [
-          3,
-          0
-        ],
-        [
-          4,
-          0
-        ],
-        [
-          4,
-          1
-        ]
-      ]
-    }
+    { "answer": "RAINYDAY", "path": [[0,2],[1,1],[2,0],[3,0],[4,0],[5,0],[6,1],[7,1]], "special": true },
+    { "answer": "RAINCOAT", "path": [[7,4],[6,4],[7,3],[6,2],[5,3],[4,4],[3,4],[4,3]] },
+    { "answer": "THUNDER", "path": [[7,5],[6,5],[5,4],[5,5],[4,5],[3,5],[2,5]] },
+    { "answer": "DRIZZLE", "path": [[2,3],[3,3],[4,2],[4,1],[3,1],[2,1],[3,2]] },
+    { "answer": "BLANKET", "path": [[0,4],[0,3],[1,3],[1,4],[2,4],[1,5],[0,5]] },
+    { "answer": "WINDOW", "path": [[7,0],[6,0],[5,1],[5,2],[6,3],[7,2]] },
+    { "answer": "BOOTS", "path": [[0,0],[1,0],[0,1],[1,2],[2,2]] }
+  ],
+  "extras": [
+    "ARTS", "BAKE", "BAND", "BANK", "BASE", "BOAT", "BOIL", "BOOT", "CART", "COAT", "CODE", "COIN",
+    "CORE", "DARE", "DARK", "DART", "DATE", "DEAR", "DIET", "DIRT", "EARN", "HAND", "IRON", "LAKE",
+    "LANE", "NOTE", "OATS", "RAKE", "RATE", "READ", "REST", "ROAD", "SAIL", "SALT", "SLED", "STAR",
+    "TAKE", "TALE", "TEST", "TOAD", "TOOL", "TUNA", "WIND", "BAKER", "BLAND", "NORTH", "ROAST", "TRAIL",
+    "TRAIN"
   ]
 }

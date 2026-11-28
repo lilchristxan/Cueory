@@ -3,7 +3,11 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   checkProblems,
+  CODEX_RETRY_LIMIT,
   codexProblems,
+  codexRetries,
+  codexRetry,
+  codexRetryComment,
   codexState,
   decide,
   dependencyHolds,
@@ -67,6 +71,18 @@ const clean = (sha = HEAD) => ({
   security_review: { commit_sha: null, has_any_findings: null, has_unresolved_findings: null, status: null },
 });
 
+/** Codex's summary after its own setup failed: note that it also flags "findings", so status alone tells it apart. */
+const failed = (sha = HEAD) => ({
+  code_review: { commit_sha: sha, has_any_findings: true, has_unresolved_findings: true, status: 'failed' },
+  security_review: { commit_sha: null, has_any_findings: null, has_unresolved_findings: null, status: null },
+});
+const findings = (sha = HEAD) => ({ ...clean(sha), code_review: { ...clean(sha).code_review, has_any_findings: true, has_unresolved_findings: true } });
+const running = (sha = HEAD) => ({ ...clean(sha), code_review: { commit_sha: sha, has_any_findings: null, has_unresolved_findings: null, status: 'running' } });
+/** The bot's own earlier "@codex review" comment for a head commit. */
+function retryComment(sha = HEAD, updated_at = '2026-10-31T16:30:00Z'): IssueComment {
+  return { id: nextId++, updated_at, user: { login: 'github-actions[bot]', type: 'Bot' }, body: codexRetryComment(sha) };
+}
+
 const input = (over: Partial<Parameters<typeof decide>[0]> = {}) => ({
   repo: REPO,
   mode: 'launched' as Mode,
@@ -100,6 +116,12 @@ describe('automation.json', () => {
 
 describe('held paths', () => {
   const always = [
+    '.gitleaksignore',
+    '.gitleaks.toml',
+    'src/pages/privacy.astro',
+    'src/pages/terms.astro',
+    'src/pages/disclaimer.astro',
+    'src/config/routes.ts',
     '.github/workflows/ci.yml',
     '.github/dependabot.yml',
     'automation.json',
@@ -111,17 +133,41 @@ describe('held paths', () => {
     'content/cards/study-skills-01.json',
     'content/README.md',
     'supabase/migrations/001.sql',
+    'public/models/anatomy/heart.glb',
+    'src/pages/preview/anatomy-fixture/fixture.glb.ts',
     'wrangler.jsonc',
-  ];
-  const launchedOnly = [
     'public/_headers',
     'astro.config.mjs',
+    'scripts/check-legal-release.mjs',
+    'scripts/anatomy-production-audit.mjs',
+    'scripts/check-anatomy-build.mjs',
+    'scripts/anatomy-postbuild-audit.mjs',
+    'src/islands/anatomylab.ts',
+    'src/islands/AnatomyLab.tsx',
+    'src/islands/anatomyscene.ts',
+    'src/pages/preview/anatomy-lab.astro',
+    'src/pages/preview/anatomy-text.astro',
+    'scripts/build-anatomy.mjs',
+    'scripts/anatomy-review-report.mjs',
+    'scripts/anatomy-source-url.mjs',
+    'scripts/anatomy-systems.json',
+    'scripts/anatomy-release4.mjs',
+    'scripts/anatomy-groups.mjs',
+    'src/visuals/prunedrafts.ts',
+    'src/visuals/sources.ts',
+    'src/content.config.ts', // Visuals schema must stay a founder-reviewed publication control.
+    'src/config/site.ts',
+    'src/components/AccountCorner.astro',
+    'src/components/SignupForm.astro',
+    'src/scripts/accountcorner.ts',
+    'src/scripts/studyeventqueue.ts',
+    '.node-version',
+  ];
+  const launchedOnly = [
     'brand-source/cueory-geometry-master-v1.0.json',
     'public/brand/cueory-square-dark.svg',
     'package.json',
     'package-lock.json',
-    '.node-version',
-    'src/config/site.ts',
     'tools/extra/package.json',
   ];
   const never = ['src/islands/cards.ts', 'docs/STATUS.md', 'tests/unit/x.test.ts', 'public/favicon.svg', 'scripts/check_batch.ts'];
@@ -144,8 +190,102 @@ describe('held paths', () => {
   it('counts both sides of a rename', () => {
     const renamed = [{ filename: 'docs/old-headers.txt', previous_filename: 'public/_headers' }];
     expect(heldPaths(renamed, 'launched')).toEqual(['public/_headers']);
-    expect(heldPaths(renamed, 'prelaunch')).toEqual([]);
+    expect(heldPaths(renamed, 'prelaunch')).toEqual(['public/_headers']);
     expect(heldPaths([{ filename: 'docs/x.json', previous_filename: 'content/x.json' }], 'prelaunch')).toEqual(['content/x.json']);
+    expect(heldPaths([{ filename: 'docs/old-policy.md', previous_filename: 'src/pages/privacy.astro' }], 'prelaunch'))
+      .toEqual(['src/pages/privacy.astro']);
+    expect(heldPaths([{ filename: 'docs/old-content-schema.ts', previous_filename: 'src/content.config.ts' }], 'prelaunch'))
+      .toEqual(['src/content.config.ts']);
+    expect(heldPaths([{ filename: 'scripts/deleted-gate.mjs', previous_filename: 'scripts/check-legal-release.mjs' }], 'prelaunch'))
+      .toEqual(['scripts/check-legal-release.mjs']);
+    expect(heldPaths([{ filename: 'src/islands/cards.ts', previous_filename: 'src/islands/AnatomyLab.tsx' }], 'prelaunch'))
+      .toEqual(['src/islands/AnatomyLab.tsx']);
+    expect(heldPaths([{ filename: 'docs/old-report.mjs', previous_filename: 'scripts/anatomy-review-report.mjs' }], 'prelaunch'))
+      .toEqual(['scripts/anatomy-review-report.mjs']);
+    expect(heldPaths([{ filename: 'docs/old-source-url.md', previous_filename: 'scripts/anatomy-source-url.mjs' }], 'prelaunch'))
+      .toEqual(['scripts/anatomy-source-url.mjs']);
+    expect(heldPaths([{ filename: 'src/pages/preview/anatomy-text.astro', previous_filename: 'docs/text.md' }], 'launched'))
+      .toEqual(['src/pages/preview/anatomy-text.astro']);
+    expect(heldPaths([{ filename: 'docs/removed-fixture.md', previous_filename: 'src/pages/preview/anatomy-fixture/[name].glb.ts' }], 'prelaunch'))
+      .toEqual(['src/pages/preview/anatomy-fixture/[name].glb.ts']);
+  });
+  const sensitiveAccountSources = [
+    'src/pages/auth/callback.astro',
+    'src/pages/account/two-factor.astro',
+    'src/pages/admin/flags.astro',
+    'src/pages/preview/admin-flags.astro',
+    'src/pages/signin.astro',
+    'src/pages/signup.astro',
+    'src/pages/reset-password.astro',
+    'src/pages/account.astro',
+    'src/pages/start.astro',
+    'src/pages/progress.astro',
+    'src/pages/learn/questions.astro', // real published-question route
+    'src/islands/questions.ts', // reject answer-key fields from public question data
+    'src/islands/flag.ts', // validate authenticated reports
+    'src/scripts/progress.ts', // personal local onboarding data consumed by guest import
+    'src/islands/supabaseenv.ts',
+    'src/islands/supabaseclient.ts',
+    'src/islands/supabasebuildcheck.ts',
+    'src/islands/SignIn.tsx',
+    'src/islands/AuthCallback.tsx',
+    'src/islands/adminflagsrpc.ts',
+    'src/islands/AccountSettings.tsx',
+    'src/islands/deleteaccount.ts',
+    'src/islands/Onboarding.tsx',
+    'src/islands/twofactor.ts',
+    'src/islands/guestimportrun.ts',
+    'src/islands/exportdata.ts',
+    'src/islands/checkanswer.ts', // protects the answer-check RPC argument and response adapter
+    'src/islands/examplanimport.ts',
+    'src/islands/examplansync.ts', // account-backed exam-plan writes
+    'src/islands/ReviewSession.tsx', // invokes account-backed review sync from the review UI
+    'src/islands/reviewsync.ts', // account-backed review progress writes
+    'src/islands/studyrecorder.ts', // signed-in study-event RPC sender
+    'src/islands/flagconnect.ts',
+    'src/islands/flagsend.ts',
+    'src/islands/flagsubmit.ts',
+    'src/islands/flagitem.ts', // publishes the selected database item/version to the report form
+    'src/islands/flaginbox.ts', // private/admin comment rendering
+    'src/islands/FlagForm.tsx', // authenticated report submission UI
+    'src/islands/FlagMount.tsx', // sign-in state and report transport
+    'src/islands/ProgressPanel.tsx', // account exam-plan and personal progress
+    'src/islands/PublishedQuestions.tsx', // signed-in question transport
+    'src/islands/publishedquestions.ts', // authorized published-question query adapter
+    'src/islands/QuestionsPlayer.tsx', // answer-check feedback transport
+    'src/islands/questionsremote.ts', // check_answer RPC boundary
+    'src/islands/rpcerrors.ts', // maps account and privileged RPC failures
+  ];
+
+  it.each(sensitiveAccountSources)('%s requires founder approval even before launch', (path) => {
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      expect(isHeldPath(path, mode)).toBe(true);
+      // Even with all exact-head checks and a clean review, no manual label
+      // must be needed to block an auth-sensitive PR from auto-merging.
+      const decision = decide(input({ mode, files: [{ filename: path }] }));
+      expect(decision.action).toBe('label');
+      expect(decision.reasons.join(' ')).toContain(path);
+    }
+  });
+
+  it('holds either side of a rename involving account or admin source', () => {
+    expect(heldPaths([{
+      filename: 'src/islands/cards.ts',
+      previous_filename: 'src/islands/supabaseclient.ts',
+    }], 'prelaunch')).toEqual(['src/islands/supabaseclient.ts']);
+    expect(heldPaths([{
+      filename: 'src/pages/account/settings.astro',
+      previous_filename: 'src/pages/learn/cards.astro',
+    }], 'launched')).toEqual(['src/pages/account/settings.astro']);
+  });
+
+  it.each([
+    'src/islands/cards.ts',
+    'src/pages/courses.astro',
+    'src/pages/learn/study-skills/cards.astro',
+  ])('%s remains eligible for ordinary review', (path) => {
+    expect(isHeldPath(path, 'prelaunch')).toBe(false);
+    expect(isHeldPath(path, 'launched')).toBe(false);
   });
 });
 
@@ -447,6 +587,40 @@ describe("Codex's review", () => {
       security_review: { commit_sha: HEAD, has_any_findings: true, has_unresolved_findings: true, status: 'completed' },
     };
     expect(codexProblems(security, HEAD)).toEqual(['Codex security review is open']);
+    expect(codexProblems(failed(), HEAD)).toEqual(["Codex couldn't finish its review"]);
+  });
+
+  describe('retrying a failed review (Task 39)', () => {
+    it('asks Codex again when its newest summary says the review of this head failed', () => {
+      expect(codexRetry([codexComment(failed())], HEAD)).toEqual({ headSha: HEAD, attempt: 1, limit: 3 });
+      expect(CODEX_RETRY_LIMIT).toBe(3);
+      expect(codexRetryComment(HEAD)).toBe(`@codex review\n\n<!-- automerge-codex-retry: ${HEAD} -->`);
+    });
+
+    it('counts earlier retries for this head only, whoever posted them, and stops at the limit', () => {
+      const older = retryComment('older', '2026-10-31T10:00:00Z');
+      const retries = [retryComment(HEAD, '2026-10-31T10:00:00Z'), retryComment(HEAD, '2026-10-31T11:00:00Z')];
+      const pasted = { ...retryComment(HEAD, '2026-10-31T12:00:00Z'), user: { login: 'someone', type: 'User' } };
+      expect(codexRetries([older, ...retries], HEAD)).toHaveLength(2);
+      expect(codexRetry([older, ...retries, codexComment(failed())], HEAD)).toEqual({ headSha: HEAD, attempt: 3, limit: 3 });
+      expect(codexRetry([...retries, pasted, codexComment(failed())], HEAD)).toBeNull();
+    });
+
+    it('asks only once per failure: no new retry until Codex has posted again since the last one', () => {
+      const summary = codexComment(failed(), { updated_at: '2026-10-31T17:00:00Z' });
+      expect(codexRetry([summary, retryComment(HEAD, '2026-10-31T17:05:00Z')], HEAD)).toBeNull();
+      expect(codexRetry([summary, retryComment(HEAD, '2026-10-31T16:55:00Z')], HEAD)?.attempt).toBe(2);
+    });
+
+    it('never retries a review that finished with findings, is still running, is clean, or is for an older commit', () => {
+      expect(codexRetry([codexComment(findings())], HEAD)).toBeNull();
+      expect(codexRetry([codexComment(running())], HEAD)).toBeNull();
+      expect(codexRetry([codexComment(clean())], HEAD)).toBeNull();
+      expect(codexRetry([codexComment(failed('older'))], HEAD)).toBeNull();
+      expect(codexRetry([], HEAD)).toBeNull();
+      // Only Codex's own summary counts, so a pasted "failed" state asks for nothing.
+      expect(codexRetry([codexComment(failed(), { user: { login: 'someone', type: 'User' } })], HEAD)).toBeNull();
+    });
   });
 });
 
@@ -476,13 +650,16 @@ describe('decide', () => {
     expect(decision).toEqual({ action: 'label', reasons: ['needs Christian: changes .github/workflows/ci.yml'] });
   });
 
-  it('before launch, merges settings, brand and dependency changes that wait once the site is live', () => {
-    const files = [{ filename: 'astro.config.mjs' }, { filename: 'package.json' }, { filename: 'public/_headers' }];
-    expect(decide(input({ files, mode: 'prelaunch' })).action).toBe('merge');
-    expect(decide(input({ files, mode: 'launched' }))).toEqual({
-      action: 'label',
-      reasons: ['needs Christian: changes astro.config.mjs, package.json, public/_headers'],
-    });
+  it('founder-holds response headers and CSP in both modes while ordinary package changes remain prelaunch-eligible', () => {
+    const security = [{ filename: 'astro.config.mjs' }, { filename: 'public/_headers' }];
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      expect(decide(input({ files: security, mode }))).toEqual({
+        action: 'label',
+        reasons: ['needs Christian: changes astro.config.mjs, public/_headers'],
+      });
+    }
+    expect(decide(input({ files: [{ filename: 'package.json' }], mode: 'prelaunch' })).action).toBe('merge');
+    expect(decide(input({ files: [{ filename: 'package.json' }], mode: 'launched' })).action).toBe('label');
   });
 
   it("before launch, still holds workflows, the automation and the agents' rules, content, the database and deployment", () => {
@@ -530,6 +707,26 @@ describe('decide', () => {
       "it doesn't merge cleanly into staging",
     ]);
   });
+
+  it('waits and asks Codex again when its review failed, but never merges or retries past the limit (Task 39)', () => {
+    const asked = decide(input({ comments: [codexComment(failed())] }));
+    expect(asked.action).toBe('wait');
+    expect(asked.reasons).toEqual(["Codex couldn't finish its review", 'codex retry 1/3']);
+    expect(asked.codexRetry).toEqual({ headSha: HEAD, attempt: 1, limit: 3 });
+
+    const exhausted = decide(input({
+      comments: [retryComment(HEAD, '2026-10-31T10:00:00Z'), retryComment(HEAD, '2026-10-31T11:00:00Z'), retryComment(HEAD, '2026-10-31T12:00:00Z'), codexComment(failed())],
+    }));
+    expect(exhausted).toEqual({ action: 'wait', reasons: ["Codex couldn't finish its review"] });
+
+    expect(decide(input({ comments: [codexComment(findings())] })).codexRetry).toBeUndefined();
+    expect(decide(input({ comments: [codexComment(running())] }))).toEqual({ action: 'wait', reasons: ['Codex is still reviewing'] });
+    expect(decide(input({ comments: [codexComment(failed('older'))] }))).toEqual({ action: 'wait', reasons: ["Codex hasn't reviewed the latest commit yet"] });
+    // A failed review is still a reason to wait while checks run, and a retry is asked for alongside.
+    expect(decide(input({ checks: [], comments: [codexComment(failed())] })).codexRetry?.attempt).toBe(1);
+    // Held pull requests are labelled for Christian; the bot doesn't comment on them.
+    expect(decide(input({ files: [{ filename: 'CLAUDE.md' }], comments: [codexComment(failed())] })).codexRetry).toBeUndefined();
+  });
 });
 
 /** A pretend GitHub that records every call, so nothing touches the network. */
@@ -545,6 +742,8 @@ function fakeGitHub(
     contents = {} as Record<string, string>,
     /** Number of staging commits missing from the checked PR head. */
     behind = 0,
+    /** What GET /issues/N/comments returns (default: one clean Codex summary). */
+    comments = undefined as IssueComment[] | undefined,
   } = {},
 ) {
   const seen = new Map<number, number>();
@@ -571,7 +770,7 @@ function fakeGitHub(
       return json({ type: 'file', encoding: 'base64', content: Buffer.from(text).toString('base64') });
     }
     if (method === 'GET' && path.match(/^\/issues\/\d+\/comments$/)) {
-      return json(endlessComments ? Array.from({ length: 100 }, () => codexComment(clean())) : [codexComment(clean())]);
+      return json(endlessComments ? Array.from({ length: 100 }, () => codexComment(clean())) : comments ?? [codexComment(clean())]);
     }
     if (method === 'GET' && path.startsWith('/labels/')) return labelExists ? json({ name: 'needs-christian' }) : json({ message: 'Not Found' }, 404);
     if (method === 'PUT' && path.match(/^\/pulls\/\d+\/merge$/)) return json({ merged: true });
@@ -610,14 +809,15 @@ describe('the auto-merge run', () => {
     ]);
   });
 
-  it('before launch, merges the settings change too and labels nothing', async () => {
+  it('before launch, labels security-header changes and merges only unrelated study changes', async () => {
     const { gh, calls } = fakeGitHub(pulls());
     const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
     expect(outcomes.map((o) => [o.pr, o.done])).toEqual([
       [7, 'merged'],
-      [8, 'merged'],
+      [8, 'labelled'],
     ]);
-    expect(calls.filter((c) => c.method !== 'GET').map((c) => c.path)).toEqual(['/pulls/7/merge', '/pulls/8/merge']);
+    expect(calls.filter((c) => c.method !== 'GET').map((c) => c.path))
+      .toEqual(['/pulls/7/merge', '/labels', '/issues/8/labels']);
   });
 
   it('before launch, reads package.json on both sides and holds a major update', async () => {
@@ -710,6 +910,68 @@ describe('the auto-merge run', () => {
     expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
+  it('does not ask Codex to retry if a new commit arrived before the comment (Task 39)', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { comments: [codexComment(failed())], later: { head: { sha: 'ffff', ref: 'x', repo: { full_name: REPO } } } },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('nothing');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('does not ask Codex to retry if the PR was labelled needs-christian meanwhile (Task 39)', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { comments: [codexComment(failed())], later: { labels: [{ name: 'needs-christian' }] } },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('nothing');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('does not ask Codex to retry if the PR was retargeted meanwhile (Task 39)', async () => {
+    const { gh, calls } = fakeGitHub(
+      { 7: { pr: pull(), files: ['src/x.ts'] } },
+      { comments: [codexComment(failed())], later: { base: { ref: 'main', sha: 'bbbb' } } },
+    );
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('nothing');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('does not ask Codex to retry if the PR became a draft meanwhile (Task 39)', async () => {
+    const { gh, calls } = fakeGitHub({ 7: { pr: pull(), files: ['src/x.ts'] } }, { comments: [codexComment(failed())], later: { draft: true } });
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('nothing');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
+  it('asks Codex to retry a failed review with one comment, merges nothing, and only reports in a dry run (Task 39)', async () => {
+    const one = { 7: { pr: pull(), files: ['src/x.ts'] } };
+    const { gh, calls } = fakeGitHub(one, { comments: [codexComment(failed())] });
+    const outcomes = await runAutomerge({ gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} });
+    expect(outcomes[0]!.done).toBe('codex retry asked');
+    expect(outcomes[0]!.decision.reasons).toContain('codex retry 1/3');
+    expect(calls.filter((c) => c.method !== 'GET')).toEqual([
+      { method: 'POST', path: '/issues/7/comments', body: { body: `@codex review\n\n<!-- automerge-codex-retry: ${HEAD} -->` } },
+    ]);
+
+    const dry = fakeGitHub(one, { comments: [codexComment(failed())] });
+    expect((await runAutomerge({ gh: dry.gh, repo: REPO, mode: 'prelaunch', dryRun: true, log: () => {} }))[0]!.done).toBe('would ask codex retry');
+    expect(dry.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+
+    const spent = fakeGitHub(one, {
+      comments: [retryComment(HEAD, '2026-10-31T10:00:00Z'), retryComment(HEAD, '2026-10-31T11:00:00Z'), retryComment(HEAD, '2026-10-31T12:00:00Z'), codexComment(failed())],
+    });
+    expect((await runAutomerge({ gh: spent.gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} }))[0]!.done).toBe('nothing');
+    expect(spent.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+
+    const found = fakeGitHub(one, { comments: [codexComment(findings())] });
+    expect((await runAutomerge({ gh: found.gh, repo: REPO, mode: 'prelaunch', dryRun: false, log: () => {} }))[0]!.done).toBe('nothing');
+    expect(found.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
   it('stops with exit code 2 when the token or repository is missing', () => {
     let status = 0;
     try {
@@ -757,6 +1019,11 @@ describe('the workflow file', () => {
   it('runs one merge pass at a time without letting a skipped run cancel a waiting one (D-78)', () => {
     expect(yml).not.toMatch(/^concurrency:/m);
     expect(yml).toMatch(/^ {4}concurrency:\n {6}group: staging-automerge\n {6}cancel-in-progress: false$/m);
+  });
+
+  it('wakes for a failed Codex summary too, so a retry is asked for promptly, but never for the bot\'s own comment (Task 39)', () => {
+    expect(yml).toContain(`contains(github.event.comment.body, '"status":"failed"')`);
+    expect(yml).toContain("github.event.comment.user.login == 'chatgpt-codex-connector[bot]'");
   });
 
   it('sweeps every open pull request once an hour in case an event was missed (D-78)', () => {

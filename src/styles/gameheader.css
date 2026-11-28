@@ -1,0 +1,47 @@
+/*
+  The corner row on every game box (src/islands/GameHeader.tsx): the gear at the top left, the "?" (and any other
+  corner buttons) at the top right, the same on every game. Every size is a token.
+*/
+@layer components {
+  /* With enlarged text the 44 px corner buttons grow with it, so on the narrowest phones the right-hand group may wrap
+     below the gear (still at the right) instead of pushing the page sideways. */
+  .game-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--spacing) * 2);
+  }
+
+  .game-header-end {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    margin-inline-start: auto;
+    align-items: center;
+    gap: calc(var(--spacing) * 2);
+  }
+
+  /* Firefox measured these exactly-44 px buttons as 43.99997 px at fractional page offsets (staging run 44976015204,
+     word path in Evening), so like the standalone links (standalone-link-targets.spec.ts) their floor is one step higher:
+     48 px. The tests still hold the measured box to the real 44 px tap minimum. */
+  .game-header .corner-button {
+    inline-size: calc(var(--spacing) * 12);
+    block-size: calc(var(--spacing) * 12);
+  }
+
+  .game-header-gear svg {
+    inline-size: calc(var(--spacing) * 6);
+    block-size: calc(var(--spacing) * 6);
+  }
+
+  /* The same outline gear as the Frame's corner button (GearIcon.tsx). */
+  .game-header-gear-icon {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--game-frame-gear-stroke);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+}

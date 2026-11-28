@@ -1,9 +1,12 @@
 /** Pure rules for the fill-in recall study mode (ROADMAP Task 4). */
+import { MAX_ANSWER_TEXT } from '../scripts/resume';
 
 export interface FillInItem {
   id: string;
   /** Exactly one answer is wrapped in double brackets, for example: "Bees make [[honey]]." */
   sentence: string;
+  /** Optional distractors for multiple-choice dropdowns. */
+  distractors?: string[];
 }
 
 export interface SentenceParts {
@@ -13,6 +16,7 @@ export interface SentenceParts {
 }
 
 export type AnswerResult = 'right' | 'close' | 'wrong';
+export type FillInInputKind = 'typed' | 'choice' | 'legacy';
 
 export interface FillInState {
   /** Item indexes in this round. */
@@ -58,12 +62,36 @@ export function parseItems(data: unknown): FillInItem[] {
     if (seen.has(value.id)) throw new Error(`fill-in item id "${value.id}" is repeated.`);
     sentenceParts(value.sentence);
     seen.add(value.id);
-    return { id: value.id, sentence: value.sentence };
+    let distractors: string[] | undefined;
+    if ('distractors' in value && value.distractors !== undefined) {
+      if (!Array.isArray(value.distractors) || !value.distractors.every((d) => typeof d === 'string' && d.trim().length > 0)) {
+        throw new Error(`distractors for item "${value.id}" must be a list of non-empty strings.`);
+      }
+      distractors = [...value.distractors.map((d) => d.trim())];
+    }
+    return { id: value.id, sentence: value.sentence, ...(distractors ? { distractors } : {}) };
   });
 }
 
-/** Case, repeated whitespace and punctuation at the end do not change an answer. */
+/**
+ * A saved attempt is `n:` or `h:` plus the typed text, and the resume format caps
+ * each string at MAX_ANSWER_TEXT characters. Bound what the student can submit so
+ * one long answer can never make every later save fail (Codex on #219).
+ */
+export const MAX_TYPED = MAX_ANSWER_TEXT - 2;
+// Control characters the resume parser rejects; a text field can still receive them by paste.
+const UNSAVEABLE = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
+export function boundTyped(value: string): string {
+  return Array.from(value.replace(UNSAVEABLE, '')).slice(0, MAX_TYPED).join('');
+}
+
+/** Ignore sentence-ending punctuation, but preserve meaningful notation such as %, /, ° and -. */
 export function normalizeAnswer(value: string): string {
+  return value.normalize('NFC').trim().toLowerCase().replace(/\s+/gu, ' ').replace(/[.,!?;:]+$/gu, '').trim();
+}
+
+/** Old saved attempts removed all trailing punctuation. Keep their original replay behavior. */
+function legacyNormalizeAnswer(value: string): string {
   return value.normalize('NFC').trim().toLowerCase().replace(/\s+/gu, ' ').replace(/\p{P}+$/gu, '').trim();
 }
 
@@ -100,12 +128,52 @@ export function isCheckKey(press: { key: string; isComposing: boolean; keyCode: 
   return press.key === 'Enter' && !press.isComposing && press.keyCode !== 229;
 }
 
-export function checkAnswer(typed: string, answer: string): AnswerResult {
-  const given = normalizeAnswer(typed);
-  const expected = normalizeAnswer(answer);
+/** Dropdown choices are right or wrong, never "close". Only typed spelling slips can be close. */
+export function checkAnswer(typed: string, answer: string, kind: FillInInputKind = 'typed'): AnswerResult {
+  if (kind === 'choice') return typed.trim() === answer.trim() ? 'right' : 'wrong';
+  const normalize = kind === 'legacy' ? legacyNormalizeAnswer : normalizeAnswer;
+  const given = normalize(typed);
+  const expected = normalize(answer);
   if (given === expected) return 'right';
+  // Symbols and signs carry meaning: adding/removing them isn't a one-letter typo.
+  if (kind === 'typed') {
+    const symbols = (text: string) => text.match(/[^\p{L}\p{N}\s]/gu)?.join('') ?? '';
+    if (symbols(given) !== symbols(expected)) return 'wrong';
+  }
   const letters = expected.match(/\p{L}/gu)?.length ?? 0;
   return letters >= 5 && editDistance(given, expected) === 1 ? 'close' : 'wrong';
+}
+
+export interface SavedFillInAttempt {
+  text: string;
+  kind: FillInInputKind;
+  hinted: boolean;
+  /** Tag to persist if this attempt came from an older saved session. */
+  stored: string;
+}
+
+/** One-letter tags plus ':' preserve the existing 500-character saved-answer limit. */
+export function encodeFillInAttempt(text: string, hinted: boolean, kind: 'typed' | 'choice'): string {
+  const prefix = kind === 'choice' ? (hinted ? 'd:' : 'c:') : (hinted ? 'h:' : 'n:');
+  return prefix + text;
+}
+
+/**
+ * Older snapshots have no format marker and use n:/h: tags for unknown input kinds.
+ * In newer snapshots, n/h mean typed, c/d dropdown, and l/m preserved legacy.
+ */
+export function parseSavedFillInAttempt(raw: unknown, oldSnapshot = false): SavedFillInAttempt | null {
+  if (typeof raw !== 'string' || raw.length < 3 || raw[1] !== ':') return null;
+  const code = raw.charAt(0);
+  if (oldSnapshot ? code !== 'n' && code !== 'h' : !'nhcdlm'.includes(code)) return null;
+  const text = raw.slice(2);
+  const kind: FillInInputKind = oldSnapshot || code === 'l' || code === 'm' ? 'legacy'
+    : code === 'c' || code === 'd' ? 'choice' : 'typed';
+  const normalize = kind === 'legacy' ? legacyNormalizeAnswer : normalizeAnswer;
+  if (!normalize(text) || boundTyped(text) !== text) return null;
+  const hinted = code === 'h' || code === 'd' || code === 'm';
+  const stored = oldSnapshot ? (hinted ? 'm:' : 'l:') + text : raw;
+  return { text, kind, hinted, stored };
 }
 
 export function startFillIn(items: readonly FillInItem[]): FillInState {
@@ -130,12 +198,14 @@ export function showHint(state: FillInState): FillInState {
 }
 
 /** Check the current answer. A close answer stays open for another try. */
-export function answerCurrent(state: FillInState, items: readonly FillInItem[], typed: string): FillInState {
+export function answerCurrent(
+  state: FillInState, items: readonly FillInItem[], typed: string, kind: FillInInputKind = 'typed',
+): FillInState {
   const index = currentIndex(state);
   if (index === undefined || state.result === 'right' || state.result === 'wrong') return state;
   const item = items[index];
   if (!item) return state;
-  const result = checkAnswer(typed, sentenceParts(item.sentence).answer);
+  const result = checkAnswer(typed, sentenceParts(item.sentence).answer, kind);
   if (result === 'close') return { ...state, result };
   const needsAnotherRound = result === 'wrong' || state.hinted;
   return {
@@ -168,4 +238,75 @@ export function nextItem(state: FillInState): FillInState {
 export function summary(state: FillInState): string {
   const rounds = state.roundNumber === 1 ? 'round' : 'rounds';
   return `all ${state.total} recalled in ${state.roundNumber} ${rounds}.`;
+}
+
+/**
+ * Build 4 multiple-choice options for a blank (the answer plus 3 distractors).
+ * If item-level distractors are present, they are preferred; otherwise distractors
+ * are drawn from other blanks' answers in the deck.
+ * Fallback values are used if fewer than 3 distractors are available.
+ * Deterministic shuffle with seed ensures stability across re-renders while varying per item.
+ */
+export function blankOptions(
+  answer: string,
+  distractors?: readonly string[],
+  otherAnswers?: readonly string[],
+  seed = 0,
+): string[] {
+  const normAnswer = normalizeAnswer(answer);
+  const seen = new Set<string>([normAnswer]);
+  const candidates: string[] = [];
+
+  if (distractors) {
+    for (const d of distractors) {
+      const trimmed = d.trim();
+      const norm = normalizeAnswer(trimmed);
+      if (norm && !seen.has(norm)) {
+        seen.add(norm);
+        candidates.push(trimmed);
+      }
+    }
+  }
+
+  if (candidates.length < 3 && otherAnswers) {
+    for (const a of otherAnswers) {
+      const trimmed = a.trim();
+      const norm = normalizeAnswer(trimmed);
+      if (norm && !seen.has(norm)) {
+        seen.add(norm);
+        candidates.push(trimmed);
+      }
+    }
+  }
+
+  // Fallbacks if deck has fewer than 4 items/distractors
+  const genericFallbacks = ['none of these', 'other', 'all of these', 'unknown'];
+  for (const fallback of genericFallbacks) {
+    if (candidates.length >= 3) break;
+    const norm = normalizeAnswer(fallback);
+    if (!seen.has(norm)) {
+      seen.add(norm);
+      candidates.push(fallback);
+    }
+  }
+
+  const chosenDistractors = candidates.slice(0, 3);
+  const pool = [answer.trim(), ...chosenDistractors];
+
+  // Deterministic pseudo-random shuffle based on seed and answer string
+  let h = seed * 31 + pool.reduce((acc, str) => acc + str.charCodeAt(0), 0);
+  const random = () => {
+    h = (h * 9301 + 49297) % 233280;
+    return h / 233280;
+  };
+
+  const result = [...pool];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    const temp = result[i]!;
+    result[i] = result[j]!;
+    result[j] = temp;
+  }
+
+  return result;
 }

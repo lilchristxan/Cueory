@@ -1,0 +1,2 @@
+status: in review · task-games-v2/wordpill-rename · the game players knew as vialo is now wordpill everywhere they can see it, at /play/wordpill (the old /play/vialo address sends visitors on); new wordmark "B" and icon "L1" drawn as outlines by scripts/generate-wordpill-art.py; Evening uses the thin ivory rim (E1, approved by Christian)
+decision: D-pending · vialo is renamed wordpill; wordmark B and icon L1 are Christian's approved designs, drawn at his instruction, 2026-11-26

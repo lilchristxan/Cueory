@@ -1,36 +1,45 @@
 ---
 import AccountCorner from './AccountCorner.astro';
 import SiteMenu from './SiteMenu.astro';
+import SiteNav from './SiteNav.astro';
 import Wordmark from './Wordmark.astro';
 import { site } from '../config/site';
 
 interface Props {
   /** Study screens: the same corners, kept quiet (no frosted circles). */
   quiet?: boolean;
-  /**
-   * The home page: only the two corners, laid over the top of the full-screen hero, which shows its own logo. The
-   * header leaves the page flow there (Layout.astro wraps it in a zero-height box under the notice), so the hero
-   * still fills the first screen and nothing moves.
-   */
+  /** Home uses the two-row board header. Other pages use the existing sticky or quiet header. */
   overlay?: boolean;
+  /** The page's accounts gate is closed: the account corner stays signed out and never loads Supabase. */
+  accountsOff?: boolean;
 }
 
-const { quiet = false, overlay = false } = Astro.props;
+const { quiet = false, overlay = false, accountsOff = false } = Astro.props;
+// Redesign P2: from the large breakpoint up, pages that aren't study screens show the persistent pill between the
+// logo and the account corner (SiteNav.astro). Study screens keep the quiet corners only, and below that breakpoint
+// the ☰ panel stays the menu, so nothing changes on phones and tablets.
+const bar = !quiet;
 ---
 
 <header
+  data-scroll-header={overlay ? undefined : ''}
   class:list={[
-    'z-20 flex w-full items-center gap-4 px-gutter py-4',
-    overlay ? 'absolute inset-x-0 top-0' : 'relative',
+    'z-20 w-full',
+    !overlay && 'flex items-center gap-(--header-corner-gap) px-(--header-inline-gutter) py-4',
+    // With enlarged text the pill can be wider than the screen: let the bar wrap onto a second row, never scroll sideways.
+    !overlay && bar && 'lg:flex-wrap',
+    overlay ? 'home-board-header absolute inset-x-0 top-0' : 'sticky top-0 site-header-sticky',
   ]}
 >
-  <!-- ☰ in the top-left corner, the account in the top-right (D-46). -->
-  <div class="flex flex-1 justify-start">
+  <!-- ☰ in the top-left corner, the account in the top-right (D-46). Home (boards of 2026-11-24) is one row: ☰, logo, search + sign in; its links are in the side bar. -->
+  <div class:list={['flex flex-1 justify-start', overlay && 'home-menu', !overlay && bar && 'lg:flex-none']}>
     <SiteMenu quiet={quiet} />
   </div>
   {
     overlay ? (
-      <span />
+      <a href="/" aria-label={`${site.name} home`} class="home-brand justify-self-center">
+        <Wordmark class="home-brand-art" sizes="10.25rem" preloadBothOnDesktop />
+      </a>
     ) : (
       <a href="/" class="p-(--logo-clear) text-ink" aria-label={`${site.name} home`}>
         {/*
@@ -38,19 +47,200 @@ const { quiet = false, overlay = false } = Astro.props;
           compact emblem (guide §6.1: small, unobtrusive branding during study). Other pages get the full logo at
           240px (guide §3.5) where it fits beside the two corner buttons, and the emblem on phones, where 240px plus
           the corners, gaps and gutters would be wider than the screen.
+          The full logo loads lazily (performance, 2026-11-19): phones hide it, and a hidden lazy picture is never
+          downloaded, so a phone no longer fetches both 960px full-logo files (about 70 KB) it never shows. From 640px
+          the shown copy loads as soon as the page is laid out. The phone emblem stays eager.
         */}
         {quiet ? (
-          <Wordmark variant="emblem" class="w-(--logo-emblem)" sizes="2.25rem" />
+          <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem)" sizes="2.25rem" />
         ) : (
           <>
-            <Wordmark variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
+            <Wordmark loading="eager" variant="emblem" class="w-(--logo-emblem) sm:hidden" sizes="2.25rem" />
             <Wordmark class="hidden w-(--logo-width) sm:block" sizes="15rem" />
           </>
         )}
       </a>
     )
   }
-  <div class="flex flex-1 justify-end">
-    <AccountCorner quiet={quiet} />
-  </div>
+  {
+    overlay ? (
+      <div class="home-utilities">
+        <SiteNav home />
+        <AccountCorner quiet={quiet} accountsOff={accountsOff} pill />
+      </div>
+    ) : (
+      <>
+        {bar && (
+          <div class="hidden min-w-0 lg:flex lg:flex-1 lg:justify-center">
+            <SiteNav />
+          </div>
+        )}
+        <div class:list={['flex flex-1 justify-end', bar && 'lg:flex-none']}>
+          <AccountCorner quiet={quiet} accountsOff={accountsOff} />
+        </div>
+      </>
+    )
+  }
 </header>
+
+<!-- Home stays in normal flow; other headers retain their sticky reading controls. -->
+<style>
+  /* Home: one row, as on the boards. Menu button left, the logo centred, search and sign in right. */
+  header.home-board-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    padding-inline: var(--home-header-gutter);
+    padding-block-start: var(--home-header-pad-top);
+  }
+  .home-brand { grid-area: 1 / 2; width: var(--home-header-brand-width); max-width: 100%; }
+  .home-brand :global(.home-brand-art) { display: block; width: 100%; }
+  .home-menu { grid-area: 1 / 1; }
+  .home-utilities {
+    grid-area: 1 / 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: var(--home-header-gap);
+  }
+  .home-utilities :global([data-site-nav]) { display: contents; }
+  /* The three round buttons share one size; a button drawn under 44 px keeps a 44 px hit area around it. */
+  .home-menu :global([data-menu-open]),
+  .home-utilities :global([data-menu-search]) {
+    position: relative;
+    inline-size: var(--home-btn);
+    block-size: var(--home-btn);
+  }
+  .home-menu :global([data-menu-open])::after,
+  .home-utilities :global([data-menu-search])::after,
+  .home-utilities :global([data-account-toggle])::after {
+    content: '';
+    position: absolute;
+    inset: min(var(--spacing) * 0, calc((var(--home-btn) - var(--tap-min)) / 2));
+  }
+  .home-menu :global([data-menu-open] svg),
+  .home-utilities :global([data-menu-search] svg) {
+    inline-size: var(--home-icon);
+    block-size: var(--home-icon);
+  }
+  .home-menu :global([data-menu-open] path),
+  .home-utilities :global([data-menu-search] path),
+  .home-utilities :global([data-menu-search] circle) { stroke-width: 1.8; }
+  /* The account is the copper button of the board: a round icon on phones, the "sign in" pill from 640 px. */
+  .home-utilities :global([data-account-toggle]) {
+    position: relative;
+    inline-size: var(--home-signin-height);
+    block-size: var(--home-signin-height);
+    color: var(--cueory-copper-ink);
+    border-color: transparent;
+    background-color: transparent;
+    background-image: linear-gradient(110deg, var(--cueory-copper-start), var(--cueory-copper-end) 72%, var(--cueory-copper-shine));
+    background-origin: border-box; /* the 1 px border would otherwise show the gradient's next tile */
+    box-shadow: var(--shadow-button);
+    gap: var(--home-signin-gap);
+    font-size: var(--home-signin-size);
+  }
+  .home-utilities :global([data-account-toggle]::after) { inset: min(var(--spacing) * 0, calc((var(--home-signin-height) - var(--tap-min)) / 2)); }
+  .home-utilities :global([data-account-toggle] svg) { inline-size: var(--home-signin-icon); block-size: var(--home-signin-icon); }
+  .home-utilities :global([data-account-toggle] svg *) { stroke-width: 1.8; }
+  .home-utilities :global([data-account-toggle]:hover) { filter: brightness(1.04); }
+  .home-utilities :global(.account-pill-label) { display: none; font-weight: 700; font-size: var(--home-signin-size); }
+  @media (min-width: 40rem) {
+    .home-utilities :global([data-account-toggle]:not([data-signed-in])) {
+      inline-size: auto;
+      padding-inline: var(--home-signin-pad);
+    }
+    .home-utilities :global([data-account-toggle]:not([data-signed-in]) .account-pill-label) { display: inline; }
+  }
+
+  :global(.home-header-wrap) { container-type: inline-size; }
+
+  header.site-header-sticky {
+    /* The page tint stays legible in both palettes. The existing glass opacity and blur are shared tokens. */
+    background-color: var(--color-page);
+    background-color: rgb(from var(--color-page) r g b / var(--panel-alpha));
+    -webkit-backdrop-filter: blur(var(--blur-veil));
+    backdrop-filter: blur(var(--blur-veil));
+    box-shadow: var(--shadow-soft);
+    /* Task 77 supplies these motion tokens; use its documented values until it merges. */
+    transition: transform var(--duration-base, 240ms) var(--ease-soft, ease);
+  }
+
+  header.site-header-sticky.is-tucked {
+    transform: translateY(-100%);
+    pointer-events: none;
+  }
+
+  /*
+   * Keep scrollIntoView, keyboard focus and in-page links below the sticky home link.
+   * The clearances include the logo, its clear space, py-4 and a little breathing room.
+   * Phone: 28 spacing units (112px); sm and larger: 36 units (144px).
+   * Home's absolute overlay has no data-scroll-header, so it keeps its normal scroll behavior.
+   */
+  :global(html:has([data-scroll-header])) {
+    scroll-padding-top: calc(var(--spacing) * 28);
+  }
+
+  @media (min-width: 40rem) {
+    :global(html:has([data-scroll-header])) {
+      scroll-padding-top: calc(var(--spacing) * 36);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    header.site-header-sticky,
+    header.site-header-sticky.is-tucked {
+      transform: none;
+      transition: none;
+    }
+
+    header.site-header-sticky.is-tucked {
+      pointer-events: auto;
+    }
+  }
+</style>
+
+<script>
+  import { nextHeaderState, type HeaderState } from '../scripts/headerscroll';
+
+  const header = document.querySelector<HTMLElement>('[data-scroll-header]');
+  if (header) {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const menuDialog = header.querySelector<HTMLDialogElement>('#site-menu');
+    const menuButton = header.querySelector<HTMLButtonElement>('[data-menu-open]');
+    const accountButton = header.querySelector<HTMLButtonElement>('[data-account-toggle]');
+    let previous: HeaderState = 'visible';
+    let lastY = Math.max(0, window.scrollY);
+
+    const refresh = () => {
+      const scrollY = Math.max(0, window.scrollY);
+      const focusInside = header.contains(document.activeElement);
+      // Safari may leave a clicked account button unfocused. Its expanded state still keeps the header visible.
+      const menuOpen = menuDialog?.open === true
+        || menuButton?.getAttribute('aria-expanded') === 'true'
+        || accountButton?.getAttribute('aria-expanded') === 'true';
+      previous = reducedMotion.matches
+        ? 'visible'
+        : nextHeaderState(previous, scrollY, lastY, focusInside, menuOpen);
+      header.classList.toggle('is-tucked', previous === 'hidden');
+      lastY = scrollY;
+    };
+
+    window.addEventListener('scroll', refresh, { passive: true });
+    header.addEventListener('focusin', refresh);
+    // Let focus settle on its new target before deciding whether the header may tuck away.
+    header.addEventListener('focusout', () => requestAnimationFrame(() => {
+      // Leaving the header at the same scroll position is still a downward navigation event for the sticky chrome.
+      // Give the state helper a one-pixel delta so it can tuck the header without waiting for another wheel/touch move.
+      lastY = Math.max(0, window.scrollY - 1);
+      refresh();
+    }));
+    // The menu is a native dialog, which can move focus away from its opening button.
+    menuDialog?.addEventListener('toggle', refresh);
+    menuDialog?.addEventListener('close', refresh);
+    menuButton?.addEventListener('click', () => requestAnimationFrame(refresh));
+    accountButton?.addEventListener('click', () => requestAnimationFrame(refresh));
+    reducedMotion.addEventListener('change', refresh);
+    refresh();
+  }
+</script>

@@ -1,0 +1,1 @@
+status: Status batch for 24 Nov: moved 48 status notes of merged pull requests into docs/STATUS.md and 15 decisions into docs/DECISIONS.md (D-193 to D-207), and listed the open pull requests that wait on Christian. Documentation only.
