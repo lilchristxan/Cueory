@@ -38,15 +38,19 @@ assumed.
    registration has not opened. Before opening, both need approved wording that says what accounts store: the
    Supabase account, what Google shares at sign-in, sign-in sessions, and account emails sent through Resend. The
    wording is Christian's to approve.
-7. **Production database.** Restore `cueory-prod`, apply the same 20 changes in order, run the security check, and
-   confirm nightly backups run against it. Keep it awake: a free project pauses again after 7 quiet days.
-8. **Production sign-in.** docs/SETUP.md Part O: the same settings for `cueory-prod`, with the production Site URL
+7. **Production database.** Restore `cueory-prod`, apply the same 20 changes in order and run the security check.
+   Keep it awake: a free project pauses again after 7 quiet days.
+8. **Backups proven, not just running.** Before any student record is stored (SECURITY.md, backups rule;
+   docs/BACKUPS.md): one completed encrypted off-site upload of `cueory-prod`, and one successful practice restore
+   into a scratch database, with the date and result written down. A backup that runs but has never been restored
+   does not pass this step.
+9. **Production sign-in.** docs/SETUP.md Part O: the same settings for `cueory-prod`, with the production Site URL
    and both return addresses (`/auth/callback**` and `/reset-password`), and the production Google client. Then the
    two production build variables.
-9. **Admin.** Cloudflare Access in front of `/admin` on the live site (SECURITY.md rule 10: it must be in place before
+10. **Admin.** Cloudflare Access in front of `/admin` on the live site (SECURITY.md rule 10: it must be in place before
    any admin page is public), checked from a signed-out browser. Then Christian's own account added to `admins` (by
    hand in the SQL editor, by design) with two-factor on.
-10. **Open the live site.** Only now does `accountsOpen` change to `true`, in its own pull request that Christian
+11. **Open the live site.** Only now does `accountsOpen` change to `true`, in its own pull request that Christian
     approves. It is one shared setting, not a staging-only one: once it reaches `main` with the production variables
     present, sign-in is open to everyone.
 
@@ -82,9 +86,10 @@ Possible at any time, and it does not block accounts. What changes:
 
 - Restore `cueory-prod` (one button in Supabase), or say "restore prod" and Claude does it.
 - The two staging build variables in Cloudflare (step 1), and SETUP Parts M and N for staging, if not already done.
-- SETUP Part O and the production build variables when step 8 is reached.
+- SETUP Part O and the production build variables when step 9 is reached.
 - Resend account and the domain's email records.
 - Approve the account wording for `/privacy` and `/terms`.
+- The practice restore of a production backup (docs/BACKUPS.md), with Claude walking through it.
 - Cloudflare Access for `/admin` on the live site.
 - Approve the insights database change when its pull request is up.
 - Approve the pull request that opens accounts.
