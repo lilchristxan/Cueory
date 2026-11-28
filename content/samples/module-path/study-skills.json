@@ -1,0 +1,40 @@
+{
+  "id": "sample-study-skills",
+  "course": "study-skills",
+  "title": "Study skills (labeled sample module)",
+  "status": "sample",
+  "lessons": [{
+    "id": "study-skills-01",
+    "video": "study-skills-01",
+    "reading": "study-skills-01",
+    "board": "lesson-board",
+    "anchors": [
+      { "id": "sample-video", "kind": "video", "startSeconds": 0, "endSeconds": 15, "sampleTiming": true },
+      { "id": "sample-reading", "kind": "reading", "section": "ss01-s02" }
+    ],
+    "objectives": [{
+      "id": "classify-sample-information",
+      "title": "Classify information in the labeled sample activities.",
+      "concepts": ["study-skills"],
+      "bloom": "understand",
+      "anchors": ["sample-video", "sample-reading"]
+    }],
+    "items": [
+      { "id": "ss01-c01", "activity": "flashcard", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" },
+      { "id": "ss01-c02", "activity": "flashcard", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" },
+      { "id": "ss01-c03", "activity": "flashcard", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" },
+      { "id": "roof", "activity": "label-it", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+      { "id": "chimney", "activity": "label-it", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+      { "id": "window", "activity": "label-it", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+      { "id": "door", "activity": "label-it", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
+      { "id": "fruit", "activity": "learning-question", "lo": "classify-sample-information", "bloom": "understand", "level": 1, "anchor": "sample-reading" },
+      { "id": "honey", "activity": "fill-in", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" },
+      { "id": "days", "activity": "fill-in", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" },
+      { "id": "pencil", "activity": "fill-in", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" },
+      { "id": "umbrella", "activity": "fill-in", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" },
+      { "id": "study-skills-01", "activity": "matching", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" },
+      { "id": "weekdays", "activity": "diagnostic", "lo": "classify-sample-information", "bloom": "understand", "level": 2, "anchor": "sample-reading" },
+      { "id": "hour", "activity": "practice-exam", "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-reading" }
+    ]
+  }]
+}

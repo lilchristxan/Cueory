@@ -62,6 +62,22 @@ mkdir -p work/adaptive
 node work/adaptive/simulation.cjs
 ```
 
+## Module path and course map
+
+The module path adds an evidence record for each learning objective and thinking skill. The existing card engine schedules retention. A learner can remember a particular card while still needing practice applying the underlying idea. The module practice exam is always open. A readiness recommendation appears when every objective has sufficient evidence at both understand and apply. [Implementation brief and phase order](https://github.com/lilchristxan/Cueory/issues/1281)
+
+1. Begin with a lesson's video and reading. Each objective points to a teaching segment or reading section. Items carry their own objective, Bloom tier, difficulty and anchor. For example, an objective can target application while an earlier item asks the student to explain the idea. Bloom describes the thinking an item requires. A multiple-choice item can ask for a judgment, and a hard recall item can still be recall. [Krathwohl's overview of the revised taxonomy](https://doi.org/10.1207/s15430421tip4104_2)
+2. Offer a short round of flashcards, label it, learning questions, dropdown blanks and matching. Then use an understand or apply diagnostic item per objective. Start at level 2 when available. Follow a correct answer with an unused level 3 item when available.
+3. Send a learner with a gap back to the relevant lesson anchor before recognition, recall and application practice. Developing objectives get recall and application. Sufficient objectives get spaced review. Explain the selection, interleave objectives and cap the session at 20 items.
+4. Offer an optional analyze and evaluate track after readiness. Score the action the item asks for. Analysis requires working out relationships. Evaluation requires a judgment against criteria. Design cases with the six judgment functions in mind, using original, labeled samples on the preview. [NCSBN's model and use terms](https://www.nclex.com/clinical-judgment-measurement-model.page)
+5. Assemble the practice exam from fresh items according to its blueprint. Show the actual count right and reopen objectives with misses. The course map brings together understanding, application, analysis, evaluation and real-world application. Evidence for the last dimension comes from scored cases involving objectives in at least two distinct modules.
+
+The pilot starts each objective and tier with one unit of prior weight on each outcome, Beta(1,1). Matching and card flips contribute 0.5, label it and blanks 0.75, learning questions and diagnostic items 1.0, and exam items 1.25. A cue halves the weight and a timeout is a miss. A correct higher-tier response also contributes partial evidence to lower tiers within that objective. Sufficient requires a tenth-percentile lower bound of at least 0.70, at least 3 units of observed evidence and a first-try success on a previously unseen item. A student sees a status word, icon and evidence count. The probabilities stay inside the model.
+
+These thresholds are Cueory trial settings. Phase 8 will measure time to readiness, premature readiness and practice workload against independently simulated skills. Production Learn and browser saving stay off for this trial. Public fixtures use labeled sample content only. Later phases add the locked previews and case evidence.
+
+The build checks sample item IDs against their existing lesson sources. For a published module, it checks item IDs and activity types against an approved, answer-free inventory. That check establishes which items the authoring process declared. The permission-checked question service remains responsible for availability and grading. The public repository contains only the labeled sample.
+
 ## Progress log
 
 - [#1256](https://github.com/lilchristxan/Cueory/pull/1256) — design draft with the model, release boundaries and research references.
@@ -69,6 +85,7 @@ node work/adaptive/simulation.cjs
 - [#1258](https://github.com/lilchristxan/Cueory/pull/1258) — shipped the on-device progress format and migration to staging. Browser saving remains disconnected.
 - [#1266](https://github.com/lilchristxan/Cueory/pull/1266) — shipped the locked sample preview, backwards-clock recovery and measured route budget to staging.
 - [#1275](https://github.com/lilchristxan/Cueory/pull/1275) — shipped the Learn connection to staging with the switch off. The existing see, choose and type flow stays active. Explicit opt-in is limited to the labeled study-skills deck in builds that allow samples.
+- [Module path phase 1](https://github.com/lilchristxan/Cueory/pulls?q=is%3Apr+head%3Atask-adaptive%2Fmodule-content) adds the content model, sample board metadata and publication checks for objective coverage.
 
 ## Staging trial approval
 

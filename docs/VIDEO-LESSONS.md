@@ -23,11 +23,13 @@ Code: `src/lessons/board.ts`. Labeled sample: `content/samples/templates/lesson-
   "title": "the parts of a house (everyday sample)",
   "pictures": [
     { "id": "house", "image": { "src": "…", "alt": "…", "width": 800, "height": 600, "credit": "…" },
-      "labels": [{ "id": "roof", "text": "roof", "x": 42, "y": 5, "w": 16, "h": 7.5 }] }
+      "labels": [{ "id": "roof", "text": "roof", "x": 42, "y": 5, "w": 16, "h": 7.5,
+        "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" }] }
   ],
   "clauses": [
     { "id": "c1", "said": "The roof covers the top of the house.",
-      "question": "What covers the top of the house?", "answer": "roof", "label": "roof" },
+      "question": "What covers the top of the house?", "answer": "roof", "label": "roof",
+      "lo": "classify-sample-information", "bloom": "remember", "level": 1, "anchor": "sample-video" },
     { "id": "c5", "said": "That is the whole house." }
   ]
 }
@@ -37,6 +39,13 @@ Code: `src/lessons/board.ts`. Labeled sample: `content/samples/templates/lesson-
 - `clauses[].said`: the clause exactly as narrated. `question` and `answer` come from the reviewed script and are
   given together or not at all. `label` names the label this clause writes; every label must be written by a clause.
 - `status`: `sample`, `draft` or `approved`. Only an approved board may reach a public lesson.
+
+For a module path board, tag each study clause and picture label with four fields. `lo` names the lesson objective.
+`bloom` records the thinking this particular item requires (remember, understand, apply, analyze or evaluate).
+`level` records its difficulty from 1 to 3. `anchor` names one of that objective's teaching segments.
+Narration without an activity needs no study tags. The [labeled module manifest](../content/samples/module-path/study-skills.json)
+points to an existing placeholder reading sentence and an illustrative time range for the placeholder video.
+These source IDs let us test the connections before reviewed teaching material is available.
 
 ## Rules
 

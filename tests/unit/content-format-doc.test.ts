@@ -3,15 +3,13 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 const guide = readFileSync(new URL('../../docs/CONTENT-FORMAT.md', import.meta.url), 'utf8');
 const readme = readFileSync(new URL('../../content/README.md', import.meta.url), 'utf8');
-function variables(): Map<string, ts.Expression> {
+function variables(path: string): Map<string, ts.Expression> {
   const vars = new Map<string, ts.Expression>();
-  for (const path of ['../../src/content.config.ts', '../../src/videos/schema.ts']) {
-    const file = new URL(path, import.meta.url);
-    const ast = ts.createSourceFile(file.pathname, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
-    for (const stmt of ast.statements) if (ts.isVariableStatement(stmt))
-      for (const decl of stmt.declarationList.declarations)
-        if (ts.isIdentifier(decl.name) && decl.initializer) vars.set(decl.name.text, decl.initializer);
-  }
+  const file = new URL(path, import.meta.url);
+  const ast = ts.createSourceFile(file.pathname, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+  for (const stmt of ast.statements) if (ts.isVariableStatement(stmt))
+    for (const decl of stmt.declarationList.declarations)
+      if (ts.isIdentifier(decl.name) && decl.initializer) vars.set(decl.name.text, decl.initializer);
   return vars;
 }
 function name(p: ts.PropertyName): string {
@@ -35,11 +33,21 @@ function paths(expr: ts.Expression, vars: Map<string, ts.Expression>): string[] 
     if (ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression)) {
       const op = e.expression.name.text, receiver = e.expression.expression;
       if (op === 'optional') return walk(receiver, path, true, include, stack);
-      if (op === 'object') {
+      if (op === 'discriminatedUnion') {
+        const variants = e.arguments[1];
+        if (!variants || !ts.isArrayLiteralExpression(variants)) throw new Error('Missing schema variants: ' + path);
+        for (const variant of variants.elements) walk(variant, path, optional, include, stack);
+        return;
+      }
+      if (op === 'object' || op === 'strictObject') {
         add();
         const shape = e.arguments[0];
         if (!shape || !ts.isObjectLiteralExpression(shape)) throw new Error('Invalid z.object: ' + path);
         for (const p of shape.properties) {
+          if (ts.isSpreadAssignment(p) && ts.isPropertyAccessExpression(p.expression) && p.expression.name.text === 'shape') {
+            walk(p.expression.expression, path, optional, false, stack);
+            continue;
+          }
           if (ts.isShorthandPropertyAssignment(p)) {
             walk(p.name, path ? path + '.' + p.name.text : p.name.text, false, true, stack);
             continue;
@@ -63,7 +71,12 @@ function paths(expr: ts.Expression, vars: Map<string, ts.Expression>): string[] 
   return [...out].sort();
 }
 function schemas(): Map<string, string[]> {
-  const vars = variables(), exported = vars.get('collections');
+  const vars = variables('../../src/content.config.ts'), exported = vars.get('collections');
+  // Resolve each imported collection schema in the file where its aliases are declared.
+  const imported = new Map([
+    ['videoSchema', variables('../../src/videos/schema.ts')],
+    ['modulePathSchema', variables('../../src/lessons/module-path.ts')],
+  ]);
   if (!exported || !ts.isObjectLiteralExpression(exported)) throw new Error('Missing collections');
   const result = new Map<string, string[]>();
   for (const item of exported.properties) {
@@ -76,7 +89,10 @@ function schemas(): Map<string, string[]> {
     if (!c || !ts.isCallExpression(c)) throw new Error('Missing collection ' + ref);
     const options = c.arguments[0];
     if (!options || !ts.isObjectLiteralExpression(options)) throw new Error('Missing collection options');
-    result.set(key, paths(field(options, 'schema'), vars));
+    const schema = field(options, 'schema');
+    const scope = ts.isIdentifier(schema) ? imported.get(schema.text) ?? vars : vars;
+    if (ts.isIdentifier(schema) && !scope.has(schema.text)) throw new Error('Unknown collection schema ' + schema.text);
+    result.set(key, paths(schema, scope));
   }
   return result;
 }
@@ -109,6 +125,13 @@ describe('content format guide', () => {
     const actual = schemas(), documented = index();
     expect([...documented.keys()].sort()).toEqual([...actual.keys()].sort());
     for (const [collection, fields] of actual) expect(documented.get(collection), collection).toEqual(fields);
+  });
+  it('reads both kinds of module anchor and all four inherited item tags', () => {
+    expect(schemas().get('modulePaths')).toEqual(expect.arrayContaining([
+      'lessons[].anchors[].startSeconds', 'lessons[].anchors[].endSeconds',
+      'lessons[].anchors[].sampleTiming?', 'lessons[].anchors[].section',
+      'lessons[].items[].lo', 'lessons[].items[].bloom', 'lessons[].items[].level', 'lessons[].items[].anchor',
+    ]));
   });
   it('uses schema field names in every example', () => {
     const actual = schemas();

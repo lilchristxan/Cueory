@@ -19,7 +19,8 @@ describe('lesson board: one file from a teaching video becomes every way to stud
     // The sample board carries the same picture and covers as the label-it sample on the site.
     const live = JSON.parse(readFileSync(join(root, 'content', 'label-it', 'study-skills-01.json'), 'utf8'));
     expect(set!.image).toEqual(live.image);
-    expect(set!.labels).toEqual(live.labels);
+    expect(set!.labels.map(({ id, text, x, y, w, h }) => ({ id, text, x, y, w, h }))).toEqual(live.labels);
+    expect(set!.labels[0]).toMatchObject({ lo: 'classify-sample-information', bloom: 'remember', level: 1, anchor: 'sample-video' });
   });
 
   it('gives each picture its own set when a board has several', () => {
@@ -33,13 +34,25 @@ describe('lesson board: one file from a teaching video becomes every way to stud
   it('turns only the clauses that teach a fact into study rows, with a fill-in sentence', () => {
     const rows = boardRows(parseBoard(sample()));
     expect(rows.map((row) => row.id)).toEqual(['c1', 'c2', 'c3', 'c4']);
-    expect(rows[0]).toEqual({ id: 'c1', question: 'What covers the top of the house?', answer: 'roof', sentence: 'The ___ covers the top of the house.' });
+    expect(rows[0]).toEqual({ id: 'c1', question: 'What covers the top of the house?', answer: 'roof', sentence: 'The ___ covers the top of the house.', lo: 'classify-sample-information', bloom: 'remember', level: 1, anchor: 'sample-video' });
   });
 
   it('blanks whole words only and leaves the sentence out when the answer is not said', () => {
     const board = sample();
     board.clauses[0] = { id: 'c1', said: 'Roofing keeps rain out.', question: 'What keeps rain out?', answer: 'roof', label: 'roof' };
     expect(boardRows(board)[0]).toEqual({ id: 'c1', question: 'What keeps rain out?', answer: 'roof' });
+  });
+
+  it('accepts an older untagged board and rejects a partial set of study tags', () => {
+    const board = sample();
+    const clause = board.clauses[0]!;
+    delete clause.lo;
+    expect(boardProblems(board)).toContain('board "sample-house": clause "c1" needs lo, bloom, level and anchor study tags');
+    delete clause.bloom;
+    delete clause.level;
+    delete clause.anchor;
+    expect(boardProblems(board)).toEqual([]);
+    expect(boardRows(board)[0]).not.toHaveProperty('lo');
   });
 
   it('borrows wrong choices from the same lesson and never repeats the right answer', () => {
