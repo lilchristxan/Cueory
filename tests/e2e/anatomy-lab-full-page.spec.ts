@@ -132,6 +132,11 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     // Asking for a set view stops the turning.
     await page.getByRole('button', { name: 'anterior view', exact: true }).click();
     await expect(spin).toHaveAttribute('aria-pressed', 'false');
+    // Turning reduced motion on while it turns stops it too, and the button says so.
+    await spin.click();
+    await expect(spin).toHaveAttribute('aria-pressed', 'true');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await expect(spin).toHaveAttribute('aria-pressed', 'false');
   });
 
   test('with reduced motion the model starts still', async ({ page }) => {

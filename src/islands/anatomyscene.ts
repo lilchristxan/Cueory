@@ -310,6 +310,13 @@ const VISIBILITY_IDLE_MS = 120;
 /** The ID picture's size: about this many pixels, whatever the view's size (enough to find small visible parts). */
 const ID_PICTURE_PIXELS = 360_000;
 
+function sameIds(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a === b) return true;
+  if (a.size !== b.size) return false;
+  for (const id of a) if (!b.has(id)) return false;
+  return true;
+}
+
 export function createLabScene({ canvas, reducedMotion, colors: initialColors, posture: initialPosture, onRender, onSpinStop }: Options): LabScene {
   let colors = initialColors;
   let currentReducedMotion = reducedMotion;
@@ -820,6 +827,11 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
   function setReducedMotion(reduced: boolean) {
     currentReducedMotion = reduced;
     controls.enableDamping = !reduced;
+    // Reduced motion turned on while the model turns by itself: stop it, and tell the page so its button agrees.
+    if (reduced && spinning) {
+      spinning = false;
+      onSpinStop?.();
+    }
     requestRender();
   }
 
@@ -1340,7 +1352,10 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     load,
     add,
     setAppearance(next) {
+      const before = appearance.hidden;
       appearance = next;
+      // The board holds only the parts on show, so hiding or bringing back a part while spread re-lays it.
+      if (spread > 0 && !sameIds(before, next.hidden)) applySpread();
       applyAppearance();
     },
     setColors(next) {
