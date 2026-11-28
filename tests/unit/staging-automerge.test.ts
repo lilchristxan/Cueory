@@ -147,6 +147,14 @@ describe('held paths', () => {
     'src/islands/anatomyscene.ts',
     'src/pages/preview/anatomy-lab.astro',
     'src/pages/preview/anatomy-text.astro',
+    'src/pages/preview/anatomy-review/index.astro',
+    'src/pages/preview/anatomy-review/[system].astro',
+    'src/pages/preview/anatomy-review.astro',
+    'src/pages/anatomy.astro',
+    'src/pages/anatomy/index.astro',
+    'src/islands/anatomypublic.ts',
+    'src/islands/AnatomyReviewPictures.tsx',
+    'src/components/SiteMenu.astro',
     'scripts/build-anatomy.mjs',
     'scripts/anatomy-review-report.mjs',
     'scripts/anatomy-source-url.mjs',
@@ -185,6 +193,31 @@ describe('held paths', () => {
   it.each(never)('%s never does', (path) => {
     expect(isHeldPath(path, 'prelaunch')).toBe(false);
     expect(isHeldPath(path, 'launched')).toBe(false);
+  });
+
+  it('does not auto-merge a new public Anatomy Lab or founder review-sheet gate, even with green checks', () => {
+    // These paths are created by separate Task 178 proposals. They must be held
+    // before those PRs merge, so an unattended later edit cannot expose drafts.
+    const paths = [
+      'src/pages/anatomy.astro',
+      'src/pages/anatomy/index.astro',
+      'src/islands/anatomypublic.ts',
+      'src/components/SiteMenu.astro',
+      'src/pages/preview/anatomy-review/index.astro',
+      'src/pages/preview/anatomy-review/[system].astro',
+      'src/islands/AnatomyReviewPictures.tsx',
+    ];
+    for (const mode of ['prelaunch', 'launched'] as const) {
+      for (const path of paths) {
+        const decision = decide(input({ mode, files: [{ filename: path }] }));
+        expect(decision.action, `${mode}: ${path}`).toBe('label');
+        expect(decision.reasons.join(' '), `${mode}: ${path}`).toContain(path);
+      }
+    }
+    expect(heldPaths([{
+      filename: 'src/islands/cards.ts',
+      previous_filename: 'src/pages/preview/anatomy-review/[system].astro',
+    }], 'prelaunch')).toEqual(['src/pages/preview/anatomy-review/[system].astro']);
   });
 
   it('counts both sides of a rename', () => {

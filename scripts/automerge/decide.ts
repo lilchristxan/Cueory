@@ -66,6 +66,8 @@ const ALWAYS_HELD_PREFIXES = [
   '.github/', 'scripts/automerge/', 'content/', 'supabase/',
   'public/models/anatomy/', // Founder reviews every 3D model binary before it reaches staging.
   'src/pages/preview/anatomy-fixture/', // Test fixture endpoint must never become an unattended production route.
+  'src/pages/preview/anatomy-review/', // Draft-only founder review sheets, including future per-system routes.
+  'src/pages/anatomy/', // Alternate public anatomy route files could otherwise bypass the gate.
   'src/pages/auth/', 'src/pages/account/', 'src/pages/admin/', 'src/pages/preview/admin-',
 ];
 const ALWAYS_HELD_FILES = new Set([
@@ -89,6 +91,11 @@ const ALWAYS_HELD_FILES = new Set([
   'src/islands/anatomyscene.ts', // Renders mandatory source credits in exported anatomy PNGs.
   'src/pages/preview/anatomy-lab.astro', // Serializes the model selection into the page.
   'src/pages/preview/anatomy-text.astro', // Serializes source names without JavaScript under the same draft gate.
+  'src/pages/preview/anatomy-review.astro', // Future single-file review-sheet index must also wait for review.
+  'src/pages/anatomy.astro', // Public-facing route may expose only founder-approved models.
+  'src/islands/anatomypublic.ts', // The production-only model selection gate for that route and navigation.
+  'src/islands/AnatomyReviewPictures.tsx', // Generates credit-bearing review pictures from unpublished models.
+  'src/components/SiteMenu.astro', // Controls when the public Anatomy Lab navigation is visible.
   'scripts/build-anatomy.mjs', // Source-driven geometry and label generation.
   'scripts/anatomy-review-report.mjs',
   'scripts/anatomy-source-url.mjs', // Model generator's official source/rights URL mapping. // Provides the founder's prepublication labels and rights inventory.
