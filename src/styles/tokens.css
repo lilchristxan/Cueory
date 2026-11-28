@@ -58,6 +58,14 @@
   /* Ivory and Espresso text fail 4.5:1 on the copper stops; Charcoal passes on all four (4.65 or more). */
   --cueory-copper-ink: #1c1917;   /* Charcoal — text on the gradient, in both themes */
   /* Game accents (Christian, 20 Nov 2026; docs/BRAND.md). Teal is for piccline only; dim is for vialo's unlit board cells on dark. */
+  /* Conventional colours for anatomical parts (Christian, 2026-11-27): red arteries, blue veins, yellow nerves, brown
+     muscles, as anatomy atlases and models print them (sources in src/islands/anatomycolours.ts). These are the one
+     place the anatomy lab steps outside the brand palette, on his instruction; bones and organs keep the lab's own
+     model colours. Chosen to read on the black and on the white stage. */
+  --anatomy-artery: #c9463d;
+  --anatomy-vein: #3f6fb5;
+  --anatomy-nerve: #d9b53a;
+  --anatomy-muscle: #9a5b45;
   --color-game-teal: #2f7a78;     /* Teal         — piccline accent in Daytime */
   --color-game-dim: #5a463a;      /* Dim          — vialo unlit cells on dark */
   --cueory-glass-bg: rgb(var(--glass-rgb) / var(--glass-alpha));

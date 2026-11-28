@@ -1,3 +1,4 @@
+import { conventionalTint, TINT_TOKEN } from './anatomycolours';
 import { isApplePlatform, shortcutKeyAction, shortcutWheelAction, SHORTCUT_KEY_MAP, type Modifiers, type ShortcutAction } from './anatomyshortcuts';
 import {
   Fragment,
@@ -111,6 +112,7 @@ import {
   historyShortcut,
   labelLines,
   labelTextFor,
+  labelsThatFit,
   labelsToShow,
   leftOutNote,
   missToRecord,
@@ -510,8 +512,19 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
   const toRestore = lazy ? lazyRestore(layers, hidden) : nextToRestore(layers, hidden);
   const layerGapNote = system?.key === WHOLE_BODY_KEY ? unavailableLayersNote(system.structures) : null;
   const labelIds = useMemo(
-    () => (labelsOn && !quiz && !namesHidden ? labelsToShow(visible, selected) : []),
-    [labelsOn, quiz, namesHidden, visible, selected],
+    () => {
+      if (!labelsOn || quiz || namesHidden) return [];
+      // Sizes come from the loaded model; before it is ready there is nothing to measure, and nothing to label.
+      const bounds = load.state === 'ready' ? sceneRef.current?.boundsById() : undefined;
+      const sizeOf = (id: string) => {
+        const box = bounds?.get(id);
+        if (!box) return 0;
+        return Math.hypot(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z);
+      };
+      return bounds ? labelsThatFit(visible, selected, sizeOf) : labelsToShow(visible, selected);
+    },
+    // The count of found structures changes when model files finish loading, so late layers are measured too.
+    [labelsOn, quiz, namesHidden, visible, selected, load.state, found.length],
   );
   labelIdsRef.current = labelIds;
 
@@ -1319,6 +1332,25 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
     sceneRef.current?.setSpin(on);
     if (on) setOrientation('free');
   }, [spinReady, spinSystemKey, spinFixture]);
+  // Conventional colours (red arteries, blue veins, yellow nerves, brown muscles): read from each structure's own
+  // words, coloured from the tokens, and sent to the scene whenever the model, its loaded files or the stage change.
+  const tintStructures = system?.structures;
+  const tintSystemKey = system?.key;
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const lab = labRef.current;
+    if (!scene || !lab || !spinReady || !tintStructures || !tintSystemKey) return;
+    const style = getComputedStyle(lab);
+    const tints = new Map<string, string>();
+    for (const structure of tintStructures) {
+      // The whole body mixes systems: there a structure's layer stands in for its system.
+      const key = tintSystemKey === WHOLE_BODY_KEY ? (structure.layer ?? '') : tintSystemKey;
+      const tint = conventionalTint(key, structure.text, structure.group);
+      const colour = tint ? style.getPropertyValue(TINT_TOKEN[tint]).trim() : '';
+      if (colour) tints.set(structure.id, colour);
+    }
+    scene.setTints(tints);
+  }, [spinReady, tintStructures, tintSystemKey, found.length, stage]);
   // Studying a structure needs a still model: selecting one, a quiz, a round or name it stops the turning.
   const studying = Boolean(selected || quiz || round || recall);
   useEffect(() => {
@@ -2471,7 +2503,7 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
               )}
           {labelsOn && !quiz && !recall && visible.length > labelIds.length && (
             <p className="text-sm text-ink-soft">
-              {selected ? 'with this many structures showing, only the selected one is labeled.' : 'with this many structures showing, select one to label it.'}
+              with this many structures showing, the largest are labeled. select any structure to label it.
             </p>
           )}
           {labelNote.length > 0 && (

@@ -204,6 +204,8 @@ export interface LabScene {
   clear(): void;
   setAppearance(appearance: Appearance): void;
   setColors(colors: LabColors): void;
+  /** Gives some structures a colour of their own (a CSS colour by id); the rest keep the model colours. */
+  setTints(tints: ReadonlyMap<string, string>): void;
   /** The quiz uses nearest-hit picking so earlier answers do not bias later taps. */
   pick(clientX: number, clientY: number, preferSelected?: boolean): string | null;
   project(ids: readonly string[]): ProjectedPoint[];
@@ -404,6 +406,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
 
   let root: THREE.Object3D | null = null;
   let spread = 0;
+  /** A structure's own colour, by id: the conventional colours (anatomycolours.ts). */
+  let tints: ReadonlyMap<string, string> = new Map();
   let meshesById = new Map<string, THREE.Mesh[]>();
   let order: string[] = [];
   let centers = new Map<string, THREE.Vector3>();
@@ -542,7 +546,8 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
       // A faded structure stays see-through even while selected; dimming (another one selected) goes further.
       const fade = faded.has(id);
       const opacity = dim ? Math.min(colors.dimAlpha, fade ? colors.fadedOpacity : 1) : fade ? colors.fadedOpacity : 1;
-      const color = isSelected ? colors.modelSelected : index % 2 === 0 ? colors.model : colors.modelAlt;
+      // A conventional colour (red artery, blue vein…) wins over the lab's own two model colours; selected wins over both.
+      const color = isSelected ? colors.modelSelected : tints.get(id) ?? (index % 2 === 0 ? colors.model : colors.modelAlt);
       for (const mesh of meshesById.get(id) ?? []) {
         mesh.visible = !hidden.has(id);
         const material = solidOf(mesh);
@@ -1364,6 +1369,11 @@ export function createLabScene({ canvas, reducedMotion, colors: initialColors, p
     resetView,
     viewFrom,
     setReducedMotion,
+    setTints(next) {
+      tints = next;
+      applyAppearance();
+      requestRender();
+    },
     setSpin(on) {
       if (on === spinning) return;
       spinning = on;
