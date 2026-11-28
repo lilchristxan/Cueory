@@ -178,6 +178,17 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
     await expect(choices.getByRole('button', { name: 'white' })).toHaveAttribute('aria-pressed', 'true');
     expect(await stage()).toBe('rgb(249, 245, 239)');
     expect(await bar()).toBe(brown);
+    // Notes written straight on the stage are dark on white. Whether a note shows depends on the model, so the
+    // rule itself is checked with a probe carrying the notes' class.
+    const noteColour = await page.getByTestId('anatomy-lab').evaluate((lab) => {
+      const probe = document.createElement('p');
+      probe.className = 'lab-stage-note';
+      lab.append(probe);
+      const colour = getComputedStyle(probe).color;
+      probe.remove();
+      return colour;
+    });
+    expect(noteColour).toBe('rgb(28, 25, 23)');
     // A saved picture takes the white stage's colours too: an Ivory page with dark text.
     const picture = () => page.getByTestId('anatomy-lab').evaluate((lab) => {
       const style = getComputedStyle(lab);

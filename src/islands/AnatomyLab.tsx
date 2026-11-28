@@ -2502,12 +2502,12 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                 </div>
               )}
           {labelsOn && !quiz && !recall && visible.length > labelIds.length && (
-            <p className="text-sm text-ink-soft">
+            <p className="lab-stage-note text-sm" data-testid="anatomy-label-limit">
               with this many structures showing, the largest are labeled. select any structure to label it.
             </p>
           )}
           {labelNote.length > 0 && (
-            <div className="space-y-1 text-sm text-ink-soft" data-testid="anatomy-label-note">
+            <div className="lab-stage-note space-y-1 text-sm" data-testid="anatomy-label-note">
               {labelNote.map((note) => <p key={note}>{note}</p>)}
             </div>
           )}
@@ -2986,6 +2986,8 @@ export default function AnatomyLab({ systems: baseSystems, fixture, drafts, auto
                       className={secondaryButton}
                       disabled={!ready}
                       onClick={() => {
+                        // A chosen view stays put: the model stops turning by itself, as with the remote's views.
+                        stopSpin();
                         sceneRef.current?.viewPreset(preset);
                         setAnnounce(`view: ${VIEW_WORDS[preset]}.`);
                       }}

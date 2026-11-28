@@ -18,6 +18,15 @@
   .lab-page {
     background: var(--lab-stage-flat);
   }
+  /* Notes written straight on the stage (which labels found no room, what "behind" means): on the white stage the
+     lab's light text measured under 2:1, so there they take the stage's dark ink. */
+  .lab-stage-note {
+    color: var(--color-ink-soft);
+  }
+  .lab-page[data-stage='white'] .lab-stage-note {
+    color: var(--lab-charcoal);
+  }
+
   /* Printing a worksheet: the full-page lab goes back into the normal page flow, so a long sheet runs over as many
      printed pages as it needs instead of being clipped to one window. */
   @media print {
