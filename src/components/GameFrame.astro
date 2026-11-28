@@ -288,6 +288,11 @@ const activeDateLine = propDateLine ?? formatGameDateLine(new Date());
       <!-- The four stats are drawn by the island itself, and only for a signed-in visitor (nothing is rendered, and no gap
            kept, for anyone else). They are still recorded in this browser either way. -->
       {(showStats ?? framed) && <GameFrameStats client:load game={currentConfig.id} cta={statsCta} />}
+
+      <!-- The finished game's result (a short word, one figure, share and the wait for the next puzzle) shows here on a
+           desktop window. The games fill it through a React portal (src/islands/EndResult.tsx); below the tablet
+           breakpoint this mount is hidden and the same block shows under the board instead. -->
+      <div class="game-frame-end-slot" id="game-frame-end-slot" data-testid="game-frame-end-slot"></div>
     </aside>
 
     <!-- Center area -->

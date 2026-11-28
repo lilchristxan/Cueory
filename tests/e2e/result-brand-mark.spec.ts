@@ -29,7 +29,8 @@ test('no game result mark appears while a student is answering', async ({ page }
   await expect(mark(page)).toHaveCount(0);
 });
 
-test('pillo completion adds the unobtrusive original-art mark inside the result only', async ({ page }) => {
+// Christian, 2026-11-27: the finished game's block is minimal, so the repeated "cueory.app/play" line is gone.
+test('pillo completion shows no repeated brand line in its result', async ({ page }) => {
   await page.goto('/play/pillo');
   await page.getByTestId('pulse').getByLabel('your guess', { exact: true }).fill('grace');
   await page.getByTestId('pulse').getByRole('button', { name: 'enter', exact: true }).click();
@@ -38,16 +39,12 @@ test('pillo completion adds the unobtrusive original-art mark inside the result 
   await resultDialog.getByRole('button', { name: 'close results' }).click();
   const result = page.getByTestId('pulse-result');
   await expect(result).toBeFocused();
-  await expect(result.getByTestId('result-brand-mark')).toHaveText('cueory.app/play');
-  await expect(result.getByTestId('result-brand-mark').locator('img.logo-day')).toHaveAttribute(
-    'src', '/brand/v1/emblem-light-96.png',
-  );
-  await expect(page.getByTestId('pulse').getByRole('list', { name: 'your guesses' }).getByTestId('result-brand-mark')).toHaveCount(0);
+  await expect(mark(page)).toHaveCount(0);
+  await expect(result).not.toContainText('cueory.app');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-
-test('crossword completion adds the mark to its finished card, not the clues', async ({ page }) => {
+test('crossword completion shows no repeated brand line in its finished card', async ({ page }) => {
   await page.goto('/play/crossword');
   // The crossword has no clue buttons any more: each square is a button named by its row and column (Task 627).
   // Same easy November sample as play.spec.ts.
@@ -60,11 +57,9 @@ test('crossword completion adds the mark to its finished card, not the clues', a
       await page.keyboard.type(letter);
     }
   }
-  await expect(page.getByTestId('cueword-result').getByTestId('result-brand-mark')).toHaveText('cueory.app/play');
-  // The clues (the clue bar and the printed clue lists) never carry the mark.
-  await expect(board.getByTestId('cueword-clue').getByTestId('result-brand-mark')).toHaveCount(0);
-  await expect(board.locator('.crossword-print-clues')).toHaveCount(1);
-  await expect(board.locator('.crossword-print-clues').getByTestId('result-brand-mark')).toHaveCount(0);
+  await expect(page.getByTestId('cueword-result')).toBeVisible();
+  await expect(mark(page)).toHaveCount(0);
+  await expect(page.getByTestId('cueword-result')).not.toContainText('cueory.app');
 });
 
 test('progress is a share-worthy summary, with a mark that remains decorative', async ({ page }) => {

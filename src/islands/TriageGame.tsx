@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { dayLabel } from './daily';
 import { localDay, reportRound } from './gameresults';
-import ResultBrandMark from './ResultBrandMark';
+import EndResult from './EndResult';
+import { nextLine } from './endresult';
+import { useNextWait } from './usenextwait';
 import { dayNumber, puzzleForDay } from './pulse';
 import {
   answerInWords,
@@ -69,6 +71,7 @@ export default function TriageGame({ puzzles }: Props) {
     reportRound({ game: 'triage', day: localDay(today), solved: state.status === 'sorted', tries: state.slips });
   }, [state.status]);
 
+  const nextWait = useNextWait(state.status !== 'playing');
   if (!puzzle) return <p>no puzzle today.</p>;
   const playing = state.status === 'playing';
   const left = termsLeft(state);
@@ -192,26 +195,31 @@ export default function TriageGame({ puzzles }: Props) {
       </div>
 
       {!playing && (
-        <div ref={result} tabIndex={-1} className="triage-result mt-6" data-testid="triage-result">
-          <p className="text-lg font-medium">{state.status === 'sorted' ? 'sorted.' : 'out of slips.'}</p>
+        <>
+          <EndResult
+            testId="triage-result"
+            resultRef={result}
+            result={state.status === 'sorted' ? 'sorted.' : 'out of slips.'}
+            figure={state.status === 'sorted' ? (state.slips === 0 ? 'no slips' : state.slips === 1 ? '1 slip' : `${state.slips} slips`) : undefined}
+            note={copied || undefined}
+            next={nextLine('next puzzle', nextWait)}
+            nextTestId="triage-next"
+          >
+            <button type="button" className={`${primaryButton} min-h-(--tap-min)`} onClick={share}>
+              copy my result
+            </button>
+          </EndResult>
           {state.status === 'out' && (
-            <>
-              <p className="mt-1">here is where each term goes:</p>
+            <div className="triage-answer-block mt-6">
+              <p>here is where each term goes:</p>
               <ul className="mt-2 flex flex-col gap-1" data-testid="triage-answer">
                 {answerInWords(puzzle).map((line) => (
                   <li key={line}>{line}</li>
                 ))}
               </ul>
-            </>
+            </div>
           )}
-          <p className="mt-3 text-ink-soft">{triageShareText(state, dayLabel(today))}</p>
-          <button type="button" className={`${primaryButton} mt-4`} onClick={share}>
-            copy my result
-          </button>
-          {copied && <p className="mt-2 text-sm text-ink-soft">{copied}</p>}
-          <p className="mt-4 text-sm text-ink-soft">a new puzzle comes tomorrow.</p>
-          <ResultBrandMark path="/play" />
-        </div>
+        </>
       )}
 
       <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="triage-live">

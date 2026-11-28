@@ -28,7 +28,8 @@ import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
 import { useStatsVisible } from './gamestatsgate';
-import ResultBrandMark from './ResultBrandMark';
+import EndResult from './EndResult';
+import { nextLine } from './endresult';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { gameName } from '../config/games';
@@ -415,15 +416,20 @@ export default function PulseGame({ puzzles, framed = false }: Props) {
           </div>
         </div>
       ) : (
-        <div ref={result} tabIndex={-1} className="pillo-result mt-6" data-testid="pulse-result">
-          <p className="text-lg font-medium">
-            {state.status === 'solved' ? 'solved.' : `the word was ${state.answer}.`}
-          </p>
-          <p className="mt-1 text-ink-soft">{shareText(state, dayLabel(today))}</p>
-          <button type="button" className={`${primaryButton} mt-4`} onClick={share}>
-            copy my result
-          </button>
-          {copied && <p className="mt-2 text-sm text-ink-soft">{copied}</p>}
+        <>
+          <EndResult
+            testId="pulse-result"
+            resultRef={result}
+            result={state.status === 'solved' ? 'solved.' : `the word was ${state.answer}.`}
+            figure={`${GUESSES - guessesLeft(state)}/${GUESSES}`}
+            note={copied || undefined}
+            next={nextLine('next word', wait)}
+            nextTestId="pulse-next"
+          >
+            <button type="button" className="min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover" onClick={share}>
+              copy my result
+            </button>
+          </EndResult>
 
           {statsVisible && <section className="pillo-stats mt-6" aria-labelledby="pillo-stats-heading" data-testid="pulse-stats">
             <h3 id="pillo-stats-heading" className="font-semibold">
@@ -480,12 +486,7 @@ export default function PulseGame({ puzzles, framed = false }: Props) {
             )}
           </section>}
 
-          <p className="mt-4 text-sm text-ink-soft">a new word comes tomorrow.</p>
-          <p className="mt-1 text-sm text-ink-soft" data-testid="pulse-next">
-            next word in {wait}.
-          </p>
-          <ResultBrandMark path="/play" />
-        </div>
+        </>
       )}
 
 

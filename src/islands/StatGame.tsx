@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import ResultBrandMark from './ResultBrandMark';
+import EndResult from './EndResult';
+import { joinFigure, nextLine } from './endresult';
+import { useNextWait } from './usenextwait';
 import { playGameCue, soundSwitchOn } from './gamesound';
 import { showResultCard, statResultCard } from './gameresults';
 import {
@@ -102,6 +104,7 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
   // Answers stay hidden until the end, so the only cues are neutral: picking, locking in and finishing (never right or wrong).
   // tachyyy has no sound setting of its own, so the shared "game sounds" switch alone decides (read at the moment of the cue).
 
+  const nextWait = useNextWait(phase === 'done');
   const left = phase === 'playing' ? secondsLeft(state, now) : STAT_SECONDS;
   const question = questions[state.index];
 
@@ -379,32 +382,25 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
       )}
 
       {phase === 'done' && rows && result && (
-        <div ref={resultRef} tabIndex={-1} className="flex flex-col items-center gap-3 text-center" data-testid="stat-result">
-          <p className="text-sm font-bold text-ink-soft">today's shift</p>
-          <p className="display text-display" data-testid="stat-score">
-            {scoreOf(rows)}
-            <span className="text-2xl text-ink-soft"> / {STAT_QUESTIONS}</span>
-          </p>
-          <p className="text-lg font-bold" data-testid="stat-verdict">
-            {verdict(scoreOf(rows))}
-          </p>
-          <p className="text-ink-soft">
-            average answer time: <strong className="text-ink" data-testid="stat-average">{averageSeconds(state.answers)} s</strong>
-          </p>
-          <p className="max-w-full wrap-anywhere rounded-lg border-2 border-dashed border-line bg-page px-4 py-3" data-testid="stat-share">
-            {result.share}
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            <button type="button" className={primaryButton} onClick={copy} data-testid="stat-copy">
+        <>
+          <EndResult
+            testId="stat-result"
+            resultRef={resultRef}
+            result={verdict(scoreOf(rows))}
+            resultTestId="stat-verdict"
+            figure={joinFigure([`${scoreOf(rows)} / ${STAT_QUESTIONS}`, `${averageSeconds(state.answers)} s average`])}
+            figureTestId="stat-score"
+            note={<span role="status" data-testid="stat-copied">{copied}</span>}
+            next={nextLine('next round', nextWait)}
+            nextTestId="stat-tomorrow"
+          >
+            <button type="button" className={`${primaryButton} min-h-(--tap-min)`} onClick={copy} data-testid="stat-copy">
               copy my score
             </button>
-            <button type="button" className={quietButton} onClick={begin} data-testid="stat-again">
+            <button type="button" className={`${quietButton} min-h-(--tap-min)`} onClick={begin} data-testid="stat-again">
               practice again
             </button>
-          </div>
-          <p className="min-h-6 text-sm text-ink-soft" role="status" data-testid="stat-copied">
-            {copied}
-          </p>
+          </EndResult>
 
           <section className="mt-4 w-full text-start" aria-labelledby="stat-review-heading">
             <h3 id="stat-review-heading" className="text-lg font-bold">
@@ -446,11 +442,7 @@ export default function StatGame({ questions, sampleKey, game = 'stat' }: Props)
               })}
             </ol>
           </section>
-          <p className="text-sm text-ink-soft" data-testid="stat-tomorrow">
-            these are sample questions. play again tomorrow for another practice round. reviewed daily sets will come later.
-          </p>
-          <ResultBrandMark path="/play" />
-        </div>
+        </>
       )}
     </div>
   );

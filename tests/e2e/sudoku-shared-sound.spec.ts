@@ -38,7 +38,7 @@ for (const shared of [true, false]) {
       await cells.nth(index).click();
       await page.keyboard.press(String(daily.solution[index]));
     }
-    await expect(game.getByTestId('sudoku-result')).toBeVisible();
+    await expect(page.getByTestId('sudoku-result')).toBeVisible();
     expect(await page.evaluate(() => (window as unknown as { tones: number }).tones)).toBe(shared ? 1 : 0);
   });
 }
@@ -88,6 +88,6 @@ test('game sounds turned off in the sudoku dialog keep the solve silent even whe
     await cells.nth(index).click();
     await page.keyboard.press(String(daily.solution[index]));
   }
-  await expect(game.getByTestId('sudoku-result')).toBeVisible();
+  await expect(page.getByTestId('sudoku-result')).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { tones: number }).tones)).toBe(0);
 });

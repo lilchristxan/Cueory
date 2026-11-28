@@ -326,7 +326,7 @@ test('after a lost game the answer appears nowhere in the visible text or access
   }
   const result = page.getByTestId('vialo-result');
   await expect(result).toBeVisible();
-  await expect(result).toContainText('out of guesses');
+  await expect(result).toContainText('out of tries');
   await expect(result).toContainText('next word in');
   // Fixed day 1 Nov 2026: the word of the day is grace.
   const everything = await page.evaluate(() => {

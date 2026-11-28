@@ -34,7 +34,8 @@ import { heldRounds, loadStats, localDay, reportProgress, reportRound } from './
 import { dailyStats, recordResult, type DailyStats, type GameStats } from './gamestats';
 import { loadWordList } from './pillowords';
 import { useStatsVisible } from './gamestatsgate';
-import ResultBrandMark from './ResultBrandMark';
+import EndResult from './EndResult';
+import { joinFigure, nextLine } from './endresult';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
 import { useSharedGameSettings } from './GameSettings.tsx';
@@ -516,46 +517,47 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
           })}
         </div>
       ) : (
-        <div ref={result} tabIndex={-1} className="vialo-result mt-6" data-testid="vialo-result">
-          <p className="text-lg font-medium">
-            {state.status === 'solved' ? 'solved.' : 'out of guesses. the game is over.'}
-          </p>
-          <p className="mt-1 text-ink-soft">{vialoShareText(state, dayLabel(today))}</p>
-          {solveMs !== undefined && (
-            <p className="mt-1 text-ink-soft" data-testid="vialo-solve-time">
-              solve time {clock(solveMs)}.
-            </p>
-          )}
-          {shareReady && (
-            <>
+        <>
+          <EndResult
+            testId="vialo-result"
+            resultRef={result}
+            result={state.status === 'solved' ? 'solved.' : 'out of tries.'}
+            figure={joinFigure([`${GUESSES - guessesLeft(state)}/${GUESSES}`, solveMs !== undefined && clock(solveMs)])}
+            figureTestId="vialo-solve-time"
+            next={nextLine('next word', wait)}
+            nextTestId="vialo-next"
+          >
+            {shareReady && (
               <button
                 ref={shareButton}
                 type="button"
-                className="mt-4 min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover"
+                className="min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover"
                 onClick={() => setShareOpen(true)}
                 data-testid="vialo-share-open"
               >
                 share
               </button>
-              <Suspense fallback={null}>
-                <VialoShare
-                  open={shareOpen}
-                  onClose={() => {
-                    setShareOpen(false);
-                    requestAnimationFrame(() => shareButton.current?.focus());
-                  }}
-                  rows={state.guesses.map((guess) => guess.marks)}
-                  solved={state.status === 'solved'}
-                  tries={GUESSES - guessesLeft(state)}
-                  maxTries={GUESSES}
-                  solveMs={solveMs}
-                  date={today}
-                  account={statsVisible && finish.on ? { winPercent: finish.stats.winPercent, streak: finish.stats.currentStreak } : undefined}
-                  resultLine={vialoShareText(state, dayLabel(today))}
-                  siteUrl={site.url}
-                />
-              </Suspense>
-            </>
+            )}
+          </EndResult>
+          {shareReady && (
+            <Suspense fallback={null}>
+              <VialoShare
+                open={shareOpen}
+                onClose={() => {
+                  setShareOpen(false);
+                  requestAnimationFrame(() => shareButton.current?.focus());
+                }}
+                rows={state.guesses.map((guess) => guess.marks)}
+                solved={state.status === 'solved'}
+                tries={GUESSES - guessesLeft(state)}
+                maxTries={GUESSES}
+                solveMs={solveMs}
+                date={today}
+                account={statsVisible && finish.on ? { winPercent: finish.stats.winPercent, streak: finish.stats.currentStreak } : undefined}
+                resultLine={vialoShareText(state, dayLabel(today))}
+                siteUrl={site.url}
+              />
+            </Suspense>
           )}
 
           {statsVisible && <section className="vialo-stats mt-6" aria-labelledby="vialo-stats-heading" data-testid="vialo-stats">
@@ -613,12 +615,7 @@ export default function VialoGame({ puzzles, framed = false }: Props) {
             )}
           </section>}
 
-          <p className="mt-4 text-sm text-ink-soft">a new word comes tomorrow.</p>
-          <p className="mt-1 text-sm text-ink-soft" data-testid="vialo-next">
-            next word in {wait}.
-          </p>
-          <ResultBrandMark path="/play" />
-        </div>
+        </>
       )}
 
       <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="vialo-live">

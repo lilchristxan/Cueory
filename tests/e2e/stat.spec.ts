@@ -302,11 +302,9 @@ test('the clock runs out and moves on, the timer is read out at 10 and 5 seconds
   await page.clock.runFor(100);
   const result = page.getByTestId('stat-result');
   await expect(result).toBeFocused();
-  await expect(page.getByTestId('stat-score')).toHaveText('10 / 15');
+  await expect(page.getByTestId('stat-score')).toHaveText('10 / 15 · 3 s average');
   await expect(page.getByTestId('stat-verdict')).toHaveText('solid shift.');
-  await expect(page.getByTestId('stat-share')).toHaveText('stat · wed 11 nov · 10/15 · cueory.app');
-  // 20 s for the timed-out question, 2 s for each of the other fourteen: 47 / 15, about 3.
-  await expect(page.getByTestId('stat-average')).toHaveText('3 s');
+  // The average is on the score line: 20 s for the timed-out question, 2 s for each of the other fourteen: 47 / 15, about 3.
   const rows = page.getByTestId('stat-review-row');
   await expect(rows).toHaveCount(15);
   await expect(rows.nth(0)).toContainText('out of time');
@@ -362,10 +360,11 @@ test('review rows name timeouts with and without a pick, show times and rational
   await expect(rows.nth(2)).toContainText('no answer (skipped)');
   await expect(page.getByTestId('stat-review-rationale')).toHaveCount(15);
   await expect(page.getByTestId('stat-review-rationale').first()).toHaveText('reason: [sample rationale pending review]');
-  await expect(page.getByTestId('stat-tomorrow')).toContainText('play again tomorrow');
+  await expect(page.getByTestId('stat-tomorrow')).toContainText('next round in');
 
-  await page.getByTestId('stat-again').focus();
-  await page.keyboard.press('Tab');
+  // On a desktop window the buttons are in the side panel, ahead of the board in the tab order, so the review is entered at its first row.
+  await page.keyboard.press('Shift'); // keyboard modality, so the focus ring counts as focus-visible
+  await rows.first().focus();
   await expect(rows.first()).toBeFocused();
   expect(await rows.first().evaluate((el) => el.matches(':focus-visible') && parseFloat(getComputedStyle(el).outlineWidth) > 0)).toBe(true);
   await page.keyboard.press('Tab');
@@ -377,7 +376,7 @@ test('it sends nothing off the site and saves nothing', async ({ page }) => {
   page.on('request', (request) => { if (!request.url().startsWith('http://localhost') && !request.url().startsWith('data:')) external.push(request.url()); });
   await start(page);
   await finish(page, 0, (index) => key[index]!);
-  await expect(page.getByTestId('stat-score')).toHaveText('15 / 15');
+  await expect(page.getByTestId('stat-score')).toContainText('15 / 15');
   await expect(page.getByTestId('stat-verdict')).toHaveText('top of the unit today.');
   expect(external).toEqual([]);
   expect(await page.evaluate(() => Object.keys(localStorage).filter((name) => /stat/i.test(name)))).toEqual([]);

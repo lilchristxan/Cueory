@@ -129,7 +129,7 @@ test('sudoku stats are always kept (no switch), show each level, and "forget all
     await cells(page).nth(index).click();
     await page.keyboard.press(String(daily.solution[index]));
   }
-  await expect(game(page).getByTestId('sudoku-result')).toBeVisible();
+  await expect(page.getByTestId('sudoku-result')).toBeVisible();
   // The finished-game dialog is modal (the page behind it is inert and cannot scroll), so close it first.
   await expect(page.getByTestId('share-dialog')).toBeFocused();
   await page.getByTestId('share-dialog-close').click();

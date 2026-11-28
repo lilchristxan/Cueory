@@ -331,7 +331,7 @@ test.describe('the solve timer', () => {
     await field(page).fill('grace');
     await field(page).press('Enter');
     await expect(page.getByTestId('vialo-result')).toContainText('solved.');
-    await expect(page.getByTestId('vialo-solve-time')).toHaveText('solve time 0:05.');
+    await expect(page.getByTestId('vialo-solve-time')).toHaveText('1/6 · 0:05');
     await page.clock.fastForward(60_000);
     await expect(time(page)).toHaveText('time: 0:05');
   });
@@ -342,7 +342,7 @@ test.describe('the solve timer', () => {
     await page.clock.fastForward(7_000);
     await expect(time(page)).toHaveText('time: 0:07');
     await page.evaluate(() => window.dispatchEvent(new CustomEvent('cueory:vialo-forfeited', { detail: { day: '2026-11-01' } })));
-    await expect(page.getByTestId('vialo-result')).toContainText('out of guesses');
+    await expect(page.getByTestId('vialo-result')).toContainText('out of tries');
     await page.clock.fastForward(60_000);
     await expect(time(page)).toHaveText('time: 0:07');
     await page.clock.fastForward(60_000);

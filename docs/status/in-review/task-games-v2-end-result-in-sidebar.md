@@ -1,0 +1,1 @@
+status: in review. Design proposal for Christian: every daily game's end-of-game block moves to the game frame's left side panel on desktop (under the copper bar), minimal (result word, one figure, share, wait for the next puzzle); under the board on tablet and phone. No pull request opened.

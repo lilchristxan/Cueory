@@ -18,6 +18,9 @@ import { sudokuCellClasses } from './sudokuhighlight';
 import { DEFAULT_SUDOKU_SETTINGS, GAME_PROGRESS_EVENT, LEVEL_LABELS, sudokuProgressDetail, LEVEL_RULES, advanceSudokuSeconds, autoCandidateNotes, checkSudoku, conflictIndices, placedDigits, dailySudokuSeed, editSudokuBoard, effectiveSudokuMode, generateSudoku, getResult, loadSudokuSettings, newSudokuBoard, noteDigits, pushSudokuHistory, saveSudokuSettings, sudokuCellPresentation, sudokuKeyAction, sudokuWrongCells, undoSudoku, type SudokuBoard, type SudokuBoardAction, type SudokuLevel, type SudokuMode, type SudokuSettings } from './sudoku';
 import { reportRound, SUDOKU_STATS_STORAGE_KEY, sudokuRoundResult } from './gameresults';
 import { keepSudokuSolve, loadSudokuStats, sudokuLevelStats, sudokuTime, type SavedSudokuStats } from './sudokustats';
+import EndResult from './EndResult';
+import { joinFigure, nextLine } from './endresult';
+import { useNextWait } from './usenextwait';
 
 const LEVELS: SudokuLevel[] = ['easy', 'medium', 'hard'];
 const NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
@@ -86,6 +89,7 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
   const cells = useRef(new Map<number, HTMLButtonElement>());
   const { entries, marks, notes } = board;
   const solved = entries.every((value, index) => value === puzzle.solution[index]);
+  const nextWait = useNextWait(solved);
   // "print anyway" on an unfinished level (usegameprint.ts) ends that level on screen as lost. Not saved: a reload starts the
   // level fresh, and the stored first result of the day stands.
   const [lostLevels, setLostLevels] = useState<ReadonlySet<SudokuLevel>>(() => new Set());
@@ -519,7 +523,17 @@ export default function SudokuGame({ framed = false }: { framed?: boolean } = {}
       </div>
     </div>
     {lost && !solved && <p className="sudoku-solved" role="status" data-testid="sudoku-forfeit-note">you printed before finishing, so this level counts as not solved today.</p>}
-    {solved && <div ref={solvedResult} className="sudoku-solved" tabIndex={-1} role="status" data-testid="sudoku-result"><p className="text-lg font-medium">solved.</p><p>{elapsed} · {errors} {errors === 1 ? 'error' : 'errors'}</p><p className="text-sm text-ink-soft">a new sudoku comes out tomorrow.</p>{shareReady && <button ref={shareButton} type="button" className="sudoku-text-button" onClick={() => setShareOpen(true)} data-testid="sudoku-share-open">share</button>}</div>}
+    {solved && <EndResult
+      testId="sudoku-result"
+      resultRef={solvedResult}
+      status
+      result="solved."
+      figure={joinFigure([elapsed, `${errors} ${errors === 1 ? 'error' : 'errors'}`])}
+      next={nextLine('next sudoku', nextWait)}
+      nextTestId="sudoku-next"
+    >
+      {shareReady && <button ref={shareButton} type="button" className="min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover" onClick={() => setShareOpen(true)} data-testid="sudoku-share-open">share</button>}
+    </EndResult>}
     {shareReady && <Suspense fallback={null}>
       <SudokuShare
         open={shareOpen}

@@ -17,7 +17,7 @@ async function solve(page: Page) {
       await page.keyboard.type(letter);
     }
   }
-  await expect(board(page).getByTestId('cueword-result')).toBeVisible();
+  await expect(page.getByTestId('cueword-result')).toBeVisible();
 }
 
 const tones = (page: Page) => page.evaluate(() => (window as unknown as { tones: number }).tones);

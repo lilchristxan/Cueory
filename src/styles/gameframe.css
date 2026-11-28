@@ -1465,3 +1465,82 @@
   background: none;
   border-color: transparent;
 }
+
+/* ---------------- The finished game's result (Christian, 2026-11-27) ----------------
+   One minimal block for every game: a short result word, one figure, the share button and the wait for the next
+   puzzle. src/islands/EndResult.tsx puts it in this mount in the desktop side panel and under the board everywhere else
+   (the mount is hidden below the tablet breakpoint, and that is how the island knows which place to use). On a tall
+   desktop window it sits under the copper bar, which is on the screen's midline; tokens.css gives the two values. */
+.game-frame-end-slot {
+  inline-size: 100%;
+  box-sizing: border-box;
+  text-align: center;
+}
+@media (width < 64rem) {
+  .game-frame-end-slot {
+    display: none;
+  }
+}
+.game-frame-sidebar:has(.game-frame-account-bar) .game-frame-end-slot {
+  position: var(--game-frame-end-position, static);
+  inset-inline: 0;
+  top: var(--game-frame-end-top, auto);
+  padding-inline: var(--game-frame-account-pad, 0);
+}
+
+.game-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  inline-size: 100%;
+  box-sizing: border-box;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+/* Under the board (tablet and phone) the block keeps clear of the play area. */
+.game-end[data-placement="board"] {
+  margin-block-start: calc(var(--spacing) * 6);
+}
+.game-end-result {
+  margin: 0;
+  font-size: var(--game-frame-tagline-size);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.game-end-figure,
+.game-end-next,
+.game-end-note {
+  margin: 0;
+  font-size: var(--game-frame-stat-label-compact);
+  overflow-wrap: anywhere;
+}
+.game-end-figure {
+  margin-block-start: calc(var(--spacing) * 1);
+  font-variant-numeric: tabular-nums;
+}
+.game-end-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  margin-block-start: calc(var(--spacing) * 3);
+}
+.game-end-note {
+  margin-block-start: calc(var(--spacing) * 2);
+  color: var(--color-ink-soft);
+}
+.game-end-note:empty {
+  margin: 0;
+}
+.game-end-next {
+  margin-block-start: calc(var(--spacing) * 3);
+  color: var(--color-ink-soft);
+}
+@media print {
+  .game-end,
+  .game-frame-end-slot {
+    display: none;
+  }
+}

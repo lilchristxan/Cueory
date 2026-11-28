@@ -146,7 +146,7 @@ test.describe('the solve timer', () => {
     const frozen = await time.textContent();
     await page.clock.fastForward(8000);
     await expect(time).toHaveText(frozen!);
-    await expect(page.getByTestId('suture-solve-time')).toHaveText(/solve time \d+:\d\d\./);
+    await expect(page.getByTestId('suture-solve-time')).toHaveText(/^\d+:\d\d$/);
   });
 
   test('"show the timer" hides the line without moving the board, and the time still reaches the sticker', async ({ page }) => {

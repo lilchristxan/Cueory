@@ -1952,5 +1952,8 @@
     --game-frame-account-top: 50vh;
     --game-frame-account-shift: calc(var(--game-frame-btn-size) / -2);
     --game-frame-account-pad: calc(var(--spacing) * 6);
+    /* The finished game's result sits under that bar: the bar's own height (button, gap, one line of text) plus a gap. */
+    --game-frame-end-position: absolute;
+    --game-frame-end-top: calc(50vh + var(--game-frame-btn-size) / 2 + var(--spacing) * 14);
   }
 }

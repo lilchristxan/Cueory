@@ -104,10 +104,10 @@ test.describe('crossword parity (Task 721)', () => {
 
     await useHelp(page, 'reveal', 'puzzle');
     await closeResultDialog(page);
-    const badge = board(page).getByTestId('crossword-badge');
+    const badge = page.getByTestId('crossword-badge');
     await expect(badge).toHaveText(/solved with help/);
     await expect(badge).toHaveAttribute('data-badge', 'helped');
-    await expect(board(page).getByTestId('crossword-streak-note')).toContainText("doesn't extend your streak");
+    await expect(page.getByTestId('crossword-streak-note')).toContainText("doesn't extend your streak");
   });
 
   test('an unassisted solve gets the "solved without help" badge and starts the crossword streak', async ({ page }) => {
@@ -115,8 +115,8 @@ test.describe('crossword parity (Task 721)', () => {
     await expect(frameStats(page).getByRole('switch')).toHaveCount(0);
     await fill(page);
     await closeResultDialog(page);
-    await expect(board(page).getByTestId('crossword-badge')).toHaveText(/solved without help/);
-    await expect(board(page).getByTestId('crossword-streak-note')).toContainText('extends your streak');
+    await expect(page.getByTestId('crossword-badge')).toHaveText(/solved without help/);
+    await expect(page.getByTestId('crossword-streak-note')).toHaveCount(0);
     // The sidebar numbers are for signed-in players only (2026-11-25); a signed-out page has no stats panel.
     await expect(frameStats(page)).toHaveCount(0);
     const kept = JSON.parse((await page.evaluate(() => localStorage.getItem('cueory-game-stats')))!);

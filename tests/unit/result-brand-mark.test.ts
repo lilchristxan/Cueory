@@ -33,23 +33,15 @@ describe('quiet result brand mark', () => {
     expect(astro).not.toContain('<img');
   });
 
+  // Christian, 2026-11-27: the end-of-game block is minimal and lives in the game frame's side panel, so the repeated
+  // "cueory.app/play" credit no longer shows in any game's finished block (the brand is already in the panel).
   it.each([
-    ['src/islands/PulseGame.tsx', 'pulse-result'],
-    ['src/islands/TriageGame.tsx', 'triage-result'],
-    ['src/islands/CuewordGame.tsx', 'cueword-result'],
-  ])('appears only inside the %s completed-result card', (path, testid) => {
-    const contents = source(path);
-    const start = contents.indexOf('data-testid="' + testid + '"');
-    const mark = contents.indexOf('<ResultBrandMark path="/play" />');
-    expect(start).toBeGreaterThan(0);
-    expect(mark).toBeGreaterThan(start);
-    expect(contents.slice(0, start)).not.toContain('<ResultBrandMark');
-  });
-
-  it('keeps brand marks outside answer regions', () => {
-    const triage = source('src/islands/TriageGame.tsx');
-    expect(triage.indexOf('<ResultBrandMark path="/play" />')).toBeGreaterThan(
-      triage.indexOf('data-testid="triage-answer"'),
-    );
+    'src/islands/PulseGame.tsx',
+    'src/islands/VialoGame.tsx',
+    'src/islands/TriageGame.tsx',
+    'src/islands/CuewordGame.tsx',
+    'src/islands/StatGame.tsx',
+  ])('%s no longer repeats the brand line in its finished block', (path) => {
+    expect(source(path)).not.toContain('<ResultBrandMark');
   });
 });

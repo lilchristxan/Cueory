@@ -21,6 +21,10 @@ import {
   type CellLook, type PathState, type SuturePathPuzzle, type WordPathPuzzle,
 } from './suturepath';
 
+import EndResult from './EndResult';
+import { nextLine } from './endresult';
+import { useNextWait } from './usenextwait';
+
 const PicclineShare = lazy(() => import('./PicclineShare'));
 const PicclineForfeit = lazy(() => import('./PicclineForfeit'));
 
@@ -141,6 +145,7 @@ export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props)
   const howToPlay = useGameHelp('suture');
   const title = useId();
   const done = pathDone(state, puzzle);
+  const nextWait = useNextWait(done);
   // Set below: once a print forfeits the day, the board on screen can no longer be played.
   const [forfeited, setForfeited] = useState(false);
   const [printNote, setPrintNote] = useState('');
@@ -572,16 +577,22 @@ export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props)
         {puzzle.sample && <p>sample puzzle</p>}
       </div>
       {done && (
-        <div ref={result} tabIndex={-1} className="mt-6 rounded-md border border-control p-4" data-testid="suture-result" data-print-hidden>
-          <p className="text-lg font-medium">board complete.</p>
-          <p className="mt-2">{shared}</p>
-          {solveMs !== undefined && <p className="mt-1 text-ink-soft" data-testid="suture-solve-time">solve time {formatSolveTime(solveMs)}.</p>}
-          <div className="mt-3 flex flex-wrap gap-2">
+        <>
+          <EndResult
+            testId="suture-result"
+            resultRef={result}
+            result="board complete."
+            figure={solveMs !== undefined ? formatSolveTime(solveMs) : undefined}
+            figureTestId="suture-solve-time"
+            note={copied || undefined}
+            next={nextLine('next piccline', nextWait)}
+            nextTestId="suture-next"
+          >
             <button type="button" className={button} onClick={share}>copy my result</button>
             {shareReady && (
               <button ref={shareButton} type="button" className={button} onClick={() => setShareOpen(true)} data-testid="suture-share-open">share</button>
             )}
-          </div>
+          </EndResult>
           {shareReady && (
             <Suspense fallback={null}>
               <PicclineShare
@@ -598,8 +609,7 @@ export function PathBoard({ puzzle, name, framed = false, printPuzzles }: Props)
               />
             </Suspense>
           )}
-          {copied && <p className="mt-2 text-sm text-ink-soft" aria-live="polite">{copied}</p>}
-        </div>
+        </>
       )}
       <p className="mt-3 text-sm text-ink-soft" aria-live="polite" aria-atomic="true" data-testid="suture-live" data-print-hidden>{said}</p>
     </section>

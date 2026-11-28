@@ -1,12 +1,14 @@
 import '../styles/crossword.css';
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { browserStorage } from '../scripts/storage';
-import { localDay, reportRound } from './gameresults';
+import { localDay, reportRound, showResultCard, type GameResultCard } from './gameresults';
 import { printGame } from './gameprint';
 import { usePrintRequest } from './useprintrequest';
 import { useGameHelp } from './GameHelp';
 import GameHeader from './GameHeader';
-import ResultBrandMark from './ResultBrandMark';
+import EndResult from './EndResult';
+import { joinFigure, nextLine } from './endresult';
+import { useNextWait } from './usenextwait';
 import { dayLabel } from './daily';
 import { playGameCue } from './gamesound';
 import { playSolvedTone } from './solvetone';
@@ -115,6 +117,8 @@ function Board({ puzzle, name, framed = false }: Props) {
   useEffect(() => { if (asking) confirmButton.current?.focus(); }, [asking]);
 
   const reported = useRef(false);
+  const resultCard = useRef<GameResultCard | null>(null);
+  const nextWait = useNextWait(solved);
   useEffect(() => {
     if (!solved || reported.current) return;
     reported.current = true;
@@ -122,10 +126,8 @@ function Board({ puzzle, name, framed = false }: Props) {
     setCounts(streak);
     // The shared "game sounds" switch (#734) silences every game, whatever the crossword's own sound setting says.
     if (soundAllowed(settings.playSound)) playSolvedTone();
-    reportRound({
-      game: 'cueword', day: localDay(today), solved: true, tries: state.assists, streak,
-      card: {
-        game: 'cueword', name, date: dayLabel(today), level: crosswordLevelLabels[gameResult.level],
+    const card: GameResultCard = {
+      game: 'cueword', name, date: dayLabel(today), level: crosswordLevelLabels[gameResult.level],
         shareResult: `${crosswordLevelLabels[gameResult.level]} · solved in ${elapsedText(gameResult.seconds)}${helped ? ' with help' : ''}`,
         result: 'solved', summary: helped ? "you completed today's crossword with help." : "you completed today's crossword.",
         stats: [
@@ -134,8 +136,9 @@ function Board({ puzzle, name, framed = false }: Props) {
           { label: 'help', value: helped ? 'used' : 'none' },
         ],
         path: '/play/crossword',
-      },
-    });
+    };
+    resultCard.current = card;
+    reportRound({ game: 'cueword', day: localDay(today), solved: true, tries: state.assists, streak, card });
   }, [solved, today, name, gameResult.level, gameResult.seconds, state.assists, helped, settings.playSound, soundAllowed]);
 
   const update = (next: CuewordState, focus = true) => {
@@ -447,20 +450,31 @@ function Board({ puzzle, name, framed = false }: Props) {
       <p className="sr-only" aria-live="polite" aria-atomic="true" data-testid="crossword-live">{said}</p>
 
       {solved && (
-        <div ref={result} tabIndex={-1} className="crossword-result mt-6 rounded-md border border-control p-4" data-testid="cueword-result" role="status">
-          <p className="text-lg font-medium">solved.</p>
-          <p className="mt-2">{crosswordLevelLabels[gameResult.level]} · {elapsedText(gameResult.seconds)}</p>
-          <p className="crossword-badge mt-2" data-testid="crossword-badge" data-badge={helped ? 'helped' : 'clean'}>
-            <span aria-hidden="true">{helped ? '◇' : '◆'} </span>
-            {helped ? 'solved with help' : 'solved without help'}
-          </p>
-          <p className="mt-1 text-sm text-ink-soft" data-testid="crossword-streak-note">
-            {counts ? 'this solve extends your streak when stats are on.'
-              : helped ? "check or reveal was used, so this solve doesn't extend your streak."
-                : "solved more than 48 hours after the puzzle's date, so it doesn't extend your streak."}
-          </p>
-          <ResultBrandMark path="/play" />
-        </div>
+        <EndResult
+          testId="cueword-result"
+          resultRef={result}
+          status
+          result="solved."
+          figure={joinFigure([crosswordLevelLabels[gameResult.level], elapsedText(gameResult.seconds)])}
+          next={nextLine('next crossword', nextWait)}
+          nextTestId="crossword-next"
+          note={<>
+            <span className="crossword-badge" data-testid="crossword-badge" data-badge={helped ? 'helped' : 'clean'}>
+              <span aria-hidden="true">{helped ? '◇' : '◆'} </span>
+              {helped ? 'solved with help' : 'solved without help'}
+            </span>
+            {!counts && (
+              <span className="block" data-testid="crossword-streak-note">
+                {helped ? "check or reveal was used, so this solve doesn't extend your streak."
+                  : "solved more than 48 hours after the puzzle's date, so it doesn't extend your streak."}
+              </span>
+            )}
+          </>}
+        >
+          <button type="button" className="min-h-(--tap-min) rounded-pill bg-button px-5 py-2.5 text-on-button hover:bg-button-hover" onClick={() => { if (resultCard.current) showResultCard(resultCard.current); }} data-testid="crossword-share-open">
+            share
+          </button>
+        </EndResult>
       )}
     </section>
   );
