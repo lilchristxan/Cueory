@@ -315,10 +315,14 @@ test.describe('anatomy lab: the view remote, the stage and the tree', () => {
       await expect.poll(async () => key(await read())).toEqual(key(start));
     }
 
-    // Ctrl + up arrow zooms (the view changes) and Ctrl + down arrow zooms back out.
-    await page.keyboard.press('Control+ArrowUp');
+    // The main key with the up arrow zooms (the view changes) and with the down arrow zooms back out. The lab uses
+    // Command where the browser reports an Apple platform (Safari's engine does, on any machine) and Ctrl elsewhere,
+    // by the same rule as isApplePlatform in anatomyshortcuts.ts.
+    const apple = await page.evaluate(() => /mac|iphone|ipad|ipod/i.test(navigator.platform) || /\bMac OS X\b|iPhone|iPad/i.test(navigator.userAgent));
+    const mainKey = apple ? 'Meta' : 'Control';
+    await page.keyboard.press(`${mainKey}+ArrowUp`);
     await expect.poll(async () => key(await read())).not.toEqual(key(start));
-    await page.keyboard.press('Control+ArrowDown');
+    await page.keyboard.press(`${mainKey}+ArrowDown`);
     await expect.poll(async () => key(await read())).toEqual(key(start));
 
     // The wheel with Shift held moves the model: backward left, forward right.
