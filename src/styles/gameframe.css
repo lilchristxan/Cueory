@@ -1426,6 +1426,23 @@
   background-color: transparent;
 }
 
+/* piccline's own page (Christian, 2026-11-27): a soft sky of blue, cream and peach fills the whole frame, in Light and
+   (as dusk) in Evening, and the side panel lets it show through. */
+.game-frame[data-game-look="piccline"] {
+  background: var(--piccline-sky);
+  /* Secondary text sits straight on the sky, so it takes the main ink colour, as on wordpill's sky. */
+  --color-ink-soft: var(--color-ink);
+}
+
+.game-frame[data-game-look="piccline"] .game-frame-sidebar {
+  background-color: transparent;
+}
+
+/* The cue line above the board is teal elsewhere; teal on the sky's blue measured under 4.5:1, so here it is ink. */
+.game-frame[data-game-look="piccline"] .wordpath-cue {
+  color: var(--color-ink);
+}
+
 /* The copper "join the launch list" bar sits at the middle of the screen's height in the desktop side panel
    (Christian, 2026-11-27), whatever the height of the badge above it: the button's own centre is on the midline and its
    one line of text hangs under it. tokens.css switches these values on only for a desktop window tall enough for the bar
