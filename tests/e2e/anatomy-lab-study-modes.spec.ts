@@ -43,11 +43,15 @@ const overlay = (page: Page) => page.getByTestId('anatomy-labels');
 /** Where every label sits on screen, by name: it changes when the camera really moves. */
 async function labelSpots(page: Page): Promise<Record<string, string>> {
   // Measured from the 3D view's own corner, so scrolling the page changes nothing.
-  return overlay(page).locator(':scope > span').evaluateAll((spans) =>
-    Object.fromEntries(spans.map((span) => {
-      const box = span.getBoundingClientRect();
-      const frame = span.parentElement!.getBoundingClientRect();
-      return [span.textContent ?? '', `${Math.round(box.x - frame.x)},${Math.round(box.y - frame.y)}`];
+  // Read in one step from the overlay itself: the labels are redrawn while the camera moves, so a label found a
+  // moment earlier may already be gone from the page.
+  return overlay(page).evaluateAll((overlays) =>
+    Object.fromEntries(overlays.flatMap((frameEl) => {
+      const frame = frameEl.getBoundingClientRect();
+      return [...frameEl.querySelectorAll(':scope > span')].map((span) => {
+        const box = span.getBoundingClientRect();
+        return [span.textContent ?? '', `${Math.round(box.x - frame.x)},${Math.round(box.y - frame.y)}`];
+      });
     })),
   );
 }

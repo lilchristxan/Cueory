@@ -388,10 +388,9 @@ test.describe('anatomy lab', () => {
     await expect(cubeB).toHaveAttribute('aria-pressed', 'true');
     const card = page.getByRole('region', { name: 'fixture cube B' });
     await expect(card).toBeVisible();
-    await expect(card.getByText('name from the test fixture')).toBeVisible();
 
-    // hide / show from the list's own button
-    await page.keyboard.press('Tab');
+    // hide / show from the row's own dot, which sits just before the name (Christian, 2026-11-27)
+    await page.keyboard.press('Shift+Tab');
     await expect(page.getByRole('button', { name: 'hide fixture cube B' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(cubeB).toContainText('(hidden)');
@@ -1278,7 +1277,7 @@ test.describe('anatomy lab system switch', () => {
       await expect.poll(() => held.length, { timeout: 20_000 }).toBeGreaterThan(0);
       await expect(page.getByTestId('anatomy-layer-loading')).toBeVisible();
 
-      const nextSystem = picker.getByRole('button').first();
+      const nextSystem = picker.locator(':scope > button').first();
       await nextSystem.click();
       await expect(nextSystem).toHaveAttribute('aria-pressed', 'true');
       await expect(page.getByTestId('anatomy-layer-loading')).toHaveCount(0);
@@ -1308,7 +1307,7 @@ test.describe('anatomy lab system switch', () => {
       // the viewer reaches its open phase, not merely when canvas is visible.
       await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
       const picker = page.getByRole('group', { name: 'body system' });
-      const buttons = picker.getByRole('button');
+      const buttons = picker.locator(':scope > button');
       // Drafts are enabled for this test build: absence is a real regression,
       // not a reason to silently skip the system-switch safety test.
       await expect.poll(() => buttons.count(), { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
@@ -1321,7 +1320,8 @@ test.describe('anatomy lab system switch', () => {
       // Re-arm exactly before the next system selection, so its GLB stays
       // pending while the old model's controls are checked.
       holdRequests = true;
-      await buttons.nth(1).click();
+      // Any system other than the one the lab opened on (the skeleton, since 2026-11-27).
+      await picker.locator(':scope > button[aria-pressed="false"]').first().click();
       await expect(page.getByText(/^loading /).first()).toBeVisible();
       const cameraControls = page.getByRole('group', { name: 'view' });
       for (const name of ['turn left', 'turn right', 'tilt up', 'tilt down', 'zoom in', 'zoom out', 'reset view']) {

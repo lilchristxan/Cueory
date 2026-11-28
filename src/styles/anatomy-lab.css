@@ -5,20 +5,74 @@
   Nothing here animates: state changes are instant, so reduced motion has nothing to switch off.
 */
 @layer components {
+  /* The open lab is the whole page (Christian, 2026-11-27): nothing else on the page shows or takes focus. */
+  html.lab-open {
+    overflow: hidden;
+  }
+  html.lab-open body :not(.lab-page, .lab-page *) {
+    visibility: hidden;
+  }
+  html.lab-open .lab-page {
+    visibility: visible;
+  }
+  .lab-page {
+    background: var(--lab-stage-flat);
+  }
+  /* Notes written straight on the stage (which labels found no room, what "behind" means): on the white stage the
+     lab's light text measured under 2:1, so there they take the stage's dark ink. */
+  .lab-stage-note {
+    color: var(--color-ink-soft);
+  }
+  .lab-page[data-stage='white'] .lab-stage-note {
+    color: var(--lab-charcoal);
+  }
+
+  /* Printing a worksheet: the full-page lab goes back into the normal page flow, so a long sheet runs over as many
+     printed pages as it needs instead of being clipped to one window. */
+  @media print {
+    html.lab-open {
+      overflow: visible;
+    }
+  }
+  /* The bars around the stage (top bar, panel buttons, other tools, credits) stay brown on a black or a white stage. */
+  /* A box hidden down to its round icon button: the button's own brown disc, on a black or a white stage. */
+  .lab-min .lab-round {
+    background: var(--lab-panel-solid);
+    color: var(--lab-ivory);
+  }
+  .lab-bar {
+    background: var(--lab-panel-solid);
+  }
+  /* On the white stage the see-through glass would wash out, so the panels are the plain brown panel. */
+  .lab-page[data-stage='white'] .lab-glass {
+    background: var(--lab-panel-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  /* "flag or comment" in the lab opens the page's own form (in the footer). While it is open the footer sits over the lab,
+     pinned to the bottom edge, so a student never has to leave the lab to report something. */
+  html.lab-open body footer:has([data-footer-flag] button[aria-expanded='true']),
+  html.lab-open body footer:has([data-footer-flag] button[aria-expanded='true']) * {
+    visibility: visible;
+  }
+  html.lab-open body footer:has([data-footer-flag] button[aria-expanded='true']) {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 60;
+    background: var(--color-page);
+    border-top: var(--lab-edge) solid var(--color-line);
+  }
+
   .anatomy-lab {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
     overflow: hidden;
-    border-radius: var(--lab-radius-panel);
-    border: var(--lab-edge) solid var(--lab-edge-dim);
     color: var(--lab-ivory);
     font-family: var(--font-body);
     line-height: 1.5;
-    background:
-      linear-gradient(180deg, var(--lab-stage-sheen), transparent 38%),
-      radial-gradient(ellipse 30% 58% at 50% 48%, var(--lab-stage-halo) 0%, var(--lab-stage-halo-edge) 46%, transparent 74%),
-      linear-gradient(var(--lab-grid-line) var(--lab-edge), transparent var(--lab-edge)) 0 0 / var(--lab-grid-size) var(--lab-grid-size),
-      linear-gradient(90deg, var(--lab-grid-line) var(--lab-edge), transparent var(--lab-edge)) 0 0 / var(--lab-grid-size) var(--lab-grid-size),
-      radial-gradient(ellipse at 50% 38%, var(--lab-stage-mid) 0%, var(--lab-stage-dark) 70%);
+    background: var(--lab-stage-flat);
   }
 
   /* One focus look on the dark stage: a copper-shine ring, 3:1 or better against the stage and the glass. */
@@ -38,6 +92,11 @@
     border-bottom: var(--lab-edge) solid var(--lab-hair);
   }
 
+  /* Christian's logo artwork in the middle of the top bar: sized only, never recoloured or filtered. */
+  .lab-logo {
+    width: var(--lab-logo-width);
+    height: auto;
+  }
   .lab-title {
     font-size: var(--lab-title-size);
     font-weight: 700;
@@ -98,14 +157,16 @@
     white-space: nowrap;
     cursor: pointer;
   }
-  .lab-btn:hover:not(:disabled):not([aria-disabled='true']) {
+  /* Not a pressed button: its dark text needs the copper under it, hovered or not. */
+  .lab-btn:hover:not(:disabled):not([aria-disabled='true']):not([aria-pressed='true']):not(.lab-btn-primary) {
     background: var(--lab-row-on);
     border-color: var(--lab-copper-glow);
   }
   .lab-btn[aria-pressed='true'],
   .lab-btn-primary {
     border-color: transparent;
-    background: var(--lab-copper-fill);
+    /* The plain copper under the gradient is what a contrast check (and a browser without gradients) reads. */
+    background: var(--lab-copper-fill) var(--lab-copper-glow);
     color: var(--lab-charcoal);
     font-weight: 700;
   }
@@ -125,6 +186,51 @@
     height: calc(var(--spacing) * 11);
     font-size: var(--lab-round-size);
     background: linear-gradient(160deg, var(--lab-glass-top), var(--lab-glass-bottom));
+  }
+
+  /* An icon button's name. With a mouse it floats above the button on hover and on keyboard focus; on a touch screen,
+     where nothing hovers, it is always written beside the icon, so the name is never hover-only. */
+  .lab-tip {
+    position: relative;
+  }
+  .lab-tip-text {
+    position: absolute;
+    bottom: calc(100% + var(--spacing) * 1.5);
+    left: 50%;
+    z-index: 20;
+    translate: -50% 0;
+    padding: calc(var(--spacing) * 1) calc(var(--spacing) * 2.5);
+    border-radius: var(--lab-radius-row);
+    border: var(--lab-edge) solid var(--lab-ring);
+    background: var(--lab-charcoal);
+    color: var(--lab-ivory);
+    font-size: var(--lab-caption-size);
+    font-weight: 400;
+    line-height: 1.5;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+  }
+  .lab-tip:hover .lab-tip-text,
+  .lab-tip:focus-visible .lab-tip-text {
+    opacity: 1;
+  }
+  @media (hover: none) {
+    .lab-btn.lab-tip {
+      width: auto;
+      padding: 0 calc(var(--spacing) * 4);
+      border-radius: var(--radius-pill);
+    }
+    .lab-tip-text {
+      position: static;
+      translate: none;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: inherit;
+      font-size: var(--lab-button-size);
+      opacity: 1;
+    }
   }
 
   /* Text fields (the search box, the view name). */
@@ -178,10 +284,32 @@
     border: calc(var(--lab-edge) * 1.5) solid var(--lab-sand);
     background: transparent;
   }
-  .lab-row[aria-pressed='true'] .lab-dot {
+  .lab-row[aria-pressed='true'] .lab-dot,
+  .lab-dot[data-on='true'] {
     background: var(--lab-copper-glow);
     border-color: var(--lab-copper-glow);
     box-shadow: 0 0 var(--lab-dot) var(--lab-copper);
+  }
+  /* A structure's own dot: lit while it shows, hollow while hidden; tapping it hides or shows the structure. */
+  .lab-dot-btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--spacing) * 11);
+    min-height: calc(var(--spacing) * 11);
+    padding: 0;
+    border-radius: 50%;
+    border: var(--lab-edge) solid transparent;
+    background: transparent;
+    cursor: pointer;
+  }
+  .lab-dot-btn:hover:not(:disabled) {
+    background: var(--lab-row-on);
+  }
+  .lab-dot-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
   }
   .lab-state {
     margin-left: auto;

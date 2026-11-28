@@ -10,7 +10,7 @@ export async function openLabPanels(page: Page): Promise<void> {
   await stage.or(page.getByRole('alert')).first().waitFor({ timeout: 20_000 });
   if ((await stage.count()) === 0) return;
   const dock = page.getByRole('group', { name: 'panels' });
-  for (const name of ['orientation', 'body systems', 'structures']) {
+  for (const name of ['controls', 'body systems']) {
     const button = dock.getByRole('button', { name, exact: true });
     if ((await button.isVisible()) && (await button.getAttribute('aria-expanded')) === 'false') await button.click();
   }

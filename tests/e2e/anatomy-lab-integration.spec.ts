@@ -27,22 +27,14 @@ const live = (page: Page) => page.getByTestId('anatomy-announce');
 const card = (page: Page, name: string) => page.getByRole('region', { name });
 
 test.describe('anatomy lab study tools, integration', () => {
-  test('the name card shows where a structure sits and lists no siblings when there is only one', async ({ page }) => {
+  test('the name card is the name and the system: no breadcrumb and no siblings list', async ({ page }) => {
     await openLab(page);
     await list(page).getByRole('button', { name: 'fixture cube A', exact: true }).click();
-    const crumbs = card(page, 'fixture cube A').getByRole('navigation', { name: 'where it sits' });
-    await expect(crumbs).toBeVisible();
-    await expect(crumbs.getByRole('listitem')).toHaveCount(2);
-    await expect(crumbs.getByRole('listitem').nth(0)).toHaveText(/fixture group one/);
-    await expect(crumbs.getByRole('listitem').nth(1)).toHaveText(/fixture cube A/);
-    // The group heading is not a structure, so it is plain text, not a button; the current name is marked.
-    await expect(crumbs.getByRole('button')).toHaveCount(0);
-    await expect(crumbs.locator('[aria-current="location"]')).toHaveText('fixture cube A');
-    // Cube A has one sibling (cube B): no siblings list, which starts at two.
+    // Christian (2026-11-27): the card had too much on it. Where a structure sits is the tree and the index below.
+    await expect(card(page, 'fixture cube A').getByRole('heading', { name: 'fixture cube A' })).toBeVisible();
+    await expect(card(page, 'fixture cube A').getByRole('navigation')).toHaveCount(0);
     await expect(page.getByTestId('anatomy-siblings')).toHaveCount(0);
-    // A structure without a group shows no breadcrumb at all.
-    await list(page).getByRole('button', { name: 'fixture slab E', exact: true }).click();
-    await expect(card(page, 'fixture slab E').getByRole('navigation', { name: 'where it sits' })).toHaveCount(0);
+    await expect(page.getByTestId('anatomy-card-rows').locator('dt')).toHaveText(['system']);
   });
 
   test('show nearby brings hidden neighbours back as one undoable step', async ({ page }) => {
