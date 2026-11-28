@@ -42,7 +42,7 @@ test('switching body systems clears the previous system\'s structure search', as
   await expect(page.locator('canvas')).toBeFocused({ timeout: 15_000 });
 
   const picker = page.getByRole('group', { name: 'body system' });
-  const buttons = picker.getByRole('button');
+  const buttons = picker.locator(':scope > button');
   // The draft-enabled fixture test needs at least one other body system.
   // Do not turn a missing source model into a green skipped test.
   await expect.poll(() => buttons.count(), { timeout: 15_000 }).toBeGreaterThanOrEqual(2);
