@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { coverageWarnings, modulePathSchema, type ModulePath } from '../../src/lessons/module-path';
@@ -105,6 +105,57 @@ describe('Astro module content loader', () => {
     expect(warn.mock.calls).toEqual([[expect.stringContaining('1 of 3 fresh')]]);
   });
 
+  it('uses normalized file IDs for id-less readings and decks, and honors an explicit Astro slug', () => {
+    const root = copySources();
+    for (const folder of ['lessons', 'cards']) {
+      const path = join(root, folder, 'study-skills-01.json');
+      const data = JSON.parse(readFileSync(path, 'utf8'));
+      delete data.id;
+      writeFileSync(path, JSON.stringify(data));
+      renameSync(path, join(root, folder, 'Study Skills 01!.json'));
+    }
+    expect(loadModulePaths(root, () => {})).toHaveLength(1);
+
+    const deckPath = join(root, 'cards', 'Study Skills 01!.json');
+    const deck = JSON.parse(readFileSync(deckPath, 'utf8'));
+    writeFileSync(deckPath, JSON.stringify({ ...deck, id: 'study-skills-01', slug: 'sample-deck' }));
+    expect(() => loadModulePaths(root, () => {})).toThrow(/Study item study-skills-01 has no matching source/);
+    const module = readModule();
+    module.lessons[0]!.items.find(item => item.activity === 'matching')!.id = 'sample-deck';
+    writeFileSync(join(root, manifest), JSON.stringify(module));
+    expect(loadModulePaths(root, () => {})).toHaveLength(1);
+  });
+
+  it('rejects a different reading whose raw JSON claims the intended lesson ID', () => {
+    const root = copySources();
+    const module = readModule();
+    module.lessons[0]!.reading = 'alternate';
+    writeFileSync(join(root, manifest), JSON.stringify(module));
+    renameSync(join(root, 'lessons/study-skills-01.json'), join(root, 'lessons/alternate.json'));
+    expect(() => loadModulePaths(root, () => {})).toThrow(/needs its reading in course study-skills/);
+  });
+
+  it.each([
+    ['lessons', 'labeled reading'], ['videos', 'labeled video'], ['cards', 'labeled sample or placeholder flashcard'],
+    ['fill-in', 'labeled sample or placeholder fill-in'], ['label-it', 'labeled sample or placeholder label-it'],
+    ['questions', 'labeled sample or placeholder learning-question'],
+  ])('rejects changing only a consumed %s source from sample data to published', (folder, message) => {
+    const root = copySources();
+    expect(loadModulePaths(root, () => {})).toHaveLength(1);
+    const path = join(root, folder, 'study-skills-01.json');
+    const data = JSON.parse(readFileSync(path, 'utf8'));
+    writeFileSync(path, JSON.stringify({ ...data, status: 'published' }));
+    expect(() => loadModulePaths(root, () => {})).toThrow(message);
+  });
+
+  it('accepts the modeled draft video only while its video ID is the placeholder', () => {
+    const root = copySources();
+    const path = join(root, 'videos/study-skills-01.json');
+    const video = JSON.parse(readFileSync(path, 'utf8'));
+    writeFileSync(path, JSON.stringify({ ...video, videoId: 'sample00001' }));
+    expect(() => loadModulePaths(root, () => {})).toThrow(/labeled video or explicitly modeled draft placeholder/);
+  });
+
   it.each([
     ['videos', 'video source'], ['lessons', 'reading in course'], ['questions', 'Study item weekdays has no matching source'],
   ])('fails when only the referenced %s file disappears between builds', (folder, message) => {
@@ -140,7 +191,7 @@ describe('Astro module content loader', () => {
     lesson.anchors = lesson.anchors.map(anchor => anchor.kind === 'video' ? { ...anchor, sampleTiming: undefined } : anchor);
     put('module-path/manifests/module.json', module);
     put('lessons/study-skills-01.json', {
-      id: lesson.id, status: 'published', course: module.course, order: 1,
+      status: 'published', course: module.course, order: 1,
       title: 'Synthetic lesson fixture', summary: 'For the loader test only.',
       sentences: [{ id: 'ss01-s02', text: 'A synthetic reading section.' }],
     });

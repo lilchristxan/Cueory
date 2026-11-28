@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseSet } from '../../src/islands/labelit';
 import { boardLabelSets, boardProblems, boardRows, parseBoard, wrongChoices, type LessonBoard } from '../../src/lessons/board';
+import type { ModulePath } from '../../src/lessons/module-path';
 
 const root = join(__dirname, '..', '..');
 const sample = (): LessonBoard => JSON.parse(readFileSync(join(root, 'content', 'samples', 'templates', 'lesson-board.json'), 'utf8')) as LessonBoard;
@@ -11,6 +12,17 @@ describe('lesson board: one file from a teaching video becomes every way to stud
   it('accepts the labeled sample', () => {
     expect(boardProblems(sample())).toEqual([]);
     expect(parseBoard(sample()).status).toBe('sample');
+  });
+
+  it('requires every region of a linked board to match a label-it item in the module', () => {
+    const module: ModulePath = JSON.parse(readFileSync(join(root, 'content/samples/module-path/study-skills.json'), 'utf8'));
+    const board = sample();
+    board.pictures[0]!.labels[0]!.id = 'renamed-region';
+    board.clauses[0]!.label = 'renamed-region';
+    expect(boardProblems(board)).toEqual([]);
+    expect(boardProblems(board, module.lessons[0])).toEqual([
+      'board "sample-house": label "renamed-region" needs an indexed label-it item in lesson study-skills-01',
+    ]);
   });
 
   it('turns the picture into a label-it set that the label-it page already accepts', () => {

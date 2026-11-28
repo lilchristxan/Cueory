@@ -74,7 +74,9 @@ export function boardProblems(raw: unknown, lesson?: ModuleLesson): string[] {
     if (lesson) {
       const { lo, anchor } = target.data;
       const shared = labelId && lesson.items.find(item => item.activity === 'label-it' && item.id === labelId);
-      if (shared && (shared.lo !== lo || shared.anchor !== anchor || shared.bloom !== target.data.bloom || shared.level !== target.data.level)) {
+      if (labelId && !shared) {
+        problems.push(`${where}: ${what} needs an indexed label-it item in lesson ${lesson.id}`);
+      } else if (shared && (shared.lo !== lo || shared.anchor !== anchor || shared.bloom !== target.data.bloom || shared.level !== target.data.level)) {
         problems.push(`${where}: ${what} study tags differ from its indexed module item`);
       }
       const objective = lesson.objectives.find(objective => objective.id === lo);
