@@ -62,6 +62,91 @@ mkdir -p work/adaptive
 node work/adaptive/simulation.cjs
 ```
 
+## Module path and course map
+
+Tracked in [#1281](https://github.com/lilchristxan/Cueory/issues/1281). The defaults below are unverified until the Phase 8 simulation checks them.
+Christian's direction (Nov 28, 2026): one system that treats a module's **video and reading together as the input**, runs **active practice** (flashcards, label it / image occlusion, learning questions, fill in the blank, matching), uses the **quiz afterward as the diagnostic**, then **calibrates adaptive practice** until the student is above sufficient understanding to take a practice test. From there the student can **go further into analysis and evaluation** (Bloom's) and then **own the module's practice exam**. Finally, connect each module to the whole course to show course-level **understanding, analysis, evaluation and real-world application**.
+
+This builds on `docs/design/adaptive-learning.md` (#1256, #1257, #1258, #1266, #1275, #1280). Keep that engine. It handles **retention** per card. This brief adds the layer above it: **understanding per learning objective and per Bloom tier**, the module path, and the course map.
+
+```mermaid
+flowchart LR
+  A[Video + reading<br/>aligned to objectives] --> B[Active practice round<br/>cards · label it · questions · fill in · matching]
+  B --> C[Diagnostic quiz<br/>every objective]
+  C --> D{Calibrate per objective}
+  D -->|gap| E[Rewatch/reread the exact segment<br/>→ recognition → recall → application]
+  D -->|developing| F[Recall + application]
+  D -->|sufficient| G[Spaced review only]
+  E --> D
+  F --> D
+  G --> H{Ready for practice test}
+  H --> I[Optional: analyze + evaluate<br/>NCJMM case items]
+  H --> J[Module practice exam<br/>fresh items, blueprint]
+  I --> J
+  J -->|misses reopen objectives| D
+  J --> K[Course map<br/>modules × Bloom tiers]
+```
+
+### Keep these rules
+
+- D-36: no exam score prediction and no chance of passing. Show status words, an icon, evidence counts, and the actual number right on tests the student took.
+- Module "needs" are recommendations, not locks (Nov 3). The practice exam is always open. It is *recommended* once the gate is met.
+- On-device progress first, through the existing export and reset boundary. Any database change or signed-in sync needs a separate approved design.
+- Reviewed bank items are still checked on the server, and only the allowed result reaches the engine (D-33, D-86).
+- Pure TypeScript engine with no browser or network imports. Every new UI goes behind a default-off switch or a locked preview route until Christian looks at it.
+- Pharmacology is embedded in each module, never a separate one. Clinical application goes through the nursing process / NCJMM.
+- Study pages use the approved focused-card designs (#1255, #1260), tachyyy mode (#1269) and the read-aloud button. A tachyyy timeout counts as a miss.
+
+### 1. Content model (the input)
+
+- A module has lessons. Each lesson has a **video** (YouTube embed) and a **reading**. Both are cut into **anchors**: a video time range or a reading section id.
+- Each lesson lists **learning objectives (LOs)**. An LO has an id, concept id(s), a Bloom tier (remember / understand / apply / analyze / evaluate) and the anchors that teach it.
+- **Every** study item (flashcard, label-it set or region, learning question, fill-in-the-blank, matching set, diagnostic item, exam item) carries `lo`, `bloom`, `level` (1–3, same as the existing difficulty rule) and `anchor`.
+- Extend the lesson board file (#1268) with `lo`, `bloom` and `anchor` columns. The video's images already become label-it sets, and its transcript already becomes the other rows.
+- Add a validator that fails the build when a published LO has no anchor or no item for the diagnostic, or when an item points to a missing LO. It should warn when an LO has fewer than one item per activity type, or fewer than 3 unused items for the practice exam.
+
+### 2. Learner model (per LO × Bloom tier)
+
+- Evidence is weighted by how much the task proves. Defaults (unverified, tune by simulation): matching and flashcard flips 0.5, label it and fill in the blank 0.75, learning questions and diagnostic items 1.0, practice exam items 1.25. Using a cue halves the credit. A timeout counts as a miss.
+- Each LO tier keeps a Beta(1,1) prior updated with the weighted correct and missed counts. Report the posterior mean and its 10th-percentile lower bound. Never show either to the student as a percentage.
+- Status words come from the lower bound plus a minimum amount of evidence: not started → gap → developing → **sufficient** → strong. Default for **sufficient**: lower bound ≥ 0.70, with ≥ 3 weighted evidence including at least one *first-try* correct on an item the student had not seen before.
+- Retention stays with the existing half-life engine. When an LO's cards fall below 80% recall, the LO drops one status until it is reviewed.
+- Transfer: when a higher tier is correct (apply), lower tiers of the same LO get 0.5 credit. A miss at a higher tier gives lower tiers nothing.
+
+### 3. Module path
+
+1. **Input.** Video + reading, each with its anchors. Mark a lesson viewed once the student has watched most of the video or scrolled the reading; it is never a lock.
+2. **Active practice round.** One short pass per activity type across the lesson's LOs. Default order: flashcards → label it → learning questions → fill in the blank (dropdown blanks) → matching. Cap around 15 minutes. This collects low-weight evidence.
+3. **Diagnostic quiz.** One understand- or apply-tier item per LO, then follow the existing level-test rule (level 2 first, a correct answer opens one level 3). It sets each LO's starting status at full weight.
+4. **Calibrate and adapt.**
+   - A **gap** first links to the exact anchor ("rewatch 3:12–4:05" or "reread: compensation"), then climbs from recognition (matching or cards) to recall (fill in, label it) to application (questions).
+   - **Developing** gets recall and application. **Sufficient** gets spaced review only.
+   - Aim for about 70–85% success by choosing the level per LO with the existing up-after-two, down-after-miss rule.
+   - Interleave: no more than 2 items from the same LO in a row. Keep the 20-item session cap. Always tell the student *why* they are seeing an item ("you missed this on the diagnostic", "due for review").
+5. **Readiness gate.** "Ready for the practice test" when every LO is **sufficient** at understand and apply.
+6. **Go further (optional).** Analyze and evaluate items built as NCJMM case items: recognize cues, analyze cues, prioritize hypotheses, generate solutions, take action, evaluate outcomes. Use NGN-style formats where we have them (matrix, extended multiple response, highlight, bowtie). These tiers appear only after the gate, on their own track.
+7. **Module practice exam.** Assembled from a blueprint that weights LOs by importance and covers every Bloom tier the student unlocked. Use only fresh items the student has not seen. Results show the number right and the status per LO. Each missed LO reopens step 4. "Owning" the module means strong at every tier, including analyze and evaluate, after the practice exam.
+8. **Spaced review** continues through the existing engine.
+
+### 4. Course map
+
+- Aggregate every module's LOs into a **modules × dimensions** grid. The dimensions are **understanding** (remember and understand), **application** (apply), **analysis**, **evaluation**, and **real-world application** (cross-module NCJMM case studies that pull LOs from two or more modules).
+- Each cell shows a status word, an icon and the evidence count. Retention decay counts, so a module studied weeks ago can fade.
+- Course readiness for a final or exit exam: every module at sufficient, plus a cumulative case-study set. Weight modules by the course blueprint (for Med-Surg I, the curriculum map's weights).
+
+### 5. Phases (one PR each, to staging, behind switches)
+
+1. Content model, lesson board columns and validator. Tag one sample module (use the existing labeled sample deck plus one real Med-Surg I lesson if it is ready).
+2. Learner model as a pure module, with unit and seeded property tests.
+3. Diagnostic blueprint, calibration and remediation planner, and the readiness gate.
+4. Evidence adapters from cards, label it, learn, fill in the blank and matching. Build matching as a focused screen if it does not exist yet, in the approved study-page style.
+5. Module path UI on a locked preview route `/preview/module-path`.
+6. Analyze and evaluate items and the practice exam assembler (fresh items only).
+7. Course map aggregation, plus the preview UI as a visual grid. Christian is visual, so make the map the first thing he sees.
+8. Extend the simulation: synthetic students run the whole module path. Report time to readiness, the share wrongly marked ready (when their simulated true skill is below the threshold), and items per day. Tune the weights and thresholds from it, and record them in the design doc.
+
+Update `docs/design/adaptive-learning.md` with a "Module path and course map" section in the first PR, and log each PR there. Use the defaults above without waiting. Put only real blockers under **Needs Christian**, phrased as yes/no questions.
+
 ## Progress log
 
 - [#1256](https://github.com/lilchristxan/Cueory/pull/1256) — design draft with the model, release boundaries and research references.
